@@ -1,5 +1,8 @@
 node_modules/
-dist-app/
+dist/
+release/
+src-tauri/target/
+src-tauri/gen/
+src-tauri/icons/icon.iconset/
 .DS_Store
-app/icone.iconset/
 *.log

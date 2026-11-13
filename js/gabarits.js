@@ -1,6 +1,6 @@
 /* ============================================================
    GABARITS : les documents PDF (relevé d'activité, facture), rendus en
-   HTML puis imprimés en PDF par l'application (app/pdf.js).
+   HTML puis imprimés en PDF par l'application (src-tauri/src/mac.rs).
 
    Même charte que les rapports Projet A : bandeau marine, titres serif,
    or en filet, chiffres tabulaires. Aucun tiret cadratin.

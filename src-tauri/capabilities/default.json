@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "La fenêtre de Sablier appelle les commandes du fond et reçoit les commandes du menu.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

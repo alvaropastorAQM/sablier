@@ -1,40 +1,13 @@
 {
   "name": "sablier",
   "productName": "Sablier",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Sablier : suivi de mission, relevés d'activité et organisation du travail (application macOS)",
   "private": true,
-  "main": "app/main.js",
   "scripts": {
-    "start": "electron .",
-    "test": "node tests/test-calculs.js && node tests/test-donnees.js",
-    "smoke": "SABLIER_SMOKE=1 SABLIER_DONNEES=/tmp/sablier-smoke SABLIER_CAPTURES=/tmp/sablier-smoke electron .",
-    "app:build": "electron-builder --mac --dir && node outils/masquer-extension-app.js && npm run app:install",
-    "app:dist": "electron-builder --mac && node outils/masquer-extension-app.js",
-    "app:install": "rm -rf /Applications/Sablier.app && cp -R dist-app/mac-arm64/Sablier.app /Applications/Sablier.app"
-  },
-  "build": {
-    "appId": "com.example.sablier",
-    "productName": "Sablier",
-    "directories": {
-      "output": "dist-app"
-    },
-    "files": [
-      "app/**/*",
-      "index.html",
-      "js/**/*",
-      "css/**/*",
-      "package.json"
-    ],
-    "mac": {
-      "category": "public.app-category.productivity",
-      "target": "dir",
-      "identity": null,
-      "icon": "app/icone.icns"
-    }
-  },
-  "devDependencies": {
-    "electron": "^43.2.0",
-    "electron-builder": "^26.15.3"
+    "start": "cargo run --manifest-path src-tauri/Cargo.toml",
+    "test": "node tests/test-calculs.js && cargo test --manifest-path src-tauri/Cargo.toml",
+    "smoke": "SABLIER_SMOKE=1 SABLIER_DONNEES=/tmp/sablier-smoke SABLIER_CAPTURES=/tmp/sablier-smoke cargo run --manifest-path src-tauri/Cargo.toml",
+    "app:build": "node scripts/installer.js"
   }
 }

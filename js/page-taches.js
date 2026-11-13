@@ -356,7 +356,8 @@ function ajouterPieceLien(t, o) {
   return p;
 }
 /* Fichiers : copiés dans le dossier de données (Pieces/<tâche>/) par
-   l'application ; sans chemins, un sélecteur de fichiers s'ouvre. */
+   l'application, depuis des chemins ou des fichiers déposés ; sans rien,
+   un sélecteur de fichiers s'ouvre. */
 function ajouterPiecesFichiers(t, chemins) {
   if (!estApp()) { notifier('Les fichiers joints sont disponibles dans l\'application macOS.'); return Promise.resolve(false); }
   return window.sablier.pieces.ajouter(t.id, chemins || null).then(function (res) {
@@ -635,8 +636,7 @@ function brancherSectionsFiche(m, t) {
     if (!ev.dataTransfer || !ev.dataTransfer.files || !ev.dataTransfer.files.length) return;
     ev.preventDefault();
     if (!estApp()) { notifier('Les fichiers joints sont disponibles dans l\'application macOS.'); return; }
-    var chemins = Array.prototype.map.call(ev.dataTransfer.files, function (f) { return window.sablier.fichiers.cheminDe(f); }).filter(Boolean);
-    if (chemins.length) ajouterPiecesFichiers(t, chemins);
+    ajouterPiecesFichiers(t, Array.prototype.slice.call(ev.dataTransfer.files));
   });
 }
 

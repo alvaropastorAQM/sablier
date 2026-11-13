@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: sablier-piece:; font-src 'self' data:;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' sablier:; style-src 'self' 'unsafe-inline'; img-src 'self' data: sablier-piece:; font-src 'self' data:; connect-src ipc: http://ipc.localhost;">
 <title>Sablier</title>
 <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -278,6 +278,8 @@
 <div class="status-bar" id="statusBar"></div>
 <div id="modaleRacine"></div>
 
+<!-- Les données et window.sablier, servis par l'application (src-tauri/src/main.rs, js/pont.js). -->
+<script src="sablier://localhost/demarrage.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/calculs.js"></script>
 <script src="js/donnees.js"></script>

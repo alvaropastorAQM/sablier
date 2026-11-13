@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('.tab-btn[data-icone]').forEach(function (b) {
     b.insertAdjacentHTML('afterbegin', '<span class="tab-ic" aria-hidden="true">' + icone(b.dataset.icone, 16) + '</span>');
   });
-  /* Fenêtre en verre du système (main.js) : le fond de la page s'efface. */
+  /* Fenêtre en verre du système (src-tauri/src/main.rs) : le fond de la page s'efface. */
   if (/[?&]vibrance=1/.test(location.search)) document.documentElement.classList.add('vibrance');
   window.addEventListener('resize', poserBulles);
 

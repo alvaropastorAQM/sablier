@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Génère l'icône de Sablier (app/icone.png en 1024 px, puis app/icone.icns).
+"""Génère l'icône de Sablier (src-tauri/icons/icon.png en 1024 px, puis icon.icns).
 
 Même esprit que l'icône de Projet A : carré arrondi marine profond, anneaux
 fins, motif lumineux au centre. Ici le motif est un sablier dont le sable
@@ -140,12 +140,12 @@ ombre = ombre.filter(ImageFilter.GaussianBlur(22 * S))
 final = Image.alpha_composite(ombre, img)
 
 final = final.resize((1024, 1024), Image.LANCZOS)
-chemin_png = os.path.join(RACINE, 'app', 'icone.png')
+chemin_png = os.path.join(RACINE, 'src-tauri', 'icons', 'icon.png')
 final.save(chemin_png)
 print('écrit', chemin_png)
 
 # --- .icns via iconutil ------------------------------------------------
-iconset = os.path.join(RACINE, 'app', 'icone.iconset')
+iconset = os.path.join(RACINE, 'src-tauri', 'icons', 'icon.iconset')
 shutil.rmtree(iconset, ignore_errors=True)
 os.makedirs(iconset)
 for taille in (16, 32, 128, 256, 512):
@@ -153,7 +153,7 @@ for taille in (16, 32, 128, 256, 512):
         px = taille * echelle
         nom = 'icon_%dx%d%s.png' % (taille, taille, '@2x' if echelle == 2 else '')
         final.resize((px, px), Image.LANCZOS).save(os.path.join(iconset, nom))
-icns = os.path.join(RACINE, 'app', 'icone.icns')
+icns = os.path.join(RACINE, 'src-tauri', 'icons', 'icon.icns')
 subprocess.run(['iconutil', '-c', 'icns', iconset, '-o', icns], check=True)
 shutil.rmtree(iconset, ignore_errors=True)
 print('écrit', icns, os.path.getsize(icns), 'octets')

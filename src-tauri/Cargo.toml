@@ -1,0 +1,26 @@
+[package]
+name = "sablier"
+version = "0.2.0"
+description = "Sablier : suivi de mission, relevés d'activité et organisation du travail"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.7.4", features = [] }
+
+[dependencies]
+# custom-protocol : la page est embarquée dans l'exécutable, sans serveur de développement.
+tauri = { version = "2.12.5", features = ["macos-private-api", "custom-protocol", "devtools"] }
+tauri-plugin-single-instance = "2.5.5"
+# preserve_order et float_roundtrip : les fichiers JSON gardent l'ordre de leurs clés et leurs nombres exacts, comme sous Electron.
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+objc2 = "0.6.5"
+block2 = "0.6.2"
+objc2-foundation = "0.3.2"
+objc2-app-kit = "0.3.2"
+objc2-web-kit = "0.3.2"
+objc2-user-notifications = "0.3.2"
+
+[profile.release]
+strip = true
+lto = "thin"

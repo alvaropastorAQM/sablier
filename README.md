@@ -5,31 +5,50 @@ le relevé d'activité mensuel et la facture qui l'accompagne, les tâches,
 les notes, le calendrier administratif de la micro-entreprise et les
 rappels qui vont avec.
 
-Design « Graphite » (`design/design_system_macos27.md`) depuis le 25/10/2026 : neutres froids, accent bleu acier, verre de macOS, sombre et clair selon le Mac ; les PDF ont leur propre charte (blanc, marine, or, titres serif) ; même technique
-(Electron, HTML/CSS/JS sans framework, données en fichiers JSON lisibles).
+Design « Graphite » (`design/design_system_macos27.md`) depuis le 25/10/2026 : neutres froids, accent bleu acier, verre de macOS, sombre et clair selon le Mac ; les PDF ont leur propre charte (blanc, marine, or, titres serif) ; l'interface
+en HTML/CSS/JS sans framework, données en fichiers JSON lisibles.
+
+Depuis le 13/11/2026, l'application tourne sous Tauri (fond en Rust,
+`src-tauri/`) et non plus sous Electron : 12 Mo au lieu de 280. L'interface
+n'a pas changé ; elle parle au fond par `window.sablier` (`js/pont.js`).
+Mêmes données, même dossier, même format de fichiers, mêmes PDF (WebKit
+imprime à la place de Chromium : un petit script, `src-tauri/src/paginer.js`,
+garde les lignes de tableau entières et répète l'en-tête sur chaque page).
 
 ## Lancer et construire
 
 ```bash
-npm install          # une fois
-npm start            # lance l'application en développement
-npm test             # tests du moteur de calcul et de l'écriture des données (node)
+npm start            # lance l'application en développement (sur les vraies données)
+npm test             # tests du moteur de calcul (node) et du fond Rust (données, fichiers)
 npm run smoke        # auto-test sur /tmp/sablier-smoke, jamais sur les vraies données
-npm run app:build    # construit dist-app/mac-arm64/Sablier.app puis l'installe dans /Applications
-npm run app:install  # recopie seulement la construction dans /Applications
+npm run app:build    # tests, construction de release/Sablier.app, auto-test complet, puis installation dans /Applications
 ```
 
+Il faut Node.js, Rust et les outils Xcode ; aucune dépendance npm.
 L'application se lance depuis `/Applications/Sablier.app` (Dock, Spotlight).
-Chaque construction y est recopiée automatiquement : une copie ancienne dans
-/Applications ferait revenir des défauts déjà corrigés.
+Chaque construction y est recopiée automatiquement, seulement si elle passe
+l'auto-test, après avoir demandé à Sablier ouvert de quitter : une copie
+ancienne dans /Applications ferait revenir des défauts déjà corrigés.
 
 Auto-test complet, sur un dossier de données jetable (jamais sur le vrai) :
 
 ```bash
-SABLIER_SMOKE=1 SABLIER_SMOKE_SCENARIO=1 SABLIER_SMOKE_PDF=1 SABLIER_DONNEES=/tmp/sablier-test SABLIER_CAPTURES=/tmp/sablier-test npx electron .
+SABLIER_SMOKE=1 SABLIER_SMOKE_SCENARIO=1 SABLIER_SMOKE_AUDIT=1 SABLIER_SMOKE_PDF=1 SABLIER_DONNEES=/tmp/sablier-test SABLIER_CAPTURES=/tmp/sablier-test cargo run --manifest-path src-tauri/Cargo.toml
 ```
 
-L'application doit être fermée avant (une seule instance à la fois).
+Il tourne même quand Sablier est ouvert, dans une fenêtre invisible, et
+quitte avec 0 si tout est vrai (`SABLIER_SMOKE_OK`), 1 sinon
+(`SABLIER_SMOKE_ECHEC` et la liste). Les scénarios sont dans
+`tests/scenario-smoke.js` et `tests/scenario-audit.js`. Écran verrouillé ou
+en veille, WebKit ne rend pas les captures : elles sont signalées, pas
+comptées comme des échecs.
+
+Format des fichiers, vérifié sur une copie des vraies données (relus puis
+réécrits, ils ressortent à l'octet près) :
+
+```bash
+SABLIER_VERIF=<copie du dossier Donnees> cargo test --manifest-path src-tauri/Cargo.toml -- --ignored
+```
 
 ## Ce que fait chaque page
 
@@ -49,7 +68,8 @@ L'application doit être fermée avant (une seule instance à la fois).
   s'additionnent ; elle compte pour son temps exact.
 - Le **temps facturé** est le total exact du relevé ou de la facture,
   arrondi une seule fois au quart d'heure supérieur (article 6.1 du
-  contrat), réglable dans Réglages. Depuis le 26/10/2026 (règle du prestataire) : l'arrondi par intervention faisait payer près de deux heures
+  contrat), réglable dans Réglages. Depuis le 26/10/2026 (règle du
+  prestataire) : l'arrondi par intervention faisait payer près de deux heures
   de trop par mois. L'arrondi apparaît sur sa propre ligne (« Arrondi du
   total au quart d'heure supérieur ») au relevé et dans l'annexe de la
   facture ; la facture le fige (`arrondiMinutes`). Les forfaits restent
@@ -191,12 +211,16 @@ js/gabarits.js        documents PDF (relevé, facture)
 js/rappels.js         centre des rappels, notifications macOS, pastille du Dock
 js/page-*.js          une page par fichier (page-factures.js est une vue de page-releve.js)
 js/app.js             démarrage
-app/main.js           process principal Electron : fenêtre, menus, pont, pièces jointes, auto-test
-app/preload.js        window.sablier
-app/donnees.js        fichiers JSON, sauvegardes quotidiennes
-app/pdf.js            impression PDF d'un HTML
-outils/               icône, jeu de démonstration, import git, masquage de l'extension .app
-tests/                tests node du moteur
+js/pont.js            window.sablier, servi par le fond avec les données (sablier://localhost/demarrage.js)
+src-tauri/src/main.rs         fenêtre, menus, commandes du pont, protocoles (données, pièces jointes)
+src-tauri/src/donnees.rs      fichiers JSON, écritures différées et retentées, sauvegardes quotidiennes
+src-tauri/src/fichiers.rs     noms sûrs, pièces jointes, noms libres des PDF
+src-tauri/src/mac.rs          AppKit et WebKit : PDF, panneaux, alertes, notifications, Dock, corbeille
+src-tauri/src/paginer.js      sauts de page des PDF, joués avant l'impression
+src-tauri/src/autotest.rs     auto-test (SABLIER_SMOKE=1)
+scripts/installer.js  construction, vérification et installation de Sablier.app
+outils/               icône, jeu de démonstration, import git
+tests/                tests node du moteur, scénarios de l'auto-test
 ```
 
 Règle de style permanente : aucun tiret cadratin dans les textes de

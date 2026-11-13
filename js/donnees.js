@@ -1,7 +1,7 @@
 /* ============================================================
    DONNÉES : l'état de l'application et sa persistance.
 
-   Dans l'application macOS, window.sablier (app/preload.js) lit et écrit
+   Dans l'application macOS, window.sablier (js/pont.js) lit et écrit
    des fichiers JSON dans le dossier de données. Dans un navigateur nu
    (développement), on retombe sur localStorage.
 
@@ -137,6 +137,7 @@ function ideesDefaut() {
   return [
     bloc('idee', ideeBlocHtml('Alertes proactives', 'Échéances proches remontées au tableau de bord.', 'fort, évite les oublis', 'petit', 'aucun')),
     bloc('idee', ideeBlocHtml('Export CSV du journal', 'Pour retravailler les heures dans un tableur.', 'moyen', 'petit', 'aucun')),
+    bloc('idee', ideeBlocHtml('Modèles de tâches', 'Des listes d\'étapes prêtes pour les travaux qui reviennent.', 'moyen', 'moyen', 'aucun')),
   ];
 }
 
