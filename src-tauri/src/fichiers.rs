@@ -32,10 +32,26 @@ pub fn nettoyer_segment(s: &str) -> String {
     if s.is_empty() { "piece".into() } else { s }
 }
 
+/// Noms que Windows réserve à des périphériques, avec ou sans extension.
+const RESERVES_WINDOWS: [&str; 22] = [
+    "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5",
+    "LPT6", "LPT7", "LPT8", "LPT9",
+];
+
+/// Ce que Windows refuse en plus : `< > " | ? *`, un point ou une espace en fin de nom, les noms réservés (préfixés de « _ »).
+fn pour_windows(nom: String) -> String {
+    let nom: String = nom.chars().map(|c| if matches!(c, '<' | '>' | '"' | '|' | '?' | '*') { '_' } else { c }).collect();
+    let nom = nom.trim_end_matches(['.', ' ']).to_string();
+    let racine = nom.split('.').next().unwrap_or_default().trim_end();
+    if RESERVES_WINDOWS.iter().any(|r| r.eq_ignore_ascii_case(racine)) { format!("_{nom}") } else { nom }
+}
+
 /// Nom de fichier sûr : pas de séparateur, l'extension conservée, au plus 200 octets (limite du système de fichiers à 255).
+/// Sous Windows, aussi sans les caractères et les noms qu'il refuse.
 pub fn nettoyer_nom_fichier(s: &str) -> String {
     let s = if s.is_empty() { "fichier" } else { s };
     let nom: String = s.chars().map(|c| if matches!(c, '/' | '\\' | ':') || (c as u32) < 0x20 { '_' } else { c }).collect();
+    let nom = if cfg!(windows) { pour_windows(nom) } else { nom };
     let nom = sans_points_de_tete(nom);
     let ext: String = extension(&nom).chars().take(16).collect();
     let mut base = sans_extension(&nom, &ext).to_string();
@@ -220,6 +236,28 @@ mod tests {
         assert_eq!(nettoyer_nom_fichier("2026-10 octobre"), "2026-10 octobre");
         let long = nettoyer_nom_fichier(&format!("{}.pdf", "é".repeat(150)));
         assert!(long.len() <= 200 && long.ends_with(".pdf"));
+    }
+
+    #[test]
+    fn noms_acceptes_par_windows() {
+        assert_eq!(pour_windows("a<b>c\"d|e?f*.pdf".into()), "a_b_c_d_e_f_.pdf");
+        assert_eq!(pour_windows("rapport. . ".into()), "rapport");
+        assert_eq!(pour_windows("CON".into()), "_CON");
+        assert_eq!(pour_windows("nul.txt".into()), "_nul.txt");
+        assert_eq!(pour_windows("Com9.tar.gz".into()), "_Com9.tar.gz");
+        assert_eq!(pour_windows("LPT1 .txt".into()), "_LPT1 .txt");
+        assert_eq!(pour_windows("CONSOLE.txt".into()), "CONSOLE.txt");
+        assert_eq!(pour_windows("COM10".into()), "COM10");
+        assert_eq!(pour_windows("2026-10 octobre".into()), "2026-10 octobre");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn noms_nettoyes_pour_windows() {
+        assert_eq!(nettoyer_nom_fichier("Facture?.pdf"), "Facture_.pdf");
+        assert_eq!(nettoyer_nom_fichier("aux.pdf"), "_aux.pdf");
+        assert_eq!(nettoyer_nom_fichier("..."), "fichier");
+        assert_eq!(nettoyer_nom_fichier("note ."), "note");
     }
 
     #[test]
