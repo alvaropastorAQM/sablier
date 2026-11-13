@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: sablier-piece:; font-src 'self' data:;">
+<title>Sablier</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <aside class="lateral">
+    <div class="marque">
+      <div class="marque-x" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 3h12M6 21h12M7 3c0 4.2 3.2 6.2 5 9-1.8 2.8-5 4.8-5 9M17 3c0 4.2-3.2 6.2-5 9 1.8 2.8 5 4.8 5 9"/>
+          <path d="M9.6 19.4h4.8L12 16.8z" fill="currentColor" stroke="none"/>
+        </svg>
+      </div>
+      <h1 class="brand">Sablier</h1>
+    </div>
+    <nav class="tabs" data-bulle="navigation">
+      <button class="tab-btn tab-btn-rappels" id="btnRappels" type="button" data-icone="cloche" title="Ce qu'il ne faut pas rater : échéances, tâches, factures, chrono">Rappels<span class="tab-pastille" id="pastilleRappels"></span></button>
+      <button class="tab-btn" data-tab="tableau" data-icone="grille">Tableau de bord</button>
+      <button class="tab-btn" data-tab="releve" data-icone="horloge">Journal et relevé <span class="tab-pastille" id="pastilleJournal"></span></button>
+      <button class="tab-btn" data-tab="factures" data-icone="fichier">Factures et recettes <span class="tab-pastille" id="pastilleReleve"></span></button>
+      <button class="tab-btn" data-tab="taches" data-icone="case">Tâches <span class="tab-pastille" id="pastilleTaches"></span></button>
+      <button class="tab-btn" data-tab="notes" data-icone="note">Notes</button>
+      <button class="tab-btn" data-tab="echeances" data-icone="calendrier">Échéances <span class="tab-pastille" id="pastilleEcheances"></span></button>
+      <button class="tab-btn" data-tab="reglages" data-icone="reglages">Réglages</button>
+      <button class="tab-btn tab-btn-aide" data-tab="guide" data-icone="aide">Mode d'emploi</button>
+    </nav>
+    <div class="lateral-pied" id="chronoPied"></div>
+  </aside>
+
+  <div class="principal" id="principal">
+    <div id="chronoBandeau" class="chrono-bandeau"></div>
+
+    <!-- ===================== TABLEAU DE BORD ===================== -->
+    <div class="tab-panel" data-tab-panel="tableau">
+      <div id="tableauContenu"></div>
+    </div>
+
+    <!-- ===================== JOURNAL ET RELEVÉ ===================== -->
+    <div class="tab-panel" data-tab-panel="releve" style="display:none">
+      <div id="releveContenu"></div>
+      <datalist id="jrInterventionsListe"></datalist>
+    </div>
+
+    <!-- ===================== FACTURES ET RECETTES ===================== -->
+    <div class="tab-panel" data-tab-panel="factures" style="display:none">
+      <div id="facturesContenu"></div>
+    </div>
+
+    <!-- ===================== TÂCHES ===================== -->
+    <div class="tab-panel" data-tab-panel="taches" style="display:none">
+      <div id="tachesContenu"></div>
+    </div>
+
+    <!-- ===================== NOTES ===================== -->
+    <div class="tab-panel" data-tab-panel="notes" style="display:none">
+      <div id="notesContenu"></div>
+    </div>
+
+    <!-- ===================== ÉCHÉANCES ===================== -->
+    <div class="tab-panel" data-tab-panel="echeances" style="display:none">
+      <div id="echeancesContenu"></div>
+    </div>
+
+    <!-- ===================== RÉGLAGES ===================== -->
+    <div class="tab-panel" data-tab-panel="reglages" style="display:none">
+      <section class="card">
+        <h2>Réglages</h2>
+
+        <div class="reglage-bloc">
+          <h3>Facturation</h3>
+          <p class="small">Les valeurs du contrat signé. Le tarif s'applique au temps facturé : chaque intervention compte pour son temps exact, et seul le total du relevé ou de la facture est arrondi.</p>
+          <div class="grid-4">
+            <div class="field"><label for="reglTarif">Tarif horaire (€ HT)</label><input type="number" id="reglTarif" step="0.01" min="0"></div>
+            <div class="field"><label for="reglArrondi">Arrondi du temps facturé</label>
+              <select id="reglArrondi">
+                <option value="0">Aucun (à la minute)</option>
+                <option value="0.25">Au quart d'heure supérieur</option>
+                <option value="0.5">À la demi-heure supérieure</option>
+                <option value="1">À l'heure supérieure</option>
+              </select>
+            </div>
+            <div class="field"><label for="reglHeuresJournee">Heures par journée</label><input type="number" id="reglHeuresJournee" step="0.5" min="1"></div>
+            <div class="field"><label for="reglRepereAnnuel">Repère annuel (heures)</label><input type="number" id="reglRepereAnnuel" step="1" min="0"></div>
+            <div class="field"><label for="reglContratDebut">Début du contrat</label><input type="date" id="reglContratDebut"></div>
+            <div class="field"><label for="reglContratFin">Fin du contrat</label><input type="date" id="reglContratFin"></div>
+            <div class="field span-2"><label for="reglMentionTVA">Mention TVA sur les factures</label><input type="text" id="reglMentionTVA"></div>
+            <div class="field"><label for="reglDelaiPaiement">Délai de paiement (jours)</label><input type="number" id="reglDelaiPaiement" step="1" min="0"></div>
+            <div class="field span-2"><label for="reglDossierFactures">Dossier des factures (facture et relevé PDF, un sous-dossier par mois)</label>
+              <div style="display:flex; gap:8px;"><input type="text" id="reglDossierFactures" style="flex:1;" placeholder="Aucun : Sablier demandera où enregistrer chaque PDF"><button type="button" class="btn btn-ghost" id="reglChoisirDossierFactures">Choisir…</button></div></div>
+          </div>
+        </div>
+
+        <div class="reglage-bloc">
+          <h3>Prestataire</h3>
+          <p class="small">Sur les factures et les relevés : nom, forme juridique, adresse sur deux lignes, SIREN, email et téléphone. Le SIRET et le code APE restent enregistrés mais ne sont pas imprimés.</p>
+          <div class="grid-4">
+            <div class="field"><label for="reglPrestNom">Nom</label><input type="text" id="reglPrestNom"></div>
+            <div class="field"><label for="reglPrestForme">Forme juridique</label><input type="text" id="reglPrestForme" placeholder="Entrepreneur individuel"></div>
+            <div class="field"><label for="reglPrestSiren">SIREN</label><input type="text" id="reglPrestSiren"></div>
+            <div class="field"><label for="reglPrestSiret">SIRET (non imprimé)</label><input type="text" id="reglPrestSiret"></div>
+            <div class="field span-2"><label for="reglPrestAdresse">Adresse (voie, puis code postal et ville)</label><input type="text" id="reglPrestAdresse" placeholder="12 rue des Essais, 75000 Paris"></div>
+            <div class="field"><label for="reglPrestEmail">Email</label><input type="email" id="reglPrestEmail"></div>
+            <div class="field"><label for="reglPrestTel">Téléphone</label><input type="text" id="reglPrestTel"></div>
+            <div class="field"><label for="reglPrestApe">Code APE (non imprimé)</label><input type="text" id="reglPrestApe"></div>
+          </div>
+        </div>
+
+        <div class="reglage-bloc">
+          <h3>Coordonnées bancaires</h3>
+          <p class="small">Imprimées dans les « Conditions de règlement » des factures : titulaire du compte, banque, IBAN par groupes de quatre, BIC. Recopiez-les depuis votre relevé d'identité bancaire.</p>
+          <div class="grid-4">
+            <div class="field"><label for="reglPrestTitulaire">Titulaire du compte</label><input type="text" id="reglPrestTitulaire" placeholder="EI Nom Prénom"></div>
+            <div class="field"><label for="reglPrestBanque">Banque</label><input type="text" id="reglPrestBanque" placeholder="Banque Exemple"></div>
+            <div class="field"><label for="reglPrestIban">IBAN</label><input type="text" id="reglPrestIban" placeholder="FR76 …"></div>
+            <div class="field"><label for="reglPrestBic">BIC</label><input type="text" id="reglPrestBic"></div>
+          </div>
+        </div>
+
+        <div class="reglage-bloc">
+          <h3>Client</h3>
+          <div class="grid-4">
+            <div class="field"><label for="reglClientSociete">Société</label><input type="text" id="reglClientSociete"></div>
+            <div class="field"><label for="reglClientContact">Contact</label><input type="text" id="reglClientContact"></div>
+            <div class="field span-2"><label for="reglClientAdresse">Adresse</label><input type="text" id="reglClientAdresse"></div>
+            <div class="field"><label for="reglClientSiren">SIREN</label><input type="text" id="reglClientSiren"></div>
+            <div class="field"><label for="reglClientEmail">Email de facturation</label><input type="email" id="reglClientEmail"></div>
+          </div>
+        </div>
+
+        <div class="reglage-bloc">
+          <h3>Axes de la mission</h3>
+          <p class="small">Les axes du contrat. Chaque axe a sa couleur, reprise sur les cartes, le journal, le relevé et les factures : cliquez sur la pastille pour la changer. Un axe utilisé par des saisies ne peut pas être supprimé.</p>
+          <div style="position:relative;"><input type="color" id="reglCouleurLibre" aria-label="Couleur libre" style="position:absolute; left:0; top:0; width:1px; height:1px; opacity:0; border:0; padding:0;"></div>
+          <div class="axes-lignes" id="reglAxes"></div>
+          <div class="reglage-actions">
+            <button class="btn btn-ghost btn-petit" id="reglAjouterAxe">Ajouter un axe</button>
+          </div>
+        </div>
+
+        <div class="reglage-bloc">
+          <h3>Cotisations sociales (estimation)</h3>
+          <p class="small">Sert à la trésorerie et aux trimestres URSSAF de la vue Factures. Les cotisations se calculent sur le chiffre d'affaires encaissé ; la première déclaration regroupe le trimestre du début d'activité et le suivant.</p>
+          <div class="grid-4">
+            <div class="field"><label for="reglDebutActivite">Début d'activité</label><input type="date" id="reglDebutActivite"></div>
+            <div class="field"><label for="reglTauxAcre">Taux avec ACRE (%)</label><input type="number" id="reglTauxAcre" step="0.1" min="0"></div>
+            <div class="field"><label for="reglFinAcre">Fin de l'ACRE</label><input type="date" id="reglFinAcre"></div>
+            <div class="field"><label for="reglTauxPlein">Taux plein (%)</label><input type="number" id="reglTauxPlein" step="0.1" min="0"></div>
+          </div>
+        </div>
+
+        <div class="reglage-bloc" id="reglRappels">
+          <h3>Rappels et notifications</h3>
+          <p class="small">Sablier surveille les échéances, les tâches datées, les mois à facturer, les factures à encaisser, un chrono oublié et un journal délaissé. Tout remonte dans le centre des rappels (barre latérale) et sur le tableau de bord ; les nouveautés sont aussi envoyées dans le centre de notifications du Mac.</p>
+          <div class="grid-4">
+            <div class="field span-2"><label>Notifications macOS</label><label class="field-ligne"><input type="checkbox" id="reglRappelNatifs"> <span>Envoyer les rappels dans le centre de notifications du Mac</span></label></div>
+            <div class="field span-2"><label>À l'ouverture</label><label class="field-ligne"><input type="checkbox" id="reglRappelDemarrage"> <span>Récapituler les rappels du jour à l'ouverture de l'application</span></label></div>
+            <div class="field"><label for="reglRappelEcheances">Échéances : jours avant</label><input type="number" id="reglRappelEcheances" step="1" min="0"></div>
+            <div class="field"><label for="reglRappelTaches">Tâches : jours avant</label><input type="number" id="reglRappelTaches" step="1" min="0"></div>
+            <div class="field"><label for="reglRappelFactures">Paiements : jours avant</label><input type="number" id="reglRappelFactures" step="1" min="0"></div>
+            <div class="field"><label for="reglRappelChrono">Chrono oublié : après (heures)</label><input type="number" id="reglRappelChrono" step="0.5" min="0"></div>
+            <div class="field"><label for="reglRappelJournal">Journal délaissé : après (jours, 0 = jamais)</label><input type="number" id="reglRappelJournal" step="1" min="0"></div>
+          </div>
+          <div class="reglage-actions">
+            <button class="btn btn-ghost btn-petit" id="reglOuvrirRappels">Ouvrir le centre des rappels</button>
+            <button class="btn btn-ghost btn-petit" id="reglTesterNotif">Envoyer une notification d'essai</button>
+          </div>
+        </div>
+
+        <div class="reglage-bloc">
+          <h3>Données</h3>
+          <p class="small" id="reglDossier">Les données sont enregistrées dans des fichiers lisibles sur ce Mac.</p>
+          <div class="reglage-actions">
+            <button class="btn btn-ghost" id="reglOuvrirDossier">Ouvrir le dossier de données</button>
+            <button class="btn btn-ghost" id="reglExporter">Exporter une sauvegarde…</button>
+            <button class="btn btn-ghost" id="reglImporter">Importer une sauvegarde…</button>
+            <button class="btn btn-ghost" id="reglExportCsv">Exporter le journal (CSV)…</button>
+          </div>
+        </div>
+
+        <div class="reglage-bloc">
+          <h3>À propos</h3>
+          <p class="small" id="reglAPropos">Sablier, suivi de mission pour indépendant.</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===================== MODE D'EMPLOI ===================== -->
+    <div class="tab-panel" data-tab-panel="guide" style="display:none">
+      <section class="card">
+        <h2>Le rituel mensuel en bref</h2>
+        <div class="guide-flow">
+          <div class="guide-flow-step"><span class="num">1</span><h4>Saisir au fil de l'eau</h4><p>Le chrono pendant que vous travaillez, ou une ligne ajoutée dans « Journal et relevé » (<kbd>⌘</kbd><kbd>N</kbd>).</p></div>
+          <div class="guide-flow-step"><span class="num">2</span><h4>Contrôler le relevé</h4><p>En fin de mois, « Journal et relevé » montre le travail jour par jour et calcule le temps facturé.</p></div>
+          <div class="guide-flow-step"><span class="num">3</span><h4>Établir la facture</h4><p>Un clic crée la facture numérotée et enregistre la facture et le relevé en PDF dans le dossier des factures (Réglages).</p></div>
+          <div class="guide-flow-step"><span class="num">4</span><h4>Noter l'encaissement</h4><p>Page « Factures et recettes » : marquez la facture payée à réception du virement, le livre des recettes se remplit.</p></div>
+          <div class="guide-flow-step"><span class="num">5</span><h4>Déclarer à l'URSSAF</h4><p>Chaque trimestre, le tableau des recettes donne le chiffre d'affaires encaissé à déclarer.</p></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Page par page</h2>
+
+        <details class="guide-fold" open>
+          <summary>Rappels</summary>
+          <div class="details-body">
+            <ul>
+              <li><strong>Ce que Sablier surveille</strong> : les échéances (chacune avec son délai de rappel, sinon celui des Réglages), les tâches datées, les mois écoulés pas encore facturés, les factures dont le paiement approche ou est dépassé, un chrono qui tourne depuis trop longtemps, un journal sans saisie depuis plusieurs jours.</li>
+              <li><strong>Où ils apparaissent</strong> : en tête du tableau de bord, dans le centre des rappels (bouton <span class="guide-ui">Rappels</span> de la barre latérale, <kbd>⌘</kbd><kbd>⇧</kbd><kbd>R</kbd>), sur la pastille du Dock, et par notification du Mac. Un rappel se reporte à demain ou à dans sept jours, ou se marque fait.</li>
+              <li>Au premier envoi, macOS demande l'autorisation d'afficher les notifications de Sablier : acceptez, ou réglez-la plus tard dans Réglages Système › Notifications.</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="guide-fold">
+          <summary>Journal et chrono</summary>
+          <div class="details-body">
+            <h4>Les lignes du journal</h4>
+            <ul>
+              <li><strong>Jour par jour</strong> : la page « Journal et relevé » montre une ligne par journée (interventions, temps facturé, montant). Un clic la déplie sur ses lignes, que l'on modifie, duplique, supprime ou reprend au chrono.</li>
+              <li><strong>Ajouter une ligne</strong> (bouton en haut de la page, ou <kbd>⌘</kbd><kbd>N</kbd>) : date, axe, intervention (le libellé du relevé), détail facultatif, puis début et fin ou une durée (<span class="guide-ui">1h30</span>, <span class="guide-ui">45 min</span>, <span class="guide-ui">2,5</span>).</li>
+              <li><strong>Chrono</strong> : le bouton en bas de la barre latérale lance le compteur ; vous nommez l'intervention à l'arrêt. Il s'affiche dans un bandeau en haut de l'écran, survit à la fermeture de l'application, et crée la ligne quand vous l'arrêtez. Raccourci : <kbd>⌘</kbd><kbd>⇧</kbd><kbd>T</kbd>, pause avec <kbd>⌘</kbd><kbd>⌥</kbd><kbd>T</kbd>.</li>
+              <li><strong>Reprendre</strong> : sur une ligne existante, ce bouton relance le chrono avec les mêmes libellés.</li>
+              <li><strong>Tâche liée</strong> : dans la fiche d'une ligne, rattachez-la à une tâche : son temps s'ajoute au temps passé de la tâche, et la ligne porte le nom de la tâche dans le journal (un clic ouvre la fiche). Le chrono lancé depuis une carte fait ce lien tout seul.</li>
+              <li><strong>Mois de facturation</strong> : dans la fiche d'une ligne, il vaut par défaut le mois du travail. Choisissez un mois plus tard pour porter ce travail sur un relevé et une facture ultérieurs : la ligne garde sa date dans le journal et porte la pastille <span class="guide-ui">facturé en octobre</span>. Utile pour un travail fait avant le début du contrat.</li>
+            </ul>
+            <h4>Règle de calcul</h4>
+            <div class="guide-note">Les lignes d'une même journée qui portent le même axe et le même libellé d'intervention forment une seule intervention. Chaque intervention compte pour son temps exact ; seul le total du relevé ou de la facture est arrondi au quart d'heure supérieur, une fois (article 6.1 du contrat ; règle du 26/10/2026). Ni le découpage en lignes ni le nombre de séances ne changent donc ce que paie le client. Une intervention se reporte toujours entière : ses lignes partagent le même mois de facturation.</div>
+          </div>
+        </details>
+
+        <details class="guide-fold">
+          <summary>Journal et relevé, factures</summary>
+          <div class="details-body">
+            <ul>
+              <li>Le <strong>relevé</strong> reprend le modèle du contrat : date, axe, nature du travail, temps passé, temps facturé, montant ; à l'écran, il se lit jour par jour, et le PDF garde le détail complet. Les frais de déplacement autorisés s'ajoutent sur justificatifs. Une ligne peut être non facturable (0 €, motif affiché) ou porter un forfait.</li>
+              <li><strong>Travaux réalisés</strong> : les tâches terminées dans le mois peuvent être jointes au relevé en annexe, pour donner au client une vue de ce qui a avancé (les premières sont affichées, « Voir plus » montre le reste).</li>
+              <li><strong>Établir la facture</strong> fige les lignes pas encore facturées du mois : numéro continu (année-numéro), date d'émission, échéance à trente jours, conditions de règlement (pénalités de retard et indemnité de 40 € toujours imprimées) avec vos coordonnées bancaires. Un mois peut porter plusieurs factures. Seul le numéro suivant est accepté, et la date ne peut pas précéder celle de la facture précédente. Une facture émise ne se modifie plus ; seule la dernière peut être supprimée en cas d'erreur avant envoi, et jamais une fois encaissée. La facture et le relevé du mois sont enregistrés en PDF dans le dossier des factures choisi dans les Réglages, sous-dossier du mois (« 2026-11 novembre »), créé au besoin ; « Refaire les PDF » ajoute une copie (« Facture-2026-01 (2).pdf ») sans toucher aux PDF déjà enregistrés : prestataire, client et relevé restent ceux de l'émission.</li>
+              <li><strong>Reporter sur un autre mois</strong> déplace des interventions vers le relevé et la facture d'un mois ultérieur, sans toucher à leur date : le travail de septembre peut ainsi être facturé en octobre. Le relevé de départ et celui d'arrivée l'annoncent chacun d'un bandeau, la ligne porte la mention « Réalisé en septembre 2026 » sur l'écran comme sur le PDF du relevé. La facture, elle, ne dit pas quand le travail a été réalisé : ni date ni mois d'origine, et son annexe regroupe les interventions par axe et libellé, temps et montants additionnés ; la trace reste dans le journal et le relevé. Une intervention déjà portée par une facture ne se reporte plus.</li>
+              <li><strong>Factures et recettes</strong> (onglet sous « Journal et relevé ») montre les factures émises, le livre des recettes (à remplir en marquant chaque facture payée) et le tableau des trimestres URSSAF, avec cotisations estimées (taux ACRE jusqu'au 30 septembre 2027, taux plein ensuite) et une case « Déclaré » par trimestre.</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="guide-fold">
+          <summary>Tâches, notes et échéances</summary>
+          <div class="details-body">
+            <ul>
+              <li><strong>Tâches</strong> : trois colonnes (À faire, En cours, Fait). Glissez les cartes d'une colonne à l'autre ; elles se rangent d'elles-mêmes par priorité puis par échéance. Un clic ouvre la <strong>fiche</strong> : étapes à cocher (l'avancement s'affiche sur la carte), pièces jointes (fichiers et images glissés depuis le Finder, liens, extraits de code), pages de notes liées, journal d'avancement daté, temps passé d'après le journal. Depuis une carte, <span class="guide-ui">Chrono</span> lance le compteur sur cette tâche.</li>
+              <li><strong>Idées</strong> : elles se notent dans la page de notes « Idées en vrac » (style <span class="guide-ui">Idée</span> : bouton ampoule de la barre, <span class="guide-ui">/</span> puis « Idée », ou <span class="guide-ui">? </span> en début de ligne). Dans une idée, Entrée passe à la ligne pour le détail ; deux fois Entrée en sort. Le bouton <span class="guide-ui">En faire une tâche</span> crée la tâche dans « À faire », liée à la page ; le bouton <span class="guide-ui">Tâche</span> de la barre fait de même pour n'importe quelle ligne.</li>
+              <li><strong>Notes</strong> : des pages et sous-pages, à la manière d'un carnet. Une page s'écrit d'un seul tenant, comme dans Notes d'Apple : Entrée passe à la ligne, <kbd>⇧</kbd><kbd>Entrée</kbd> va à la ligne sans changer de paragraphe. La barre au-dessus de la page donne le style des lignes sélectionnées (texte ou titre, listes, cases à cocher, citation, encadré, idée, séparateur), le gras, l'italique, le souligné, le barré, le surlignage et les liens. Au clavier : <span class="guide-ui">/</span> sur une ligne vide pour insérer ; <span class="guide-ui"># </span> titre, <span class="guide-ui">- </span> liste, <span class="guide-ui">1. </span> liste numérotée, <span class="guide-ui">[] </span> case, <span class="guide-ui">&gt; </span> citation en début de ligne ; <kbd>⇧</kbd><kbd>⌘</kbd><kbd>L</kbd> case à cocher, <kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd> liste, <kbd>⌥</kbd><kbd>⌘</kbd><kbd>1</kbd> à <kbd>3</kbd> titres, <kbd>⌥</kbd><kbd>⌘</kbd><kbd>0</kbd> texte ; <kbd>Tab</kbd> décale une ligne de liste, <kbd>⌥</kbd><kbd>⇧</kbd><kbd>↑</kbd> ou <kbd>↓</kbd> la déplace ; <kbd>⌘</kbd><kbd>Entrée</kbd> coche une case ; <kbd>⌘</kbd><kbd>Z</kbd> annule. Un texte collé arrive toujours sans mise en forme. La recherche, à gauche, cherche aussi dans le contenu des pages. Sous le titre, la bande « Tâches liées » relie la page à des tâches, dans les deux sens. Tout s'enregistre au fil de la frappe.</li>
+              <li><strong>Échéances</strong> : le calendrier administratif de la micro-entreprise (ACRE, CFE, déclarations URSSAF, attestation de vigilance, bilan de l'été 2027) et vos propres rappels, chacun avec son délai de rappel.</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="guide-fold">
+          <summary>Données et sauvegardes</summary>
+          <div class="details-body">
+            <ul>
+              <li>Tout est enregistré dans des fichiers JSON lisibles, dans le dossier de données de l'application (bouton dans Réglages). Une copie datée est faite automatiquement une fois par jour, même si l'application reste ouverte, les trente dernières sont conservées. Les fichiers joints aux tâches sont copiés dans le sous-dossier <span class="guide-ui">Pieces</span>.</li>
+              <li><span class="guide-ui">Exporter une sauvegarde…</span> produit un fichier unique à conserver ailleurs (les fichiers joints n'y sont pas : sauvegardez le dossier de données entier, Time Machine s'en charge) ; <span class="guide-ui">Importer…</span> le restaure.</li>
+              <li>Aucune donnée personnelle de vos clients n'a sa place ici : le journal décrit votre travail, pas les clients.</li>
+            </ul>
+          </div>
+        </details>
+      </section>
+    </div>
+
+  </div><!-- /principal -->
+</div><!-- /wrap -->
+
+<div class="status-bar" id="statusBar"></div>
+<div id="modaleRacine"></div>
+
+<script src="js/utils.js"></script>
+<script src="js/calculs.js"></script>
+<script src="js/donnees.js"></script>
+<script src="js/graphique.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/bulle.js"></script>
+<script src="js/gabarits.js"></script>
+<script src="js/rappels.js"></script>
+<script src="js/page-tableau-de-bord.js"></script>
+<script src="js/page-journal.js"></script>
+<script src="js/page-releve.js"></script>
+<script src="js/page-factures.js"></script>
+<script src="js/page-taches.js"></script>
+<script src="js/page-notes.js"></script>
+<script src="js/page-echeances.js"></script>
+<script src="js/page-reglages.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
