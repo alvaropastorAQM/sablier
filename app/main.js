@@ -124,7 +124,7 @@ function creerMenu() {
       submenu: [
         { label: 'À propos de Sablier', role: 'about' },
         { type: 'separator' },
-        { label: 'Réglages…', accelerator: 'Command+,', click: () => envoyerCommande('page:reglages') },
+        { label: 'Réglages…', accelerator: 'CommandOrControl+,', click: () => envoyerCommande('page:reglages') },
         { label: 'Ouvrir le dossier de données', click: () => { shell.openPath(donnees.dossier); } },
         { label: 'Exporter une sauvegarde…', click: () => envoyerCommande('exporter') },
         { label: 'Importer une sauvegarde…', click: () => envoyerCommande('importer') },
@@ -139,13 +139,13 @@ function creerMenu() {
     {
       label: 'Fichier',
       submenu: [
-        { label: 'Nouvelle ligne de journal', accelerator: 'Command+N', click: () => envoyerCommande('nouvelle-saisie') },
-        { label: 'Démarrer ou arrêter le chrono', accelerator: 'Command+Shift+T', click: () => envoyerCommande('chrono') },
-        { label: 'Mettre en pause ou reprendre le chrono', accelerator: 'Command+Alt+T', click: () => envoyerCommande('pause-chrono') },
+        { label: 'Nouvelle ligne de journal', accelerator: 'CommandOrControl+N', click: () => envoyerCommande('nouvelle-saisie') },
+        { label: 'Démarrer ou arrêter le chrono', accelerator: 'CommandOrControl+Shift+T', click: () => envoyerCommande('chrono') },
+        { label: 'Mettre en pause ou reprendre le chrono', accelerator: 'CommandOrControl+Alt+T', click: () => envoyerCommande('pause-chrono') },
         { type: 'separator' },
-        { label: 'Nouvelle tâche', accelerator: 'Command+Shift+N', click: () => envoyerCommande('nouvelle-tache') },
-        { label: 'Nouvelle page de notes', accelerator: 'Command+Shift+P', click: () => envoyerCommande('nouvelle-page') },
-        { label: 'Rappels…', accelerator: 'Command+Shift+R', click: () => envoyerCommande('rappels') },
+        { label: 'Nouvelle tâche', accelerator: 'CommandOrControl+Shift+N', click: () => envoyerCommande('nouvelle-tache') },
+        { label: 'Nouvelle page de notes', accelerator: 'CommandOrControl+Shift+P', click: () => envoyerCommande('nouvelle-page') },
+        { label: 'Rappels…', accelerator: 'CommandOrControl+Shift+R', click: () => envoyerCommande('rappels') },
         { type: 'separator' },
         { label: 'Fermer', role: 'close' },
       ],
@@ -154,8 +154,8 @@ function creerMenu() {
       label: 'Édition',
       submenu: [
         /* L'éditeur de notes tient son propre historique : la page décide. */
-        { label: 'Annuler', accelerator: 'Command+Z', click: () => envoyerCommande('annuler') },
-        { label: 'Rétablir', accelerator: 'Shift+Command+Z', click: () => envoyerCommande('retablir') },
+        { label: 'Annuler', accelerator: 'CommandOrControl+Z', click: () => envoyerCommande('annuler') },
+        { label: 'Rétablir', accelerator: 'Shift+CommandOrControl+Z', click: () => envoyerCommande('retablir') },
         { type: 'separator' },
         { label: 'Couper', role: 'cut' },
         { label: 'Copier', role: 'copy' },
@@ -165,7 +165,7 @@ function creerMenu() {
     },
     {
       label: 'Affichage',
-      submenu: pages.map(p => ({ label: p[0], accelerator: 'Command+' + p[2], click: () => envoyerCommande('page:' + p[1]) })).concat([
+      submenu: pages.map(p => ({ label: p[0], accelerator: 'CommandOrControl+' + p[2], click: () => envoyerCommande('page:' + p[1]) })).concat([
         { type: 'separator' },
         { label: 'Recharger', role: 'reload' },
         { label: 'Taille réelle', role: 'resetZoom' },

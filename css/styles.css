@@ -80,9 +80,9 @@
   --gap-grid:      14px;
 
   /* ---------- Typographie ---------- */
-  --font-ui:    -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", system-ui, sans-serif;
-  --font-serif: "New York", "Iowan Old Style", Georgia, serif;
-  --font-mono:  "SF Mono", Menlo, Consolas, monospace;
+  --font-ui:    "Inter", system-ui, sans-serif;
+  --font-serif: "Charter", Georgia, serif;
+  --font-mono:  "JetBrains Mono", Menlo, Consolas, monospace;
 
   /* ---------- Mouvement ---------- */
   --spring-apple:    cubic-bezier(0.22, 1, 0.36, 1);

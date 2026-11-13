@@ -15,7 +15,7 @@ function styleDocument() {
   return '<style>'
     + '@page { size: A4; margin: 16mm 15mm 18mm; }'
     + 'html, body { margin: 0; padding: 0; }'
-    + 'body { font-family: "Avenir Next", "Avenir", -apple-system, "Helvetica Neue", Arial, sans-serif; font-size: 10.5pt; color: #1C2B3A; line-height: 1.45; font-feature-settings: "tnum" 1, "lnum" 1; -webkit-print-color-adjust: exact; print-color-adjust: exact; }'
+    + 'body { font-family: "Nunito Sans", "Avenir Next", Arial, sans-serif; font-size: 10.5pt; color: #1C2B3A; line-height: 1.45; font-feature-settings: "tnum" 1, "lnum" 1; -webkit-print-color-adjust: exact; print-color-adjust: exact; }'
     + 'h1, h2, h3 { font-family: "Charter", "Iowan Old Style", "Georgia", serif; margin: 0; }'
     + 'p { margin: 0; }'
     + '.bandeau { background: #1F497D; color: #FFFFFF; padding: 8mm 8mm 7mm; border-radius: 3mm; display: flex; justify-content: space-between; align-items: flex-end; gap: 8mm; }'

@@ -3,7 +3,7 @@
 
    Le HTML (relevé, facture) est rendu dans une fenêtre cachée puis
    imprimé en PDF par Chromium : aucune bibliothèque, mêmes polices
-   que l'interface (Charter, Avenir Next).
+   polices livrées avec l'application (Charter, Nunito Sans).
    ============================================================ */
 'use strict';
 
@@ -32,11 +32,33 @@ async function genererPdf(parent, html, nomFichier, dossierDefaut) {
   return rendrePdf(html, filePath);
 }
 
+/* The HTML is printed from a temporary file, where relative font URLs do
+   not resolve: the bundled fonts go inline, as data URLs. */
+const POLICES_PDF = [
+  ['Nunito Sans', 'NunitoSans-Variable.ttf', 'truetype', '200 1000', 'normal'],
+  ['Nunito Sans', 'NunitoSans-Italic-Variable.ttf', 'truetype', '200 1000', 'italic'],
+  ['Charter', 'charter_regular.woff2', 'woff2', '400', 'normal'],
+  ['Charter', 'charter_italic.woff2', 'woff2', '400', 'italic'],
+  ['Charter', 'charter_bold.woff2', 'woff2', '600 700', 'normal'],
+  ['Charter', 'charter_bold_italic.woff2', 'woff2', '600 700', 'italic'],
+];
+let stylePolices = null;
+function policesEnLigne() {
+  if (stylePolices === null) {
+    const dossier = path.join(__dirname, '..', 'css', 'fonts');
+    stylePolices = '<style>' + POLICES_PDF.map(([famille, fichier, format, graisse, style]) => {
+      const donnees = fs.readFileSync(path.join(dossier, fichier)).toString('base64');
+      return '@font-face { font-family: "' + famille + '"; src: url(data:font/' + (format === 'woff2' ? 'woff2' : 'ttf') + ';base64,' + donnees + ') format("' + format + '"); font-weight: ' + graisse + '; font-style: ' + style + '; }';
+    }).join('') + '</style>';
+  }
+  return stylePolices;
+}
+
 async function rendrePdf(html, filePath, options) {
   const tmp = path.join(os.tmpdir(), 'sablier-' + Date.now() + '-' + Math.random().toString(36).slice(2) + '.html');
   let w = null;
   try {
-    fs.writeFileSync(tmp, String(html), 'utf8');
+    fs.writeFileSync(tmp, String(html).replace('<head>', '<head>' + policesEnLigne()), 'utf8');
     w = new BrowserWindow({
       show: false, width: 900, height: 1200,
       webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },

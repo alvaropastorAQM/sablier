@@ -1,0 +1,10 @@
+/* Bundled open fonts, so the interface looks the same on every system:
+   Inter stands in for SF Pro, Charter for New York, JetBrains Mono for
+   SF Mono. Licenses sit next to the files in css/fonts/. */
+@font-face { font-family: "Inter"; src: url("fonts/InterVariable.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: block; }
+@font-face { font-family: "Inter"; src: url("fonts/InterVariable-Italic.woff2") format("woff2"); font-weight: 100 900; font-style: italic; font-display: block; }
+@font-face { font-family: "Charter"; src: url("fonts/charter_regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+@font-face { font-family: "Charter"; src: url("fonts/charter_italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: block; }
+@font-face { font-family: "Charter"; src: url("fonts/charter_bold.woff2") format("woff2"); font-weight: 600 700; font-style: normal; font-display: block; }
+@font-face { font-family: "Charter"; src: url("fonts/charter_bold_italic.woff2") format("woff2"); font-weight: 600 700; font-style: italic; font-display: block; }
+@font-face { font-family: "JetBrains Mono"; src: url("fonts/JetBrainsMono-Variable.ttf") format("truetype"); font-weight: 100 800; font-style: normal; font-display: block; }

@@ -11,7 +11,8 @@
     "smoke": "SABLIER_SMOKE=1 SABLIER_DONNEES=/tmp/sablier-smoke SABLIER_CAPTURES=/tmp/sablier-smoke electron .",
     "app:build": "electron-builder --mac --dir && node outils/masquer-extension-app.js && npm run app:install",
     "app:dist": "electron-builder --mac && node outils/masquer-extension-app.js",
-    "app:install": "rm -rf /Applications/Sablier.app && cp -R dist-app/mac-arm64/Sablier.app /Applications/Sablier.app"
+    "app:install": "rm -rf /Applications/Sablier.app && cp -R dist-app/mac-arm64/Sablier.app /Applications/Sablier.app",
+    "app:build:linux": "electron-builder --linux --dir && node outils/installer-linux.js"
   },
   "build": {
     "appId": "com.example.sablier",
@@ -31,6 +32,12 @@
       "target": "dir",
       "identity": null,
       "icon": "app/icone.icns"
+    },
+    "linux": {
+      "target": "dir",
+      "executableName": "sablier",
+      "category": "Office",
+      "icon": "app/icone.png"
     }
   },
   "devDependencies": {
