@@ -180,14 +180,16 @@ try {
   ETAT.reglages.prestataire.iban = 'FR7612345678901234567890123'; ETAT.reglages.prestataire.bic = 'BANKFRPPXXX'; ETAT.reglages.prestataire.email = 'test@example.org'; ETAT.reglages.prestataire.telephone = '0612345678'; ETAT.reglages.prestataire.adresse = '12 rue des Essais, 75000 Paris';
   var rel = releveDuMois(entreesJournal(), moisCourant(), ETAT.reglages, 0);
   var fx = construireFacture(rel, ETAT.reglages, { numero: '2099-01', dateEmission: aujourdhui(), travaux: [], factures: [] });
-  var hf = htmlFacture(fx);
+  /* The checks read the document, not its <style>, where the fonts travel as base64. */
+  var sansStyle = function (h) { return h.replace(/<style>[\s\S]*?<\/style>/g, ''); };
+  var hf = sansStyle(htmlFacture(fx));
   res.factureEpuree = hf.indexOf('APE') < 0 && hf.indexOf('SIRET 123 456 789 00015') > 0 && hf.indexOf('L. 441-10 of the French Commercial Code') > 0 && hf.indexOf('06 12 34 56 78') > 0 && hf.indexOf('<div>12 rue des Essais</div><div>75000 Paris</div>') > 0;
   res.factureReglement = hf.indexOf('class="rib"') > 0 && hf.indexOf('FR76 1234 5678 9012 3456 7890 123') > 0 && hf.indexOf(titulaireSeed) > 0 && hf.indexOf(banqueSeed) > 0 && hf.indexOf('Early payment discount: none') > 0 && hf.indexOf('fixed recovery fee of €40') > 0 && hf.indexOf('Total due') > 0 && hf.indexOf(ETAT.reglages.prestataire.nom + ' EI</div>') > 0;
   /* The invoice does not say when the work was done: no Date column,
      no "Done in" mention, no day date in the annex. */
   res.factureSansDate = hf.indexOf('<th class="num">Date</th>') < 0 && hf.indexOf('Done in') < 0 && !/\d{2}\/\d{2}\/\d{4}<\/td>/.test(hf.split('class="annexe"')[1] || '') && hf.indexOf('Annex to invoice no. 2099-01') > 0;
   ETAT.reglages.prestataire = JSON.parse(sauveP);
-  res.releveEpure = htmlReleve(rel, {}).indexOf('APE') < 0;
+  res.releveEpure = sansStyle(htmlReleve(rel, {})).indexOf('APE') < 0;
   /* --- Notes editor: a single area, one line per line break --- */
   afficherPage('notes');
   creerPageNotes(null);
