@@ -25,6 +25,8 @@ npm run app:build    # tests, construction de release/Sablier.app, auto-test com
 ```
 
 Il faut Node.js, Rust et les outils Xcode ; aucune dépendance npm.
+L'app ne tourne que sur macOS pour l'instant ; pour la porter sous Windows,
+voir [docs/MIGRATION-WINDOWS.md](docs/MIGRATION-WINDOWS.md).
 L'application se lance depuis `/Applications/Sablier.app` (Dock, Spotlight).
 Chaque construction y est recopiée automatiquement, seulement si elle passe
 l'auto-test, après avoir demandé à Sablier ouvert de quitter : une copie
