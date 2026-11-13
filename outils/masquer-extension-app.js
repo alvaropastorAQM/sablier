@@ -1,6 +1,6 @@
-/* Masque l'extension « .app » du bundle construit (attribut Finder) :
-   le Dock et le Finder affichent alors « Sablier » et non « Sablier.app ».
-   Lancé automatiquement après chaque construction. */
+/* Hides the ".app" extension of the built bundle (Finder attribute):
+   the Dock and the Finder then show "Sablier" and not "Sablier.app".
+   Run automatically after each build. */
 'use strict';
 const { execFileSync } = require('child_process');
 const fs = require('fs');
@@ -11,8 +11,8 @@ const racine = path.join(__dirname, '..');
   if (!fs.existsSync(p)) return;
   try {
     execFileSync('/usr/bin/SetFile', ['-a', 'E', p]);
-    console.log('Extension .app masquée : ' + p);
+    console.log('.app extension hidden: ' + p);
   } catch (e) {
-    console.log('SetFile indisponible (' + e.message + ') : extension laissée visible.');
+    console.log('SetFile unavailable (' + e.message + '): extension left visible.');
   }
 });

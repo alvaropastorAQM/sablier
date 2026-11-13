@@ -1,14 +1,14 @@
 /* ============================================================
-   Sablier : application macOS (Electron)
-   Process principal : fenêtre, menus, données en fichiers, PDF,
-   pièces jointes des tâches, notifications et pastille du Dock.
+   Sablier: desktop application (Electron)
+   Main process: window, menus, file-based data, PDF,
+   task attachments, notifications and badge count.
 
-   Variables d'environnement utiles :
-     SABLIER_DONNEES=<dossier>  emplacement des données (tests), profil
-                                Electron dans <dossier>-electron
-     SABLIER_SMOKE=1            auto-test : fenêtre cachée, captures des
-                                pages dans SABLIER_CAPTURES (ou /tmp), quitte ;
-                                refusé sans SABLIER_DONNEES jetable
+   Useful environment variables:
+     SABLIER_DONNEES=<folder>   data location (tests), Electron profile
+                                in <folder>-electron
+     SABLIER_SMOKE=1            self-test: hidden window, page screenshots
+                                in SABLIER_CAPTURES (or /tmp), then quits;
+                                refused without a disposable SABLIER_DONNEES
    ============================================================ */
 'use strict';
 
@@ -24,19 +24,19 @@ const { genererPdf, rendrePdf, cheminLibre } = require('./pdf.js');
 const MODE_SMOKE = process.env.SABLIER_SMOKE === '1';
 const VERSION = require('../package.json').version;
 
-/* L'auto-test écrit des données d'essai : jamais dans les vraies. */
+/* The self-test writes test data: never into the real data. */
 if (MODE_SMOKE && (!process.env.SABLIER_DONNEES || path.resolve(process.env.SABLIER_DONNEES) === path.join(app.getPath('appData'), 'Sablier', 'Donnees'))) {
-  process.stderr.write('Auto-test refusé : SABLIER_SMOKE exige SABLIER_DONNEES=<dossier jetable>.\n');
+  process.stderr.write('Self-test refused: SABLIER_SMOKE requires SABLIER_DONNEES=<disposable folder>.\n');
   process.exit(1);
 }
 
 app.setName('Sablier');
-/* Avec SABLIER_DONNEES (tests), le profil Electron va à côté du dossier de
-   données : l'auto-test tourne même quand Sablier est ouvert. */
+/* With SABLIER_DONNEES (tests), the Electron profile goes next to the data
+   folder: the self-test runs even while Sablier is open. */
 app.setPath('userData', process.env.SABLIER_DONNEES ? path.resolve(process.env.SABLIER_DONNEES) + '-electron' : path.join(app.getPath('appData'), 'Sablier'));
 
-/* Les images jointes aux tâches sont servies par un protocole interne,
-   limité au dossier Pieces des données. */
+/* Images attached to tasks are served through an internal protocol,
+   limited to the Pieces folder of the data. */
 protocol.registerSchemesAsPrivileged([{ scheme: 'sablier-piece', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 
 let fenetre = null;
@@ -66,9 +66,9 @@ function creerFenetre() {
     height: 940,
     minWidth: 1024,
     minHeight: 700,
-    /* Verre du système derrière la barre latérale et autour de la scène ;
-       les captures de l'auto-test (fenêtre cachée) ne le voient pas, elles
-       gardent le fond de la page. */
+    /* System glass behind the sidebar and around the stage; the self-test
+       screenshots (hidden window) do not see it and keep the page
+       background. */
     backgroundColor: MODE_SMOKE ? '#0B0C0E' : '#00000000',
     vibrancy: MODE_SMOKE ? undefined : 'sidebar',
     visualEffectState: 'followWindow',
@@ -89,14 +89,14 @@ function creerFenetre() {
     if (url.startsWith('http://') || url.startsWith('https://')) shell.openExternal(url);
     return { action: 'deny' };
   });
-  /* Un fichier déposé hors d'une zone prévue, ou un lien, ne doit jamais
-     remplacer l'interface par une navigation. */
+  /* A file dropped outside a drop zone, or a link, must never replace the
+     interface with a navigation. */
   fenetre.webContents.on('will-navigate', (ev) => { ev.preventDefault(); });
   fenetre.on('closed', () => { fenetre = null; });
 }
 
-/* Montre la fenêtre (la recrée au besoin) puis exécute « apres » quand
-   l'interface est prête à recevoir une commande. */
+/* Shows the window (recreating it if needed), then runs "apres" once the
+   interface is ready to receive a command. */
 function montrerFenetre(apres) {
   if (!fenetre || fenetre.isDestroyed()) {
     creerFenetre();
@@ -115,74 +115,74 @@ function envoyerCommande(nom) {
 
 function creerMenu() {
   const pages = [
-    ['Tableau de bord', 'tableau', '1'], ['Journal et relevé', 'releve', '2'], ['Factures et recettes', 'factures', '3'],
-    ['Tâches', 'taches', '4'], ['Notes', 'notes', '5'], ['Échéances', 'echeances', '6'], ['Réglages', 'reglages', '7'], ['Mode d\'emploi', 'guide', '8'],
+    ['Dashboard', 'tableau', '1'], ['Log and statement', 'releve', '2'], ['Invoices and income', 'factures', '3'],
+    ['Tasks', 'taches', '4'], ['Notes', 'notes', '5'], ['Deadlines', 'echeances', '6'], ['Settings', 'reglages', '7'], ['User guide', 'guide', '8'],
   ];
   const modele = [
     {
       label: 'Sablier',
       submenu: [
-        { label: 'À propos de Sablier', role: 'about' },
+        { label: 'About Sablier', role: 'about' },
         { type: 'separator' },
-        { label: 'Réglages…', accelerator: 'CommandOrControl+,', click: () => envoyerCommande('page:reglages') },
-        { label: 'Ouvrir le dossier de données', click: () => { shell.openPath(donnees.dossier); } },
-        { label: 'Exporter une sauvegarde…', click: () => envoyerCommande('exporter') },
-        { label: 'Importer une sauvegarde…', click: () => envoyerCommande('importer') },
+        { label: 'Settings…', accelerator: 'CommandOrControl+,', click: () => envoyerCommande('page:reglages') },
+        { label: 'Open data folder', click: () => { shell.openPath(donnees.dossier); } },
+        { label: 'Export a backup…', click: () => envoyerCommande('exporter') },
+        { label: 'Import a backup…', click: () => envoyerCommande('importer') },
         { type: 'separator' },
-        { label: 'Masquer Sablier', role: 'hide' },
-        { label: 'Masquer les autres', role: 'hideOthers' },
-        { label: 'Tout afficher', role: 'unhide' },
+        { label: 'Hide Sablier', role: 'hide' },
+        { label: 'Hide others', role: 'hideOthers' },
+        { label: 'Show all', role: 'unhide' },
         { type: 'separator' },
-        { label: 'Quitter Sablier', role: 'quit' },
+        { label: 'Quit Sablier', role: 'quit' },
       ],
     },
     {
-      label: 'Fichier',
+      label: 'File',
       submenu: [
-        { label: 'Nouvelle ligne de journal', accelerator: 'CommandOrControl+N', click: () => envoyerCommande('nouvelle-saisie') },
-        { label: 'Démarrer ou arrêter le chrono', accelerator: 'CommandOrControl+Shift+T', click: () => envoyerCommande('chrono') },
-        { label: 'Mettre en pause ou reprendre le chrono', accelerator: 'CommandOrControl+Alt+T', click: () => envoyerCommande('pause-chrono') },
+        { label: 'New log entry', accelerator: 'CommandOrControl+N', click: () => envoyerCommande('nouvelle-saisie') },
+        { label: 'Start or stop the timer', accelerator: 'CommandOrControl+Shift+T', click: () => envoyerCommande('chrono') },
+        { label: 'Pause or resume the timer', accelerator: 'CommandOrControl+Alt+T', click: () => envoyerCommande('pause-chrono') },
         { type: 'separator' },
-        { label: 'Nouvelle tâche', accelerator: 'CommandOrControl+Shift+N', click: () => envoyerCommande('nouvelle-tache') },
-        { label: 'Nouvelle page de notes', accelerator: 'CommandOrControl+Shift+P', click: () => envoyerCommande('nouvelle-page') },
-        { label: 'Rappels…', accelerator: 'CommandOrControl+Shift+R', click: () => envoyerCommande('rappels') },
+        { label: 'New task', accelerator: 'CommandOrControl+Shift+N', click: () => envoyerCommande('nouvelle-tache') },
+        { label: 'New notes page', accelerator: 'CommandOrControl+Shift+P', click: () => envoyerCommande('nouvelle-page') },
+        { label: 'Reminders…', accelerator: 'CommandOrControl+Shift+R', click: () => envoyerCommande('rappels') },
         { type: 'separator' },
-        { label: 'Fermer', role: 'close' },
+        { label: 'Close', role: 'close' },
       ],
     },
     {
-      label: 'Édition',
+      label: 'Edit',
       submenu: [
-        /* L'éditeur de notes tient son propre historique : la page décide. */
-        { label: 'Annuler', accelerator: 'CommandOrControl+Z', click: () => envoyerCommande('annuler') },
-        { label: 'Rétablir', accelerator: 'Shift+CommandOrControl+Z', click: () => envoyerCommande('retablir') },
+        /* The notes editor keeps its own history: the page decides. */
+        { label: 'Undo', accelerator: 'CommandOrControl+Z', click: () => envoyerCommande('annuler') },
+        { label: 'Redo', accelerator: 'Shift+CommandOrControl+Z', click: () => envoyerCommande('retablir') },
         { type: 'separator' },
-        { label: 'Couper', role: 'cut' },
-        { label: 'Copier', role: 'copy' },
-        { label: 'Coller', role: 'paste' },
-        { label: 'Tout sélectionner', role: 'selectAll' },
+        { label: 'Cut', role: 'cut' },
+        { label: 'Copy', role: 'copy' },
+        { label: 'Paste', role: 'paste' },
+        { label: 'Select all', role: 'selectAll' },
       ],
     },
     {
-      label: 'Affichage',
+      label: 'View',
       submenu: pages.map(p => ({ label: p[0], accelerator: 'CommandOrControl+' + p[2], click: () => envoyerCommande('page:' + p[1]) })).concat([
         { type: 'separator' },
-        { label: 'Recharger', role: 'reload' },
-        { label: 'Taille réelle', role: 'resetZoom' },
-        { label: 'Agrandir', role: 'zoomIn' },
-        { label: 'Réduire', role: 'zoomOut' },
+        { label: 'Reload', role: 'reload' },
+        { label: 'Actual size', role: 'resetZoom' },
+        { label: 'Zoom in', role: 'zoomIn' },
+        { label: 'Zoom out', role: 'zoomOut' },
         { type: 'separator' },
-        { label: 'Plein écran', role: 'togglefullscreen' },
-        { label: 'Outils de développement', role: 'toggleDevTools' },
+        { label: 'Full screen', role: 'togglefullscreen' },
+        { label: 'Developer tools', role: 'toggleDevTools' },
       ]),
     },
     {
-      label: 'Fenêtre',
+      label: 'Window',
       submenu: [
-        { label: 'Réduire', role: 'minimize' },
+        { label: 'Minimize', role: 'minimize' },
         { label: 'Zoom', role: 'zoom' },
         { type: 'separator' },
-        { label: 'Tout ramener au premier plan', role: 'front' },
+        { label: 'Bring all to front', role: 'front' },
       ],
     },
   ];
@@ -190,11 +190,11 @@ function creerMenu() {
 }
 
 /* ============================================================
-   PIÈCES JOINTES : Donnees/Pieces/<tâche>/<fichier>
+   ATTACHMENTS: Donnees/Pieces/<task>/<file>
    ============================================================ */
 function nettoyerSegment(s) { return String(s || '').replace(/[^A-Za-z0-9_.-]/g, '_').replace(/^\.+/, '_').slice(0, 80) || 'piece'; }
-/* Nom de fichier sûr : pas de séparateur, l'extension conservée, au plus
-   200 octets (limite du système de fichiers à 255). */
+/* Safe file name: no separator, extension kept, at most 200 bytes (the
+   file system limit is 255). */
 function nettoyerNomFichier(s) {
   const nom = String(s || 'fichier').replace(/[\/\\:\x00-\x1f]/g, '_').replace(/^\.+/, '_');
   const ext = path.extname(nom).slice(0, 16);
@@ -203,14 +203,14 @@ function nettoyerNomFichier(s) {
   return (base + ext) || 'fichier';
 }
 function dossierPieces() { return path.join(donnees.dossier, 'Pieces'); }
-/* Chemin absolu d'une pièce, refusé s'il sort du dossier Pieces. */
+/* Absolute path of an attachment, refused if it leaves the Pieces folder. */
 function cheminPiece(relatif) {
   const racine = dossierPieces();
   const cible = path.resolve(racine, String(relatif || ''));
   if (cible !== racine && !cible.startsWith(racine + path.sep)) return null;
   return cible;
 }
-/* Formats que Chromium sait afficher en vignette (HEIC, TIFF : non). */
+/* Formats Chromium can show as a thumbnail (not HEIC, TIFF). */
 const EXT_IMAGES = /\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i;
 
 async function copierPieces(tacheId, chemins) {
@@ -220,7 +220,7 @@ async function copierPieces(tacheId, chemins) {
   for (const src of chemins) {
     try {
       const st = await fs.promises.stat(src);
-      if (!st.isFile()) { erreurs.push(path.basename(src) + ' : pas un fichier'); continue; }
+      if (!st.isFile()) { erreurs.push(path.basename(src) + ': not a file'); continue; }
       const nom = nettoyerNomFichier(path.basename(src));
       const ext = path.extname(nom);
       const base = path.basename(nom, ext);
@@ -229,34 +229,34 @@ async function copierPieces(tacheId, chemins) {
       while (fs.existsSync(cible)) cible = path.join(dossier, base + '-' + (++i) + ext);
       await fs.promises.copyFile(src, cible);
       pieces.push({ nom: path.basename(cible), fichier: nettoyerSegment(tacheId) + '/' + path.basename(cible), taille: st.size, image: EXT_IMAGES.test(cible) });
-    } catch (e) { erreurs.push(path.basename(src) + ' : ' + e.message); }
+    } catch (e) { erreurs.push(path.basename(src) + ': ' + e.message); }
   }
   return { ok: true, pieces, erreurs };
 }
 
-/* Les chemins que l'interface peut demander à ouvrir ou révéler : ceux
-   que l'application a elle-même produits (PDF, exports). */
+/* Paths the interface may ask to open or reveal: only those the
+   application produced itself (PDFs, exports). */
 const cheminsOuvrables = new Set();
 
 /* ============================================================
-   PONT NATIF
+   NATIVE BRIDGE
    ============================================================ */
 function installerPont() {
   const dossier = process.env.SABLIER_DONNEES || path.join(app.getPath('userData'), 'Donnees');
   donnees = new Donnees(dossier);
   donnees.sauvegardeQuotidienne();
-  /* L'application reste ouverte des semaines : la copie du jour ne dépend pas d'un lancement. */
+  /* The app stays open for weeks: the daily copy does not depend on a launch. */
   setInterval(() => { donnees.purger(); donnees.sauvegardeQuotidienne(); }, 3600000);
 
   ipcMain.on('donnees:charger', (ev) => {
     ev.returnValue = donnees.lireTout();
     if ((donnees.illisibles.length || donnees.absents.length) && !MODE_SMOKE) {
-      const liste = donnees.illisibles.map(x => x.nom + '.json (conservé sous ' + path.basename(x.copie) + ')').concat(donnees.absents.map(nom => nom + '.json (absent)')).join('\n');
+      const liste = donnees.illisibles.map(x => x.nom + '.json (kept as ' + path.basename(x.copie) + ')').concat(donnees.absents.map(nom => nom + '.json (missing)')).join('\n');
       setTimeout(() => {
         dialog.showMessageBox(fenetre, {
-          type: 'warning', buttons: ['Ouvrir le dossier de données', 'Continuer'], defaultId: 1,
-          message: 'Un fichier de données manque ou n\'a pas pu être lu',
-          detail: liste + '\n\nUn fichier abîmé est mis de côté et l\'application repart avec des valeurs de départ pour cette partie : sans factures.json, la numérotation repartirait à 01. Une copie datée de chaque jour se trouve dans le sous-dossier Sauvegardes : vous pouvez y reprendre la dernière version saine.',
+          type: 'warning', buttons: ['Open data folder', 'Continue'], defaultId: 1,
+          message: 'A data file is missing or could not be read',
+          detail: liste + '\n\nA damaged file is set aside and the app starts with default values for that part: without factures.json, invoice numbering would restart at 01. A dated copy of each day is in the Sauvegardes subfolder: you can recover the last healthy version from there.',
         }).then(r => { if (r && r.response === 0) shell.openPath(donnees.dossier); });
       }, 800);
     }
@@ -270,9 +270,9 @@ function installerPont() {
 
   ipcMain.handle('donnees:exporter', async (ev, paquet, nomFichier) => {
     const { canceled, filePath } = await dialog.showSaveDialog(fenetre, {
-      title: 'Exporter une sauvegarde',
-      defaultPath: path.join(app.getPath('documents'), nomFichier || 'Sablier-sauvegarde.json'),
-      filters: [{ name: 'Sauvegarde Sablier', extensions: ['json'] }],
+      title: 'Export a backup',
+      defaultPath: path.join(app.getPath('documents'), nomFichier || 'Sablier-backup.json'),
+      filters: [{ name: 'Sablier backup', extensions: ['json'] }],
     });
     if (canceled || !filePath) return { ok: false, annule: true };
     try { fs.writeFileSync(filePath, JSON.stringify(paquet, null, 2) + '\n', 'utf8'); cheminsOuvrables.add(filePath); return { ok: true, chemin: filePath }; }
@@ -280,9 +280,9 @@ function installerPont() {
   });
   ipcMain.handle('donnees:importer', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog(fenetre, {
-      title: 'Importer une sauvegarde',
+      title: 'Import a backup',
       properties: ['openFile'],
-      filters: [{ name: 'Sauvegarde Sablier', extensions: ['json'] }],
+      filters: [{ name: 'Sablier backup', extensions: ['json'] }],
     });
     if (canceled || !filePaths.length) return { ok: false, annule: true };
     try { return { ok: true, paquet: JSON.parse(fs.readFileSync(filePaths[0], 'utf8')) }; }
@@ -296,11 +296,11 @@ function installerPont() {
     return res;
   });
 
-  /* Facture et relevé rangés d'office dans le dossier des factures (Réglages),
-     sous-dossier du mois : le premier qui commence par « AAAA-MM », sinon créé. */
+  /* Invoice and statement are filed automatically in the invoices folder
+     (Settings), in the month subfolder: the first one starting with "YYYY-MM", otherwise created. */
   ipcMain.handle('pdf:classer', async (ev, html, base, mois, nomDossier, nomFichier) => {
     base = String(base || '');
-    if (!path.isAbsolute(base) || !fs.existsSync(base) || !/^\d{4}-\d{2}$/.test(String(mois))) return { ok: false, message: 'dossier des factures introuvable, à choisir dans les Réglages' };
+    if (!path.isAbsolute(base) || !fs.existsSync(base) || !/^\d{4}-\d{2}$/.test(String(mois))) return { ok: false, message: 'invoices folder not found, choose it in Settings' };
     try {
       const existant = fs.readdirSync(base, { withFileTypes: true }).filter(d => d.isDirectory() && d.name.startsWith(mois)).map(d => d.name).sort()[0];
       const dossier = path.join(base, existant || nettoyerNomFichier(nomDossier || mois));
@@ -312,7 +312,7 @@ function installerPont() {
   });
   ipcMain.handle('dossier:choisir', async (ev, depart) => {
     const { canceled, filePaths } = await dialog.showOpenDialog(fenetre, {
-      title: 'Dossier des factures',
+      title: 'Invoices folder',
       defaultPath: depart && fs.existsSync(String(depart)) ? String(depart) : app.getPath('documents'),
       properties: ['openDirectory', 'createDirectory'],
     });
@@ -324,7 +324,7 @@ function installerPont() {
   ipcMain.handle('fichier:ouvrir-url', async (ev, url) => { if (/^https?:\/\//i.test(String(url))) await shell.openExternal(String(url)); });
   ipcMain.handle('fichier:exporter-texte', async (ev, nomFichier, contenu) => {
     const { canceled, filePath } = await dialog.showSaveDialog(fenetre, {
-      title: 'Enregistrer',
+      title: 'Save',
       defaultPath: path.join(app.getPath('documents'), nomFichier || 'export.txt'),
     });
     if (canceled || !filePath) return { ok: false, annule: true };
@@ -332,11 +332,11 @@ function installerPont() {
     catch (e) { return { ok: false, message: e.message }; }
   });
 
-  /* Pièces jointes */
+  /* Attachments */
   ipcMain.handle('pieces:ajouter', async (ev, tacheId, chemins) => {
     let liste = Array.isArray(chemins) ? chemins.filter(Boolean) : [];
     if (!liste.length) {
-      const { canceled, filePaths } = await dialog.showOpenDialog(fenetre, { title: 'Joindre des fichiers à la tâche', properties: ['openFile', 'multiSelections'] });
+      const { canceled, filePaths } = await dialog.showOpenDialog(fenetre, { title: 'Attach files to the task', properties: ['openFile', 'multiSelections'] });
       if (canceled || !filePaths.length) return { ok: false, annule: true };
       liste = filePaths;
     }
@@ -350,7 +350,7 @@ function installerPont() {
     try { await shell.trashItem(c); return { ok: true }; } catch (e) { return { ok: false, message: e.message }; }
   });
 
-  /* Rappels : notification du Mac et pastille du Dock */
+  /* Reminders: desktop notification and Dock badge */
   ipcMain.handle('rappels:notifier', async (ev, o) => {
     if (MODE_SMOKE || !Notification.isSupported()) return false;
     const n = new Notification({ title: String((o && o.titre) || 'Sablier'), body: String((o && o.corps) || ''), silent: false });
@@ -376,7 +376,7 @@ function installerProtocolePieces() {
 }
 
 /* ============================================================
-   AUTO-TEST (SABLIER_SMOKE=1)
+   SELF-TEST (SABLIER_SMOKE=1)
    ============================================================ */
 async function autoTest() {
   const dossierCaptures = process.env.SABLIER_CAPTURES || os.tmpdir();
@@ -441,32 +441,32 @@ async function autoTest() {
     })()`);
     process.stdout.write('SABLIER_SMOKE_TIRETS ' + tirets + '\n');
     if (process.env.SABLIER_SMOKE_SCENARIO === '1') {
-      /* Un fichier texte et une image d'un pixel, à joindre à une tâche. */
+      /* A text file and a one-pixel image, to attach to a task. */
       const fichierTest = path.join(os.tmpdir(), 'sablier-piece-test.txt');
-      fs.writeFileSync(fichierTest, 'pièce jointe de test\n', 'utf8');
+      fs.writeFileSync(fichierTest, 'test attachment\n', 'utf8');
       const imageTest = path.join(os.tmpdir(), 'sablier-pixel.png');
       fs.writeFileSync(imageTest, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'));
       const scenario = await fenetre.webContents.executeJavaScript(`(async function () {
         var res = {};
         function ev(el, type, opts) { el.dispatchEvent(type === 'input' ? new Event('input', { bubbles: true }) : new KeyboardEvent('keydown', Object.assign({ bubbles: true, cancelable: true }, opts))); }
         try {
-          /* --- Chrono : arrêt puis redémarrage --- */
-          if (!chronoEnCours()) demarrerChrono({ axe: 'projeta', intervention: 'Chrono de départ', detail: '' });
+          /* --- Timer: stop then restart --- */
+          if (!chronoEnCours()) demarrerChrono({ axe: 'projeta', intervention: 'Starting timer', detail: '' });
           var avant = entreesJournal().length;
           var e = arreterChrono(true);
           res.chronoArret = !!e && entreesJournal().length === avant + 1 && e.minutes >= 1;
-          demarrerChrono({ axe: 'suivi', intervention: 'Test du chrono', detail: '' });
-          res.chronoDemarre = !!chronoEnCours() && chronoEnCours().intervention === 'Test du chrono';
+          demarrerChrono({ axe: 'suivi', intervention: 'Timer test', detail: '' });
+          res.chronoDemarre = !!chronoEnCours() && chronoEnCours().intervention === 'Timer test';
           arreterChrono(true);
           res.chronoCourtEnregistre = !chronoEnCours() && entreesJournal().length === avant + 2 && entreesJournal()[avant + 1].minutes === 1;
-          /* --- Journal et relevé : la journée du chrono se déplie sur ses lignes --- */
+          /* --- Log and statement: the timer's day unfolds into its entries --- */
           RELEVE_JOURS = {};
           afficherPage('journal');
           var jourChrono = document.querySelector('#releveContenu .rl-jour[data-jour="' + e.date + '"]');
           if (jourChrono) jourChrono.click();
           res.journeeDepliee = !!jourChrono && !!document.querySelector('#releveContenu .rl-detail .jr-ligne[data-id="' + e.id + '"]');
           res.sansBoutonExport = !document.querySelector('#releveContenu [data-action="pdf-releve"]');
-          /* --- Boutons des cartes et des échéances (identifiants) --- */
+          /* --- Card and deadline buttons (ids) --- */
           afficherPage('taches');
           var boutons = Array.prototype.slice.call(document.querySelectorAll('.kb-carte .btn-icone[data-action]'));
           res.cartesAvecId = boutons.length > 0 && boutons.every(function (b) { return !!b.dataset.id; });
@@ -474,7 +474,7 @@ async function autoTest() {
           afficherPage('echeances');
           var be = Array.prototype.slice.call(document.querySelectorAll('.ec-actions .btn-icone[data-action]'));
           res.echeancesAvecId = be.length > 0 && be.every(function (b) { return !!b.dataset.id; });
-          /* --- Chrono depuis une carte, bandeau, pause, reprise, arrêt --- */
+          /* --- Timer from a card, banner, pause, resume, stop --- */
           afficherPage('taches');
           var carteChrono = document.querySelector('.kb-carte .btn-icone[data-action=chrono]');
           carteChrono.click();
@@ -496,16 +496,16 @@ async function autoTest() {
           var ligneStop = entreesJournal()[entreesJournal().length - 1];
           res.arretDepuisBandeau = entreesJournal().length === avantStop + 1 && ligneStop.minutes === 1 && ligneStop.tache === carteChrono.dataset.id && !chronoEnCours() && !document.getElementById('chronoBandeau').classList.contains('visible');
           fermerModale();
-          /* --- Priorités, tri automatique des cartes --- */
+          /* --- Priorities, automatic card sorting --- */
           var refJ = aujourdhui();
           var creerTest = function (titre, prio, jours) {
             var tt = normaliserTache({ id: uid('tt'), statut: 'a-faire', axe: 'projeta', titre: titre, description: '', priorite: prio, echeance: jours == null ? null : ajouterJours(refJ, jours), ordre: 999, creeLe: new Date().toISOString(), modifieLe: new Date().toISOString(), faitLe: null });
             taches().push(tt); return tt;
           };
-          var tUrgent = creerTest('Test urgent (basse, 2 jours)', 'basse', 2);
-          var tHaute = creerTest('Test haute manuelle (40 jours)', 'haute', 40);
-          var tMoyen = creerTest('Test auto (10 jours)', 'auto', 10);
-          var tLoin = creerTest('Test auto (30 jours)', 'auto', 30);
+          var tUrgent = creerTest('Urgent test (low, 2 days)', 'basse', 2);
+          var tHaute = creerTest('Manual high test (40 days)', 'haute', 40);
+          var tMoyen = creerTest('Auto test (10 days)', 'auto', 10);
+          var tLoin = creerTest('Auto test (30 days)', 'auto', 30);
           sauver('chantiers');
           afficherPage('taches');
           var ordreDom = Array.prototype.map.call(document.querySelectorAll('.kb-colonne[data-statut="a-faire"] .kb-carte'), function (c) { return c.dataset.id; });
@@ -514,7 +514,7 @@ async function autoTest() {
           res.prioriteRelevee = prioriteEffective(tUrgent, refJ).niveau === 'haute' && prioriteEffective(tUrgent, refJ).origine === 'echeance' && prioriteEffective(tHaute, refJ).niveau === 'haute' && prioriteEffective(tMoyen, refJ).niveau === 'moyenne' && prioriteEffective(tLoin, refJ).niveau === 'basse';
           res.pastilleHaute = !!document.querySelector('.kb-carte[data-id="' + tUrgent.id + '"] .kb-priorite.haute') && !!document.querySelector('.kb-carte[data-id="' + tMoyen.id + '"] .kb-priorite.moyenne');
           res.puceCouleur = !!document.querySelector('.kb-carte .puce-axe .axe-point') && !document.querySelector('.puce-axe .code');
-          /* --- Glisser-déposer au pointeur vers « En cours » --- */
+          /* --- Pointer drag and drop to "In progress" --- */
           var carteEl = document.querySelector('.kb-carte[data-id="' + tLoin.id + '"]');
           var colCible = document.querySelector('.kb-colonne[data-statut="en-cours"]');
           var r1 = carteEl.getBoundingClientRect(), r2 = colCible.getBoundingClientRect();
@@ -527,7 +527,7 @@ async function autoTest() {
           pe('pointerup', r2.left + r2.width / 2, r2.top + 70);
           await new Promise(function (r) { setTimeout(r, 300); });
           res.deposeEnCours = tacheParId(tLoin.id).statut === 'en-cours' && !document.querySelector('.kb-placeholder') && !document.querySelector('.kb-flottante');
-          /* clic simple sur une carte : la fiche s'ouvre */
+          /* a single click on a card opens its sheet */
           var carteClic = document.querySelector('.kb-carte[data-id="' + tHaute.id + '"]');
           var rc = carteClic.getBoundingClientRect();
           pe('pointerdown', rc.left + 20, rc.top + 12, carteClic);
@@ -537,19 +537,19 @@ async function autoTest() {
           ETAT.chantiers.taches = taches().filter(function (tt) { return [tUrgent.id, tHaute.id, tMoyen.id, tLoin.id].indexOf(tt.id) < 0; });
           sauver('chantiers');
           afficherPage('taches');
-          /* --- Modifier une carte depuis son bouton --- */
+          /* --- Edit a card from its button --- */
           document.querySelector('.kb-carte .btn-icone[data-action=modifier]').click();
           res.modaleCarte = modaleOuverte() && !!document.querySelector('#tcTitre');
           fermerModale();
-          /* --- Migration des idées vers les notes --- */
-          taches().push({ id: 'idee_test', statut: 'idee', axe: 'gouvernance', titre: 'Idée de test', description: 'Un détail', interet: 'fort', effort: 'petit', prerequis: 'rien', priorite: 'auto', echeance: null, ordre: 999, creeLe: new Date().toISOString(), modifieLe: new Date().toISOString(), faitLe: null });
+          /* --- Migration of ideas to notes --- */
+          taches().push({ id: 'idee_test', statut: 'idee', axe: 'gouvernance', titre: 'Test idea', description: 'A detail', interet: 'fort', effort: 'petit', prerequis: 'rien', priorite: 'auto', echeance: null, ordre: 999, creeLe: new Date().toISOString(), modifieLe: new Date().toISOString(), faitLe: null });
           var nbAvant = pageIdees().blocs.length;
           var nbMigre = migrerIdeesVersNotes();
           sauver('chantiers'); sauver('notes');
           var blocMigre = pageIdees().blocs[nbAvant];
-          res.migrationIdees = nbMigre === 1 && pageIdees().blocs.length === nbAvant + 1 && !taches().some(function (x) { return x.statut === 'idee'; }) && blocMigre.type === 'idee' && blocMigre.html.indexOf('<b>Idée de test</b>') === 0 && blocMigre.html.indexOf('Intérêt : fort') > 0;
+          res.migrationIdees = nbMigre === 1 && pageIdees().blocs.length === nbAvant + 1 && !taches().some(function (x) { return x.statut === 'idee'; }) && blocMigre.type === 'idee' && blocMigre.html.indexOf('<b>Test idea</b>') === 0 && blocMigre.html.indexOf('Interest: ') > 0;
           res.ideesDefautDansNotes = pageIdees().blocs.filter(function (b) { return b.type === 'idee'; }).length >= 4;
-          /* --- Idée → tâche --- */
+          /* --- Idea to task --- */
           afficherPage('notes');
           ouvrirPageNotes('page_idees');
           var lignesIdee = document.querySelectorAll('#ntDoc .ligne-idee');
@@ -557,18 +557,18 @@ async function autoTest() {
           res.blocIdeeRendu = !!ligneIdee && !!ligneIdee.querySelector('[data-bloc-action=tache]');
           var nbT = taches().length;
           var nouvelle = creerTacheDepuisLigne(ligneIdee);
-          res.conversionIdee = !!nouvelle && taches().length === nbT + 1 && nouvelle.titre === 'Idée de test' && nouvelle.statut === 'a-faire' && nouvelle.description.indexOf('Un détail') === 0 && nouvelle.notes.indexOf('page_idees') >= 0
+          res.conversionIdee = !!nouvelle && taches().length === nbT + 1 && nouvelle.titre === 'Test idea' && nouvelle.statut === 'a-faire' && nouvelle.description.indexOf('A detail') === 0 && nouvelle.notes.indexOf('page_idees') >= 0
             && !!document.querySelector('#ntDoc .ligne[data-tache="' + nouvelle.id + '"] [data-bloc-action=ouvrir-tache]') && pageParId('page_idees').blocs.some(function (b) { return b.tache === nouvelle.id; });
           res.tachesLieesStrip = !!document.querySelector('#ntTaches .chip-tache[data-id="' + nouvelle.id + '"]');
-          /* --- Fiche complète : étapes, pièces, notes, avancement, temps --- */
+          /* --- Full sheet: steps, attachments, notes, progress, time --- */
           afficherPage('taches');
           ouvrirEditionTache(nouvelle.id);
           res.ficheSections = ['etapes', 'pieces', 'notes', 'avancement', 'temps'].every(function (s) { return !!document.querySelector('.fiche-section[data-section="' + s + '"]'); });
-          ajouterEtapeTache(nouvelle, 'Première étape');
-          ajouterEtapeTache(nouvelle, 'Seconde étape');
+          ajouterEtapeTache(nouvelle, 'First step');
+          ajouterEtapeTache(nouvelle, 'Second step');
           basculerEtapeTache(nouvelle, nouvelle.etapes[0].id, true);
           res.etapes = nouvelle.etapes.length === 2 && nouvelle.etapes[0].fait === true && document.querySelector('.fiche-section[data-section="etapes"] .nb').textContent === '1/2' && document.querySelectorAll('.fiche-section[data-section="etapes"] .etape').length === 2;
-          ajouterPieceCode(nouvelle, { nom: 'exemple.js', langage: 'javascript', contenu: 'console.log(1)' });
+          ajouterPieceCode(nouvelle, { nom: 'example.js', langage: 'javascript', contenu: 'console.log(1)' });
           res.pieceCode = nouvelle.pieces.length === 1 && !!document.querySelector('.fiche-section[data-section="pieces"] .piece-code pre') && document.querySelector('.piece-code pre').textContent === 'console.log(1)';
           ajouterPieceLien(nouvelle, { nom: 'Documentation', url: 'example.org/doc' });
           res.pieceLien = nouvelle.pieces.length === 2 && nouvelle.pieces[1].url === 'https://example.org/doc' && !!document.querySelector('.piece-ligne .piece-nom');
@@ -584,7 +584,7 @@ async function autoTest() {
           lierTacheANote(nouvelle.id, 'page_projeta');
           apresMutationTache(nouvelle, 'notes');
           res.lienNote = nouvelle.notes.indexOf('page_projeta') >= 0 && tachesLieesAPage('page_projeta').length === 1 && document.querySelectorAll('.fiche-section[data-section="notes"] .chip-note').length === 2;
-          ajouterAvancementTache(nouvelle, 'Premier point d\\'avancement');
+          ajouterAvancementTache(nouvelle, 'First progress update');
           res.avancement = nouvelle.avancement.length === 1 && !!document.querySelector('.fiche-section[data-section="avancement"] .avancement-entree');
           demarrerChrono({ axe: nouvelle.axe, intervention: nouvelle.titre, tache: nouvelle.id });
           arreterChrono(true);
@@ -593,9 +593,9 @@ async function autoTest() {
           res.tempsTache = minutesTache(entreesJournal(), nouvelle.id).minutes === 1 && document.querySelector('.fiche-section[data-section="temps"] .temps-resume b').textContent === '1 min';
           fermerModale();
           res.carteCompteurs = !!document.querySelector('.kb-carte[data-id="' + nouvelle.id + '"] .kb-compteurs') && !!document.querySelector('.kb-carte[data-id="' + nouvelle.id + '"] .kb-progres');
-          /* --- Rappels --- */
-          echeances().push({ id: 'ech_test', date: ajouterJours(aujourdhui(), -2), titre: 'Échéance de test dépassée', detail: '', type: 'perso', fait: false, faitLe: null, creeLe: new Date().toISOString() });
-          echeances().push({ id: 'ech_test2', date: ajouterJours(aujourdhui(), 5), titre: 'Échéance de test à 5 jours', detail: '', type: 'perso', rappelJours: 3, fait: false, faitLe: null, creeLe: new Date().toISOString() });
+          /* --- Reminders --- */
+          echeances().push({ id: 'ech_test', date: ajouterJours(aujourdhui(), -2), titre: 'Overdue test deadline', detail: '', type: 'perso', fait: false, faitLe: null, creeLe: new Date().toISOString() });
+          echeances().push({ id: 'ech_test2', date: ajouterJours(aujourdhui(), 5), titre: 'Test deadline, 5 days out', detail: '', type: 'perso', rappelJours: 3, fait: false, faitLe: null, creeLe: new Date().toISOString() });
           sauver('echeances');
           nouvelle.echeance = aujourdhui(); sauver('chantiers');
           var rr = rappelsActifs();
@@ -612,78 +612,79 @@ async function autoTest() {
           fermerModale();
           afficherPage('tableau');
           res.tableauRappels = !!document.querySelector('#tbRappels .rappel.cliquable[data-cle="echeance:ech_test"]');
-          res.echeancesTableau = !!document.querySelector('#tbEcheances .dash-ech .dash-cal b') && !!document.querySelector('#tbEcheances .dash-jours') && !/dans \\d+ jour/.test(document.getElementById('tbEcheances').textContent);
+          res.echeancesTableau = !!document.querySelector('#tbEcheances .dash-ech .dash-cal b') && !!document.querySelector('#tbEcheances .dash-jours') && !/in \\d+ day/.test(document.getElementById('tbEcheances').textContent);
           res.tachesTableau = !!document.querySelector('#tbTaches .dash-tache[data-id="' + nouvelle.id + '"] .dash-jours');
-          /* --- Factures et recettes : un onglet à part, sans bascule dans le relevé --- */
+          /* --- Invoices and income: a tab of its own, no switch inside the statement --- */
           document.querySelector('.tab-btn[data-tab="factures"]').click();
           res.vueFactures = PAGE_COURANTE === 'factures' && !!document.querySelector('#facturesContenu #facturesTableau') && !document.querySelector('#rlVues');
           document.querySelector('.tab-btn[data-tab="releve"]').click();
           res.vueReleve = PAGE_COURANTE === 'releve' && !!document.querySelector('#rlMois') && !document.querySelector('#releveContenu .segment');
-          /* --- Gabarit de facture : en-tête épuré, bloc Règlement, mentions --- */
+          /* --- Invoice template: clean header, Payment block, legal notices --- */
           var sauveP = JSON.stringify(ETAT.reglages.prestataire);
           ETAT.reglages.prestataire.iban = 'FR7612345678901234567890123'; ETAT.reglages.prestataire.bic = 'BANKFRPPXXX'; ETAT.reglages.prestataire.email = 'test@example.org'; ETAT.reglages.prestataire.telephone = '0612345678'; ETAT.reglages.prestataire.adresse = '12 rue des Essais, 75000 Paris';
+          var titulaireSeed = ETAT.reglages.prestataire.titulaireCompte, banqueSeed = ETAT.reglages.prestataire.banque;
           var rel = releveDuMois(entreesJournal(), moisCourant(), ETAT.reglages, 0);
           var fx = construireFacture(rel, ETAT.reglages, { numero: '2099-01', dateEmission: aujourdhui(), travaux: [], factures: [] });
           var hf = htmlFacture(fx);
-          res.factureEpuree = hf.indexOf('APE') < 0 && hf.indexOf('SIRET 123 456 789 00015') > 0 && hf.indexOf('L. 441-10 du Code de commerce') > 0 && hf.indexOf('06 12 34 56 78') > 0 && hf.indexOf('<div>12 rue des Essais</div><div>75000 Paris</div>') > 0;
-          res.factureReglement = hf.indexOf('class="rib"') > 0 && hf.indexOf('FR76 1234 5678 9012 3456 7890 123') > 0 && hf.indexOf('EI Nom Prénom') > 0 && hf.indexOf('Banque Exemple') > 0 && hf.indexOf('Escompte pour paiement anticipé : néant') > 0 && hf.indexOf('indemnité forfaitaire de 40') > 0 && hf.indexOf('Total TTC à payer') > 0 && hf.indexOf(ETAT.reglages.prestataire.nom + ' EI</div>') > 0;
-          /* La facture ne dit pas quand le travail a été réalisé : ni colonne
-             Date, ni mention « Réalisé en », ni date du jour dans l'annexe. */
-          res.factureSansDate = hf.indexOf('<th class="num">Date</th>') < 0 && hf.indexOf('Réalisé en') < 0 && !/\\d{2}\\/\\d{2}\\/\\d{4}<\\/td>/.test(hf.split('class="annexe"')[1] || '') && hf.indexOf('Annexe à la facture n° 2099-01') > 0;
+          res.factureEpuree = hf.indexOf('APE') < 0 && hf.indexOf('SIRET 123 456 789 00015') > 0 && hf.indexOf('L. 441-10 of the French Commercial Code') > 0 && hf.indexOf('06 12 34 56 78') > 0 && hf.indexOf('<div>12 rue des Essais</div><div>75000 Paris</div>') > 0;
+          res.factureReglement = hf.indexOf('class="rib"') > 0 && hf.indexOf('FR76 1234 5678 9012 3456 7890 123') > 0 && hf.indexOf(titulaireSeed) > 0 && hf.indexOf(banqueSeed) > 0 && hf.indexOf('Early payment discount: none') > 0 && hf.indexOf('fixed recovery fee of €40') > 0 && hf.indexOf('Total due') > 0 && hf.indexOf(ETAT.reglages.prestataire.nom + ' EI</div>') > 0;
+          /* The invoice does not say when the work was done: no Date column,
+             no "Done in" mention, no day date in the annex. */
+          res.factureSansDate = hf.indexOf('<th class="num">Date</th>') < 0 && hf.indexOf('Done in') < 0 && !/\\d{2}\\/\\d{2}\\/\\d{4}<\\/td>/.test(hf.split('class="annexe"')[1] || '') && hf.indexOf('Annex to invoice no. 2099-01') > 0;
           ETAT.reglages.prestataire = JSON.parse(sauveP);
           res.releveEpure = htmlReleve(rel, {}).indexOf('APE') < 0;
-          /* --- Éditeur de notes : une seule zone, une ligne par retour à la ligne --- */
+          /* --- Notes editor: a single area, one line per line break --- */
           afficherPage('notes');
           creerPageNotes(null);
           var idTest = NOTES_PAGE;
           var titre = document.getElementById('ntTitre');
-          titre.textContent = 'Page de test';
+          titre.textContent = 'Test page';
           ev(titre, 'input');
-          res.titre = pageParId(NOTES_PAGE).titre === 'Page de test';
+          res.titre = pageParId(NOTES_PAGE).titre === 'Test page';
           var doc = docNotes();
           var nl = function () { return doc.querySelectorAll(':scope > .ligne').length; };
           var li = function (i) { return doc.querySelectorAll(':scope > .ligne')[i]; };
           var taper = function (t) { document.execCommand('insertText', false, t); };
           res.zoneUnique = doc.isContentEditable && !doc.querySelector('[contenteditable="true"]') && !document.querySelector('.bloc-poignee');
           placerCaret(li(0), false);
-          taper('Premier bloc');
+          taper('First block');
           ev(doc, 'keydown', { key: 'Enter' });
-          res.enterCreeBloc = nl() === 2 && li(0).textContent === 'Premier bloc' && ligneCourante() === li(1) && document.activeElement === doc;
+          res.enterCreeBloc = nl() === 2 && li(0).textContent === 'First block' && ligneCourante() === li(1) && document.activeElement === doc;
           taper('- ');
           res.raccourciPuce = li(1).dataset.type === 'puce' && li(1).textContent === '';
-          taper('Élément');
+          taper('Item');
           ev(doc, 'keydown', { key: 'Enter' });
           res.enterPuceSuivante = nl() === 3 && li(2).dataset.type === 'puce';
           ev(doc, 'keydown', { key: 'Enter' });
           res.puceVideDevientP = nl() === 3 && li(2).dataset.type === 'p';
           taper('/');
           res.menuSlashOuvert = !!document.getElementById('menuSlash');
-          taper('idée');
+          taper('idea');
           res.menuSlashIdee = document.querySelectorAll('#menuSlash button').length === 1;
           ev(doc, 'keydown', { key: 'Enter' });
           res.slashIdee = li(2).dataset.type === 'idee' && !document.getElementById('menuSlash') && !!li(2).querySelector('[data-bloc-action=tache]') && li(2).textContent === '';
-          taper('Une idée tapée');
+          taper('A typed idea');
           ev(doc, 'keydown', { key: 'Enter' });
-          taper('le détail');
-          res.ideeSurDeuxLignes = nl() === 3 && texteBrutDe(nettoyerHtml(li(2).innerHTML)) === 'Une idée tapée\\nle détail';
+          taper('the detail');
+          res.ideeSurDeuxLignes = nl() === 3 && texteBrutDe(nettoyerHtml(li(2).innerHTML)) === 'A typed idea\\nthe detail';
           ev(doc, 'keydown', { key: 'Enter' });
           ev(doc, 'keydown', { key: 'Enter' });
-          res.ideeDoubleEntreeSort = nl() === 4 && li(3).dataset.type === 'p' && nettoyerHtml(li(2).innerHTML) === 'Une idée tapée<br>le détail';
+          res.ideeDoubleEntreeSort = nl() === 4 && li(3).dataset.type === 'p' && nettoyerHtml(li(2).innerHTML) === 'A typed idea<br>the detail';
           ev(doc, 'keydown', { key: 'Backspace' });
           res.backspaceLigneVide = nl() === 3;
-          li(2).innerHTML = 'Une idée tapée';
+          li(2).innerHTML = 'A typed idea';
           decorerLigne(li(2));
           placerCaret(li(2), true);
           ev(doc, 'keydown', { key: 'Backspace' });
-          res.backspaceIdeeDevientP = li(2).dataset.type === 'p' && li(2).textContent === 'Une idée tapée';
+          res.backspaceIdeeDevientP = li(2).dataset.type === 'p' && li(2).textContent === 'A typed idea';
           placerCaret(li(2), true);
           ev(doc, 'keydown', { key: 'Backspace' });
-          res.backspaceFusionne = nl() === 2 && li(1).textContent === 'ÉlémentUne idée tapée';
+          res.backspaceFusionne = nl() === 2 && li(1).textContent === 'ItemA typed idea';
           placerCaret(li(1), false);
           ev(doc, 'keydown', { key: 'Enter' });
           taper('[] ');
           res.raccourciCase = li(2).dataset.type === 'case';
-          taper('À cocher');
+          taper('To check');
           var rc = li(2).getBoundingClientRect();
           li(2).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0, clientX: rc.left + 9, clientY: rc.top + 12 }));
           res.caseCochee = li(2).classList.contains('coche');
@@ -691,8 +692,8 @@ async function autoTest() {
           res.tabRetrait = li(2).dataset.retrait === '1';
           serialiserDoc();
           var p = pageParId(idTest);
-          res.serialise = p.blocs.length === 3 && p.blocs[0].html === 'Premier bloc' && p.blocs[1].type === 'puce' && p.blocs[2].type === 'case' && p.blocs[2].coche === true && p.blocs[2].retrait === 1;
-          /* Coller : toujours du texte normal, même depuis une page web ou du Markdown */
+          res.serialise = p.blocs.length === 3 && p.blocs[0].html === 'First block' && p.blocs[1].type === 'puce' && p.blocs[2].type === 'case' && p.blocs[2].coche === true && p.blocs[2].retrait === 1;
+          /* Paste: always plain text, even from a web page or Markdown */
           var coller = function (texte, html) {
             var dt = new DataTransfer();
             dt.setData('text/plain', texte);
@@ -700,25 +701,25 @@ async function autoTest() {
             doc.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: dt }));
           };
           placerCaret(li(0), false);
-          coller('Ligne A\\n- pas une puce\\n# pas un titre', '<h1 style="color:red">Ligne A</h1><ul><li>pas une puce</li></ul><h1>pas un titre</h1>');
-          res.collageBrut = nl() === 5 && li(0).textContent === 'Premier blocLigne A' && li(1).dataset.type === 'p' && li(1).textContent === '- pas une puce' && li(2).dataset.type === 'p' && li(2).textContent === '# pas un titre'
+          coller('Line A\\n- not a bullet\\n# not a heading', '<h1 style="color:red">Line A</h1><ul><li>not a bullet</li></ul><h1>not a heading</h1>');
+          res.collageBrut = nl() === 5 && li(0).textContent === 'First blockLine A' && li(1).dataset.type === 'p' && li(1).textContent === '- not a bullet' && li(2).dataset.type === 'p' && li(2).textContent === '# not a heading'
             && !doc.querySelector('h1, ul, li, span, font, [style]') && ligneCourante() === li(2);
-          coller('mot', '<b style="font-size:30px">mot</b>');
-          res.collageUneLigne = li(2).innerHTML === '# pas un titremot';
+          coller('word', '<b style="font-size:30px">word</b>');
+          res.collageUneLigne = li(2).innerHTML === '# not a headingword';
           annulerNotes();
           annulerNotes();
-          res.annuler = nl() === 3 && li(0).textContent === 'Premier bloc';
+          res.annuler = nl() === 3 && li(0).textContent === 'First block';
           retablirNotes();
-          res.retablir = nl() === 5 && li(1).textContent === '- pas une puce';
-          /* Remise en ordre après une modification faite par le navigateur */
+          res.retablir = nl() === 5 && li(1).textContent === '- not a bullet';
+          /* Tidying up after a change made by the browser */
           li(1).insertAdjacentHTML('beforeend', '<span style="font-size:24px">x</span>');
-          doc.appendChild(document.createTextNode('orphelin'));
+          doc.appendChild(document.createTextNode('orphan'));
           doc.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'deleteContentBackward' }));
-          res.normalisation = !doc.querySelector('span:not(.ligne-outils), [style]') && Array.prototype.every.call(doc.childNodes, function (n) { return n.nodeType === 1 && n.classList.contains('ligne'); }) && li(1).textContent === '- pas une pucex' && doc.lastChild.textContent === 'orphelin';
-          /* Monter une ligne, séparateur */
+          res.normalisation = !doc.querySelector('span:not(.ligne-outils), [style]') && Array.prototype.every.call(doc.childNodes, function (n) { return n.nodeType === 1 && n.classList.contains('ligne'); }) && li(1).textContent === '- not a bulletx' && doc.lastChild.textContent === 'orphan';
+          /* Move a line up, separator */
           placerCaret(li(1), true);
           ev(doc, 'keydown', { key: 'ArrowUp', altKey: true, shiftKey: true });
-          res.monterLigne = li(0).textContent === '- pas une pucex' && li(1).textContent === 'Premier blocLigne A';
+          res.monterLigne = li(0).textContent === '- not a bulletx' && li(1).textContent === 'First blockLine A';
           var avantSep = nl();
           placerCaret(li(0), false);
           insererSeparateur();
@@ -727,34 +728,34 @@ async function autoTest() {
           var html = '<div>a<b>b</b><span style="color:red">c</span><script>x</script></div>';
           res.nettoyage = nettoyerHtml(html) === 'a<b>b</b>c';
           var pt = new DataTransfer();
-          pt.setData('text/plain', 'Titre\\ncollé');
-          pt.setData('text/html', '<h1 style="color:red">Titre</h1>');
+          pt.setData('text/plain', 'Title\\npasted');
+          pt.setData('text/html', '<h1 style="color:red">Title</h1>');
           placerCaret(titre, false);
           titre.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: pt }));
-          res.titreCollageBrut = titre.innerHTML === 'Page de testTitre collé';
-          NOTES_RECHERCHE = 'pas une puce';
+          res.titreCollageBrut = titre.innerHTML === 'Test pageTitle pasted';
+          NOTES_RECHERCHE = 'not a bullet';
           rendreRailNotes();
           res.rechercheContenu = !!document.querySelector('#ntArbre .nt-item[data-id="' + idTest + '"] .nt-extrait');
           NOTES_RECHERCHE = '';
           rendreRailNotes();
-          /* --- Bulle Liquid Glass : posée sur la page affichée --- */
+          /* --- Liquid Glass bubble: placed on the displayed page --- */
           afficherPage('journal');
           poserBulles();
           var bulle = document.querySelector('.tabs > .bulle'), bJournal = document.querySelector('.tab-btn[data-tab="releve"]');
           res.bulleNavigation = !!bulle && bulle.style.transform.replace(/\\s/g, '') === 'translate(' + bJournal.offsetLeft + 'px,' + bJournal.offsetTop + 'px)' && bulle.style.width === bJournal.offsetWidth + 'px';
-          /* --- Tâches : avancer et terminer --- */
+          /* --- Tasks: advance and finish --- */
           afficherPage('taches');
           var t = taches().filter(function (x) { return x.statut === 'en-cours'; })[0];
           if (t) { avancerTache(t.id); res.tacheFaite = t.statut === 'fait' && t.faitLe === aujourdhui(); }
-          /* --- Relevé : travaux du mois --- */
+          /* --- Statement: work items of the month --- */
           afficherPage('releve');
           res.travauxReleve = travauxDuMois(moisCourant()).length >= 1;
-          /* --- Échéances --- */
+          /* --- Deadlines --- */
           var ech = echeances()[0];
           marquerEcheanceFaite(ech.id, true);
           res.echeanceFaite = ech.fait === true;
           marquerEcheanceFaite(ech.id, false);
-          /* --- Nettoyage --- */
+          /* --- Cleanup --- */
           ETAT.notes.pages = pagesNotes().filter(function (x) { return x.id !== idTest; });
           sauver('notes');
           ETAT.echeances.echeances = echeances().filter(function (x) { return x.id !== 'ech_test' && x.id !== 'ech_test2'; });
@@ -770,7 +771,7 @@ async function autoTest() {
         process.stdout.write('SABLIER_SMOKE_PIECE_FICHIER ' + existe + '\n');
       } catch (e) {}
     }
-    /* Scénario d'audit (tests/scenario-audit.js), cas limites. */
+    /* Audit scenario (tests/scenario-audit.js), edge cases. */
     if (process.env.SABLIER_SMOKE_AUDIT === '1') {
       const corps = fs.readFileSync(path.join(__dirname, '..', 'tests', 'scenario-audit.js'), 'utf8');
       const audit = await fenetre.webContents.executeJavaScript('(async function () { var res = {}; try {\n' + corps + '\n} catch (err) { res.erreur = String(err && err.stack || err); } return JSON.stringify(res); })()');
@@ -796,7 +797,7 @@ async function autoTest() {
         process.stdout.write('SABLIER_SMOKE_PDF facture ' + JSON.stringify(r2) + ' ' + JSON.stringify(r3) + '\n');
       }
     }
-    process.stdout.write('SABLIER_SMOKE_OK captures dans ' + dossierCaptures + '\n');
+    process.stdout.write('SABLIER_SMOKE_OK captures in ' + dossierCaptures + '\n');
   } catch (e) {
     process.stdout.write('SABLIER_SMOKE_ERREUR ' + (e && e.message) + '\n');
     process.exitCode = 1;
@@ -805,10 +806,10 @@ async function autoTest() {
   }
 }
 
-/* Rien ne démarre dans une seconde instance : elle a demandé à quitter. */
+/* Nothing starts in a second instance: it asked to quit. */
 if (verrou) {
   app.whenReady().then(() => {
-    /* Apparence forcée pour les captures de l'auto-test (clair ou sombre). */
+    /* Forced appearance for the self-test screenshots (light or dark). */
     if (MODE_SMOKE && /^(light|dark)$/.test(process.env.SABLIER_THEME || '')) nativeTheme.themeSource = process.env.SABLIER_THEME;
     chargerPreferences();
     installerPont();
@@ -830,17 +831,17 @@ if (verrou) {
     if (process.platform !== 'darwin' || MODE_SMOKE) app.quit();
   });
 
-  /* Les écritures en attente passent sur le disque avant de quitter ; si le
-     disque les refuse encore, on ne les perd pas sans le dire. */
+  /* Pending writes go to disk before quitting; if the disk still refuses
+     them, they are not lost silently. */
   app.on('before-quit', (ev) => {
     if (!donnees) return;
     donnees.purger();
     const refuses = Object.keys(donnees.minuteries);
     if (!refuses.length) return;
     const choix = dialog.showMessageBoxSync({
-      type: 'warning', buttons: ['Rester dans Sablier', 'Quitter quand même'], defaultId: 0, cancelId: 0,
-      message: 'Des données ne sont pas enregistrées',
-      detail: refuses.map(nom => nom + '.json').join(', ') + ' : le disque refuse l\'écriture. En quittant maintenant, les dernières modifications seront perdues. Libérez de la place ou exportez une sauvegarde, puis réessayez.',
+      type: 'warning', buttons: ['Stay in Sablier', 'Quit anyway'], defaultId: 0, cancelId: 0,
+      message: 'Some data is not saved',
+      detail: refuses.map(nom => nom + '.json').join(', ') + ': the disk refuses the write. If you quit now, the latest changes will be lost. Free up some space or export a backup, then try again.',
     });
     if (choix === 0) ev.preventDefault();
   });

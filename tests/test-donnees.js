@@ -1,4 +1,4 @@
-/* Tests de l'écriture des données, sur un dossier jetable : node tests/test-donnees.js */
+/* Tests of data writing, on a throwaway folder: node tests/test-donnees.js */
 'use strict';
 
 const assert = require('assert');
@@ -16,32 +16,32 @@ const relire = (d, nom) => JSON.parse(fs.readFileSync(d.chemin(nom), 'utf8'));
 function nouvelles(nom) {
   const d = new Donnees(path.join(racine, nom));
   d.alertes = [];
-  d.surErreur = (fichier, message) => d.alertes.push(fichier + ' : ' + message);
+  d.surErreur = (fichier, message) => d.alertes.push(fichier + ': ' + message);
   return d;
 }
-/* Le disque refuse les renommages jusqu'à l'appel de la fonction rendue. */
+/* The disk refuses renames until the returned function is called. */
 function disquePlein() {
   const vrai = fs.renameSync;
-  fs.renameSync = () => { const e = new Error('ENOSPC: plus de place'); e.code = 'ENOSPC'; throw e; };
+  fs.renameSync = () => { const e = new Error('ENOSPC: no space left'); e.code = 'ENOSPC'; throw e; };
   return () => { fs.renameSync = vrai; };
 }
 
 const tests = [
-  ['l\'écriture passe sur le disque avant le renommage, sans laisser de fichier temporaire', () => {
+  ['the write reaches the disk before the rename, leaving no temporary file', () => {
     const d = nouvelles('ordre');
     const appels = [];
     const vraiFsync = fs.fsyncSync, vraiRename = fs.renameSync;
     fs.fsyncSync = (fd) => { appels.push('fsync'); return vraiFsync(fd); };
-    fs.renameSync = (a, b) => { appels.push('renommage'); return vraiRename(a, b); };
+    fs.renameSync = (a, b) => { appels.push('rename'); return vraiRename(a, b); };
     try { d.ecrire('journal', { entrees: [1] }); d.ecrireMaintenant('journal'); }
     finally { fs.fsyncSync = vraiFsync; fs.renameSync = vraiRename; }
-    assert.deepStrictEqual(appels, ['fsync', 'renommage']);
+    assert.deepStrictEqual(appels, ['fsync', 'rename']);
     assert.deepStrictEqual(relire(d, 'journal'), { entrees: [1] });
     assert.ok(!fs.existsSync(d.chemin('journal') + '.tmp'));
     assert.deepStrictEqual(Object.keys(d.minuteries), []);
   }],
 
-  ['une écriture refusée est retentée jusqu\'à passer, avec le dernier contenu', async () => {
+  ['a refused write is retried until it goes through, with the latest content', async () => {
     const d = nouvelles('retente');
     d.retenteMs = 20;
     d.ecrire('factures', { factures: ['2031-01'] });
@@ -51,9 +51,9 @@ const tests = [
       d.ecrire('factures', { factures: ['2031-01', '2031-02'] });
       d.ecrireMaintenant('factures');
       assert.deepStrictEqual(relire(d, 'factures').factures, ['2031-01']);
-      assert.ok(d.minuteries.factures, 'une nouvelle tentative est prévue');
+      assert.ok(d.minuteries.factures, 'a new attempt is scheduled');
       await pause(60);
-      assert.deepStrictEqual(relire(d, 'factures').factures, ['2031-01'], 'toujours refusée');
+      assert.deepStrictEqual(relire(d, 'factures').factures, ['2031-01'], 'still refused');
       d.ecrire('factures', { factures: ['2031-01', '2031-02', '2031-03'] });
       await pause(350);
     } finally { retablir(); }
@@ -62,11 +62,11 @@ const tests = [
     assert.deepStrictEqual(Object.keys(d.minuteries), []);
   }],
 
-  ['la nouvelle tentative attend 30 secondes par défaut', () => {
+  ['the retry waits 30 seconds by default', () => {
     assert.strictEqual(nouvelles('delai').retenteMs, 30000);
   }],
 
-  ['l\'alerte ne se répète pas à chaque tentative, mais revient après 5 minutes', () => {
+  ['the alert does not repeat on every attempt, but comes back after 5 minutes', () => {
     const d = nouvelles('alerte');
     d.retenteMs = 60000;
     const retablir = disquePlein();
@@ -74,7 +74,7 @@ const tests = [
       d.ecrire('journal', { a: 1 }); d.ecrireMaintenant('journal');
       d.ecrire('notes', { a: 1 }); d.ecrireMaintenant('notes');
       assert.strictEqual(d.alertes.length, 1);
-      assert.ok(/^journal : ENOSPC/.test(d.alertes[0]));
+      assert.ok(/^journal: ENOSPC/.test(d.alertes[0]));
       d.derniereAlerte -= 5 * 60000;
       d.ecrireMaintenant('journal');
       assert.strictEqual(d.alertes.length, 2);
@@ -82,7 +82,7 @@ const tests = [
     assert.deepStrictEqual(Object.keys(d.minuteries), []);
   }],
 
-  ['une relecture pendant la panne rend la mémoire, pas l\'ancien disque', () => {
+  ['a re-read during the outage returns memory, not the old disk content', () => {
     const d = nouvelles('relecture');
     d.retenteMs = 60000;
     d.ecrire('factures', { factures: ['2031-01'] }); d.ecrireMaintenant('factures');
@@ -98,30 +98,30 @@ const tests = [
     assert.deepStrictEqual(relire(d, 'factures').factures, ['2031-01', '2031-02']);
   }],
 
-  ['après une panne, purger écrit ce qui restait en attente', () => {
+  ['after an outage, purging writes what was still pending', () => {
     const d = nouvelles('purge');
     d.retenteMs = 60000;
     const retablir = disquePlein();
     d.ecrire('chrono', { enCours: null });
     d.purger();
-    assert.deepStrictEqual(Object.keys(d.minuteries), ['chrono'], 'après la purge, seul ce qui est refusé reste en attente');
+    assert.deepStrictEqual(Object.keys(d.minuteries), ['chrono'], 'after the purge, only what is refused stays pending');
     retablir();
     d.purger();
     assert.deepStrictEqual(relire(d, 'chrono'), { enCours: null });
     assert.deepStrictEqual(Object.keys(d.minuteries), []);
   }],
 
-  ['la copie du jour : une seule par jour, une de plus si forcée, 30 gardées', () => {
+  ['the daily copy: only one per day, one more if forced, 30 kept', () => {
     const d = nouvelles('copies');
     const copies = () => fs.readdirSync(path.join(d.dossier, 'Sauvegardes')).sort();
     d.sauvegardeQuotidienne();
-    assert.deepStrictEqual(copies(), [], 'rien à copier tant qu\'aucun fichier n\'existe');
+    assert.deepStrictEqual(copies(), [], 'nothing to copy while no file exists');
     d.ecrire('journal', { n: 1 }); d.ecrireMaintenant('journal');
     d.sauvegardeQuotidienne();
     assert.strictEqual(copies().length, 1);
     d.ecrire('journal', { n: 2 }); d.ecrireMaintenant('journal');
     d.sauvegardeQuotidienne();
-    assert.strictEqual(copies().length, 1, 'l\'appel de chaque heure ne refait pas la copie du jour');
+    assert.strictEqual(copies().length, 1, 'the hourly call does not redo the day\'s copy');
     assert.deepStrictEqual(JSON.parse(fs.readFileSync(path.join(d.dossier, 'Sauvegardes', copies()[0], 'journal.json'), 'utf8')), { n: 1 });
     d.sauvegardeQuotidienne(true);
     assert.strictEqual(copies().length, 2);
@@ -130,7 +130,7 @@ const tests = [
     assert.strictEqual(copies().length, 30);
   }],
 
-  ['un changement de jour déclenche une nouvelle copie sans relancer l\'application', () => {
+  ['a change of day triggers a new copy without restarting the app', () => {
     const d = nouvelles('jour');
     d.ecrire('journal', { n: 1 }); d.ecrireMaintenant('journal');
     const VraieDate = Date;
@@ -145,10 +145,10 @@ const tests = [
     assert.deepStrictEqual(fs.readdirSync(path.join(d.dossier, 'Sauvegardes')).sort(), ['2031-03-05', '2031-03-06']);
   }],
 
-  ['factures.json absent alors que le reste existe : signalé, pas au premier lancement', () => {
+  ['factures.json missing while the rest exists: reported, but not on first launch', () => {
     const d = nouvelles('absent');
     d.lireTout();
-    assert.deepStrictEqual(d.absents, [], 'premier lancement : aucun fichier, aucune alerte');
+    assert.deepStrictEqual(d.absents, [], 'first launch: no file, no alert');
     FICHIERS.forEach(nom => { d.ecrire(nom, { schemaVersion: 1 }); });
     d.purger();
     d.lireTout();
@@ -159,34 +159,34 @@ const tests = [
     assert.deepStrictEqual(d.illisibles, []);
   }],
 
-  ['factures.json abîmé reste signalé comme illisible, pas comme absent', () => {
+  ['a corrupted factures.json is still reported as unreadable, not as missing', () => {
     const d = nouvelles('abime');
     d.ecrire('journal', { n: 1 }); d.ecrireMaintenant('journal');
-    fs.writeFileSync(d.chemin('factures'), '{ abîmé', 'utf8');
+    fs.writeFileSync(d.chemin('factures'), '{ corrupted', 'utf8');
     d.lireTout();
     assert.strictEqual(d.illisibles[0].nom, 'factures');
     assert.deepStrictEqual(d.absents, []);
   }],
 
-  ['un PDF existant n\'est jamais écrasé : le suivant prend le premier nom libre', () => {
+  ['an existing PDF is never overwritten: the next one takes the first free name', () => {
     const dossier = path.join(racine, 'pdf');
     fs.mkdirSync(dossier);
     const cible = path.join(dossier, 'Facture-2031-01.pdf');
     assert.strictEqual(cheminLibre(cible), cible);
-    fs.writeFileSync(cible, 'signée');
+    fs.writeFileSync(cible, 'signed');
     assert.strictEqual(cheminLibre(cible), path.join(dossier, 'Facture-2031-01 (2).pdf'));
-    fs.writeFileSync(path.join(dossier, 'Facture-2031-01 (2).pdf'), 'copie');
+    fs.writeFileSync(path.join(dossier, 'Facture-2031-01 (2).pdf'), 'copy');
     assert.strictEqual(cheminLibre(cible), path.join(dossier, 'Facture-2031-01 (3).pdf'));
-    assert.strictEqual(fs.readFileSync(cible, 'utf8'), 'signée');
+    assert.strictEqual(fs.readFileSync(cible, 'utf8'), 'signed');
   }],
 ];
 
 console.error = () => {};
 (async () => {
-  console.log('Écriture des données');
+  console.log('Data writing');
   try {
     for (const [nom, fn] of tests) { await fn(); n++; console.log('  ✓ ' + nom); }
   } finally { fs.rmSync(racine, { recursive: true, force: true }); }
-  console.log('\n' + n + ' tests verts.');
+  console.log('\n' + n + ' tests passed.');
   process.exit(0);
 })().catch(e => { process.stdout.write(String(e && e.stack || e) + '\n'); process.exit(1); });

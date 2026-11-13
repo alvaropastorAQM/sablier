@@ -1,12 +1,12 @@
 /* ============================================================
-   GRAPHIQUE : barres SVG maison, sans bibliothèque, dans la charte
-   (barres neutres, mois courant en accent, repère mensuel pointillé,
-   grille en cheveu, chiffres tabulaires).
+   CHART: homemade SVG bars, no library, in the app's style
+   (neutral bars, current month in accent, dotted monthly reference line,
+   hairline grid, tabular figures).
    ============================================================ */
 'use strict';
 
-/* series : [{libelle, valeur (heures), actif, futur, titre}]
-   options : {repere (heures), hauteur, unite} */
+/* series: [{libelle, valeur (hours), actif, futur, titre}]
+   options: {repere (hours), hauteur, unite} */
 function dessinerBarres(conteneur, series, options) {
   if (!conteneur) return;
   var o = options || {};
@@ -22,7 +22,7 @@ function dessinerBarres(conteneur, series, options) {
   var y = function (v) { return mg.haut + hauteur - (v / maxVal) * hauteur; };
   var pasX = largeur / n;
   var lb = Math.min(38, pasX * 0.62);
-  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Heures par mois">';
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Hours per month">';
   for (var v = 0; v <= maxVal; v += pas) {
     svg += '<line class="gr-grille" x1="' + mg.gauche + '" x2="' + (W - mg.droite) + '" y1="' + y(v).toFixed(1) + '" y2="' + y(v).toFixed(1) + '"/>';
     svg += '<text class="gr-texte" x="' + (mg.gauche - 6) + '" y="' + (y(v) + 4).toFixed(1) + '" text-anchor="end">' + v + '</text>';
@@ -31,7 +31,7 @@ function dessinerBarres(conteneur, series, options) {
     var cx = mg.gauche + pasX * i + pasX / 2;
     var h = Math.max(0, (s.valeur / maxVal) * hauteur);
     var classes = 'gr-barre' + (s.actif ? ' actif' : '') + (s.futur ? ' futur' : '');
-    svg += '<rect class="' + classes + '" x="' + (cx - lb / 2).toFixed(1) + '" y="' + (y(s.valeur)).toFixed(1) + '" width="' + lb.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="3"><title>' + echapper(s.titre || (s.libelle + ' : ' + s.valeur)) + '</title></rect>';
+    svg += '<rect class="' + classes + '" x="' + (cx - lb / 2).toFixed(1) + '" y="' + (y(s.valeur)).toFixed(1) + '" width="' + lb.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="3"><title>' + echapper(s.titre || (s.libelle + ': ' + s.valeur)) + '</title></rect>';
     if (s.valeur > 0) {
       svg += '<text class="gr-valeur" x="' + cx.toFixed(1) + '" y="' + (y(s.valeur) - 5).toFixed(1) + '" text-anchor="middle">' + fmtHeuresDec(s.valeur * 60, true) + '</text>';
     }
@@ -40,16 +40,16 @@ function dessinerBarres(conteneur, series, options) {
   });
   if (o.repere) {
     svg += '<line class="gr-repere" x1="' + mg.gauche + '" x2="' + (W - mg.droite) + '" y1="' + y(o.repere).toFixed(1) + '" y2="' + y(o.repere).toFixed(1) + '"/>';
-    svg += '<text class="gr-repere-texte" x="' + (W - mg.droite) + '" y="' + (y(o.repere) - 4).toFixed(1) + '" text-anchor="end">repère ' + fmtHeuresDec(o.repere * 60) + ' / mois</text>';
+    svg += '<text class="gr-repere-texte" x="' + (W - mg.droite) + '" y="' + (y(o.repere) - 4).toFixed(1) + '" text-anchor="end">reference ' + fmtHeuresDec(o.repere * 60) + ' / month</text>';
   }
   svg += '</svg>';
   conteneur.innerHTML = svg;
 }
 
-/* Répartition en barres horizontales (HTML). lignes : [{nom, couleur, valeur, part}] */
+/* Breakdown in horizontal bars (HTML). lignes: [{nom, couleur, valeur, part}] */
 function dessinerRepartition(conteneur, lignes) {
   if (!conteneur) return;
-  if (!lignes.length) { conteneur.innerHTML = '<div class="vide">Aucune heure sur la période.</div>'; return; }
+  if (!lignes.length) { conteneur.innerHTML = '<div class="vide">No hours in this period.</div>'; return; }
   var max = Math.max.apply(null, lignes.map(function (l) { return l.valeur; })) || 1;
   conteneur.innerHTML = '<div class="rep-lignes">' + lignes.map(function (l) {
     return '<div class="rep-ligne">'

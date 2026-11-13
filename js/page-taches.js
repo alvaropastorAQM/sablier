@@ -1,29 +1,32 @@
 /* ============================================================
-   PAGE TÂCHES : tableau en trois colonnes (À faire, En cours, Fait).
-   Dans chaque colonne, les cartes se rangent d'elles-mêmes : les
-   priorités hautes d'abord, puis moyennes, puis basses, et à priorité
-   égale l'échéance la plus proche en premier (règles dans js/calculs.js).
-   Glisser-déposer au pointeur : la carte flotte avec un léger
-   balancement, un emplacement s'ouvre là où elle se posera.
+   TASKS PAGE: board with three columns (To do, In progress, Done).
+   In each column, the cards sort themselves: high priorities first,
+   then medium, then low, and for equal priority the nearest due date
+   first (rules in js/calculs.js).
+   Pointer drag and drop: the card floats with a slight sway, and a
+   slot opens where it will land.
 
-   La fiche d'une tâche porte tout ce qui sert à suivre son avancement :
-   étapes à cocher, pièces jointes (fichiers, images, liens, extraits de
-   code), pages de notes liées, journal d'avancement daté, temps passé.
-   Les idées, elles, vivent dans les notes (page « Idées en vrac ») et
-   deviennent des tâches d'un clic.
+   A task sheet holds everything needed to follow its progress:
+   steps to tick off, attachments (files, images, links, code snippets),
+   linked notes pages, a dated progress log, time spent.
+   Ideas live in the notes (the "Loose ideas" page) and turn into
+   tasks in one click.
    ============================================================ */
 'use strict';
 
 var STATUTS_TACHE = [
-  { id: 'a-faire', nom: 'À faire', vide: 'Ce qui est décidé et attend son tour. Les idées mûrissent dans les notes, page « Idées en vrac ».' },
-  { id: 'en-cours', nom: 'En cours', vide: 'Ce sur quoi vous travaillez en ce moment.' },
-  { id: 'fait', nom: 'Fait', vide: 'Les tâches terminées rejoignent le relevé du mois.' },
+  { id: 'a-faire', nom: 'To do', vide: 'What is decided and waiting its turn. Ideas mature in the notes, on the "Loose ideas" page.' },
+  { id: 'en-cours', nom: 'In progress', vide: 'What you are working on right now.' },
+  { id: 'fait', nom: 'Done', vide: 'Finished tasks join the monthly statement.' },
 ];
 var TACHES_FILTRE_AXE = '';
 var TACHES_RECHERCHE = '';
 var TACHES_TOUT_FAIT = false;
 var GLISSER = null;
 var LANGAGES_CODE = ['texte', 'javascript', 'html', 'css', 'json', 'python', 'sql', 'bash', 'java', 'swift', 'markdown', 'autre'];
+/* Stored values stay as they are; only the displayed name is English. */
+var LIBELLES_LANGAGE = { texte: 'text', autre: 'other' };
+function libelleLangage(l) { return LIBELLES_LANGAGE[l] || l; }
 
 function initTaches() {
   PAGES.taches = rendreTaches;
@@ -52,24 +55,24 @@ function initTaches() {
 
 function tacheParId(id) { return taches().filter(function (t) { return t.id === id; })[0] || null; }
 
-/* ---------- Rendu ---------- */
+/* ---------- Rendering ---------- */
 
 function rendreTaches() {
   var zone = document.getElementById('tachesContenu');
   var enCours = taches().filter(function (t) { return t.statut === 'en-cours'; }).length;
-  var resume = taches().length + (taches().length > 1 ? ' tâches, ' : ' tâche, ') + enCours + ' en cours';
+  var resume = taches().length + (taches().length > 1 ? ' tasks, ' : ' task, ') + enCours + ' in progress';
   if (document.getElementById('kbColonnes')) {
     document.getElementById('kbResume').textContent = resume;
-    /* Le filtre d'axe suit les Réglages (axe renommé, ajouté ou supprimé). */
+    /* The area filter follows Settings (area renamed, added or deleted). */
     if (TACHES_FILTRE_AXE && !axeParId(TACHES_FILTRE_AXE)) TACHES_FILTRE_AXE = '';
     document.getElementById('kbFiltreAxe').innerHTML = optionsAxesHtml(TACHES_FILTRE_AXE, true);
     rendreColonnesTaches(true);
     return;
   }
-  zone.innerHTML = '<div class="page-entete"><div><h2 class="page-titre">Tâches</h2>'
-    + '<p class="page-sous">À faire, en cours, fait. Les cartes se rangent d\'elles-mêmes : priorité haute, moyenne puis basse, et l\'échéance la plus proche en premier. Glissez une carte d\'une colonne à l\'autre ; cliquez-la pour ouvrir sa fiche (étapes, pièces jointes, notes liées, avancement). Une tâche passée en « Fait » rejoint les travaux réalisés du relevé du mois.</p></div>'
-    + '<div class="actions"><button class="btn btn-ghost" data-action="idees">Idées en vrac</button><button class="btn" data-action="nouveau" data-statut="a-faire">Nouvelle tâche</button></div></div>'
-    + '<div class="kb-outils"><input type="text" id="kbRecherche" class="champ" style="max-width:260px;" placeholder="Rechercher…" value="' + echapper(TACHES_RECHERCHE) + '">'
+  zone.innerHTML = '<div class="page-entete"><div><h2 class="page-titre">Tasks</h2>'
+    + '<p class="page-sous">To do, in progress, done. Cards sort themselves: high, medium, then low priority, and the nearest due date first. Drag a card from one column to another; click it to open its sheet (steps, attachments, linked notes, progress). A task moved to "Done" joins the work done in the monthly statement.</p></div>'
+    + '<div class="actions"><button class="btn btn-ghost" data-action="idees">Loose ideas</button><button class="btn" data-action="nouveau" data-statut="a-faire">New task</button></div></div>'
+    + '<div class="kb-outils"><input type="text" id="kbRecherche" class="champ" style="max-width:260px;" placeholder="Search…" value="' + echapper(TACHES_RECHERCHE) + '">'
     + '<select id="kbFiltreAxe" class="champ" style="width:auto;">' + optionsAxesHtml(TACHES_FILTRE_AXE, true) + '</select>'
     + '<span class="petit" id="kbResume">' + resume + '</span></div>'
     + '<div class="kb-colonnes" id="kbColonnes"></div>';
@@ -99,15 +102,15 @@ function rendreColonnesTaches(animer) {
     return '<div class="kb-colonne" data-statut="' + s.id + '">'
       + '<div class="kb-colonne-entete"><span class="kb-colonne-titre">' + echapper(s.nom) + '</span><span class="nb">' + total + '</span></div>'
       + (liste.length ? liste.map(function (t) { return carteTacheHtml(t, ref); }).join('') : '<div class="vide" style="padding:14px 8px; font-size:12.5px;">' + echapper(s.vide) + '</div>')
-      + (tronque ? '<button class="lien" data-action="tout-fait" style="align-self:center;">Afficher les ' + total + ' tâches terminées</button>' : '')
-      + '<button class="kb-ajout" data-action="nouveau" data-statut="' + s.id + '">+ Ajouter</button>'
+      + (tronque ? '<button class="lien" data-action="tout-fait" style="align-self:center;">Show all ' + total + ' completed tasks</button>' : '')
+      + '<button class="kb-ajout" data-action="nouveau" data-statut="' + s.id + '">+ Add</button>'
       + '</div>';
   }).join('');
   if (animer) animerReclassement(conteneur, anciens);
 }
 
-/* Les cartes qui changent de place glissent de leur ancienne position
-   vers la nouvelle (technique FLIP). */
+/* Cards that change place slide from their old position to the new
+   one (FLIP technique). */
 function animerReclassement(conteneur, anciens) {
   var nouvelles = Array.prototype.slice.call(conteneur.querySelectorAll('.kb-carte'));
   var mouvements = [];
@@ -134,39 +137,39 @@ function etapesFaites(t) { return (t.etapes || []).filter(function (e) { return 
 
 function carteTacheHtml(t, ref) {
   var pe = prioriteEffective(t, ref);
-  var origine = pe.origine === 'echeance' ? ', relevée par l\'échéance' : (pe.origine === 'manuelle' ? ', choisie' : ', automatique');
-  var prioHtml = '<span class="kb-priorite ' + pe.niveau + '" title="Priorité ' + LIBELLES_PRIORITE[pe.niveau].toLowerCase() + origine + '"></span>'
+  var origine = pe.origine === 'echeance' ? ', raised by the due date' : (pe.origine === 'manuelle' ? ', chosen' : ', automatic');
+  var prioHtml = '<span class="kb-priorite ' + pe.niveau + '" title="Priority: ' + LIBELLES_PRIORITE[pe.niveau].toLowerCase() + origine + '"></span>'
     + (t.statut !== 'fait' && pe.niveau !== 'basse' ? '<span class="kb-prio-lib ' + pe.niveau + '">' + LIBELLES_PRIORITE[pe.niveau] + '</span>' : '');
   var ech = '';
   if (t.echeance && t.statut !== 'fait') {
     var j = joursEntre(ref, t.echeance);
-    ech = '<span class="kb-echeance' + (j < 0 ? ' retard' : (j <= 7 ? ' proche' : '')) + '" title="Échéance ' + libelleDelai(j) + '">' + libelleDate(t.echeance, 'jour') + ' · ' + libelleJours(j) + '</span>';
+    ech = '<span class="kb-echeance' + (j < 0 ? ' retard' : (j <= 7 ? ' proche' : '')) + '" title="Due ' + libelleDelai(j) + '">' + libelleDate(t.echeance, 'jour') + ' · ' + libelleJours(j) + '</span>';
   }
   var etapes = t.etapes || [];
   var faites = etapesFaites(t);
-  var progres = etapes.length ? '<div class="kb-progres" title="' + faites + ' étape' + (faites > 1 ? 's' : '') + ' sur ' + etapes.length + '"><span style="width:' + Math.round(100 * faites / etapes.length) + '%"></span></div>' : '';
+  var progres = etapes.length ? '<div class="kb-progres" title="' + faites + ' of ' + etapes.length + ' step' + (etapes.length > 1 ? 's' : '') + ' done"><span style="width:' + Math.round(100 * faites / etapes.length) + '%"></span></div>' : '';
   var temps = minutesTache(entreesJournal(), t.id);
   var compteurs = [];
-  if (etapes.length) compteurs.push('<span title="Étapes">' + icone('case', 13) + faites + '/' + etapes.length + '</span>');
-  if ((t.pieces || []).length) compteurs.push('<span title="Pièces jointes">' + icone('trombone', 13) + t.pieces.length + '</span>');
-  if ((t.notes || []).length) compteurs.push('<span title="Notes liées">' + icone('note', 13) + t.notes.length + '</span>');
-  if (temps.minutes) compteurs.push('<span title="Temps passé (journal)">' + icone('horloge', 13) + fmtDuree(temps.minutes) + '</span>');
+  if (etapes.length) compteurs.push('<span title="Steps">' + icone('case', 13) + faites + '/' + etapes.length + '</span>');
+  if ((t.pieces || []).length) compteurs.push('<span title="Attachments">' + icone('trombone', 13) + t.pieces.length + '</span>');
+  if ((t.notes || []).length) compteurs.push('<span title="Linked notes">' + icone('note', 13) + t.notes.length + '</span>');
+  if (temps.minutes) compteurs.push('<span title="Time spent (log)">' + icone('horloge', 13) + fmtDuree(temps.minutes) + '</span>');
   return '<div class="kb-carte' + (t.statut === 'fait' ? ' fait' : '') + '" data-id="' + echapper(t.id) + '">'
     + '<div class="kb-titre">' + echapper(t.titre) + '</div>'
     + (t.description ? '<div class="petit" style="overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">' + echapper(t.description) + '</div>' : '')
     + progres
     + '<div class="kb-meta">' + prioHtml + puceAxeHtml(t.axe) + ech
-    + (t.statut === 'fait' && t.faitLe ? '<span class="kb-echeance">fait le ' + dateFr(t.faitLe) + '</span>' : '') + '</div>'
+    + (t.statut === 'fait' && t.faitLe ? '<span class="kb-echeance">done on ' + dateFr(t.faitLe) + '</span>' : '') + '</div>'
     + (compteurs.length ? '<div class="kb-compteurs">' + compteurs.join('') + '</div>' : '')
     + '<div class="kb-carte-actions">'
-    + (t.statut !== 'fait' ? boutonIcone('chrono', 'play', 'Démarrer le chrono sur cette tâche', '', t.id) : '')
-    + boutonIcone('modifier', 'crayon', 'Ouvrir la fiche', '', t.id)
-    + (t.statut !== 'fait' ? boutonIcone('avancer', 'coche', t.statut === 'en-cours' ? 'Marquer fait' : 'Passer en cours', '', t.id) : '')
-    + boutonIcone('supprimer', 'corbeille', 'Supprimer', 'danger', t.id)
+    + (t.statut !== 'fait' ? boutonIcone('chrono', 'play', 'Start the timer on this task', '', t.id) : '')
+    + boutonIcone('modifier', 'crayon', 'Open task sheet', '', t.id)
+    + (t.statut !== 'fait' ? boutonIcone('avancer', 'coche', t.statut === 'en-cours' ? 'Mark done' : 'Move to in progress', '', t.id) : '')
+    + boutonIcone('supprimer', 'corbeille', 'Delete', 'danger', t.id)
     + '</div></div>';
 }
 
-/* ---------- Opérations ---------- */
+/* ---------- Operations ---------- */
 
 function ordreSuivant(statut) {
   var max = 0;
@@ -182,9 +185,9 @@ function appliquerStatut(t, statut) {
   else t.faitLe = null;
 }
 
-/* Dépose une tâche dans une colonne, avant la tâche « avantId » (ou en
-   fin). L'ordre manuel ne départage que les cartes de même priorité et
-   de même échéance : le classement automatique garde la main. */
+/* Drops a task into a column, before the task "avantId" (or at the
+   end). Manual order only separates cards with the same priority and
+   the same due date: the automatic ranking keeps the upper hand. */
 function deplacerTache(t, statut, avantId) {
   var ref = aujourdhui();
   appliquerStatut(t, statut);
@@ -205,16 +208,16 @@ function avancerTache(id) {
   t.ordre = ordreSuivant(suite);
   sauver('chantiers');
   rafraichir();
-  if (suite === 'fait') notifier('« ' + t.titre + ' » est terminée : elle figurera dans les travaux réalisés ' + deLibelleMois(moisDe(t.faitLe)) + '.', { type: 'succes' });
+  if (suite === 'fait') notifier('"' + t.titre + '" is done: it will appear in the work done ' + deLibelleMois(moisDe(t.faitLe)) + '.',{ type: 'succes' });
 }
 
-/* brouillon : les champs de la fiche ouverte, pour la rouvrir telle quelle
-   si la suppression est annulée. */
+/* brouillon: the fields of the open sheet, to reopen it as it was
+   if the deletion is cancelled. */
 function supprimerTache(id, brouillon) {
   var t = tacheParId(id);
   if (!t) return;
   var nbPieces = (t.pieces || []).filter(function (p) { return p.type === 'fichier'; }).length;
-  confirmer('Supprimer la tâche « ' + t.titre + ' » ?' + (nbPieces ? ' Ses ' + nbPieces + ' fichier' + (nbPieces > 1 ? 's joints iront' : ' joint ira') + ' dans la corbeille.' : ''), { ok: 'Supprimer', danger: true, titre: 'Supprimer une tâche' }).then(function (ok) {
+  confirmer('Delete the task "' + t.titre + '"?' + (nbPieces ? (nbPieces > 1 ? ' Its ' + nbPieces + ' attached files will go' : ' Its attached file will go') + ' to the trash.' : ''), { ok: 'Delete', danger: true, titre: 'Delete a task' }).then(function (ok) {
     if (!ok) { if (brouillon) ouvrirEditionTache(id, null, null, brouillon); return; }
     if (nbPieces && estApp()) window.sablier.pieces.supprimer(t.id);
     ETAT.chantiers.taches = taches().filter(function (x) { return x.id !== id; });
@@ -224,8 +227,8 @@ function supprimerTache(id, brouillon) {
   });
 }
 
-/* Créer une tâche sans passer par la fiche (depuis une note, par exemple). */
-/* L'axe demandé, ou le dernier utilisé, à condition qu'il existe encore. */
+/* Create a task without going through the sheet (from a note, for example). */
+/* The requested area, or the last one used, as long as it still exists. */
 function axeParDefaut(souhaite) {
   var id = souhaite || ETAT.reglages.ui.dernierAxe;
   if (axeParId(id)) return id;
@@ -235,7 +238,7 @@ function axeParDefaut(souhaite) {
 function creerTache(o) {
   var t = normaliserTache({
     id: uid('tache'), statut: o.statut || 'a-faire', axe: axeParDefaut(o.axe),
-    titre: String(o.titre || '').trim() || 'Sans titre', description: String(o.description || '').trim(),
+    titre: String(o.titre || '').trim() || 'Untitled', description: String(o.description || '').trim(),
     priorite: normaliserPriorite(o.priorite), echeance: o.echeance || null, notes: (o.notes || []).slice(),
     ordre: 0, creeLe: new Date().toISOString(), modifieLe: new Date().toISOString(), faitLe: null,
   });
@@ -246,7 +249,7 @@ function creerTache(o) {
   return t;
 }
 
-/* ---------- Liens entre tâches et pages de notes ---------- */
+/* ---------- Links between tasks and notes pages ---------- */
 
 function lierTacheANote(tacheId, pageId) {
   var t = tacheParId(tacheId);
@@ -264,30 +267,30 @@ function delierTacheDeNote(tacheId, pageId) {
   t.modifieLe = new Date().toISOString();
   sauver('chantiers');
 }
-/* Menu de choix d'une page de notes (arborescence indentée). */
+/* Menu to choose a notes page (indented tree). */
 function menuChoixPage(ancre, exclure, surChoix) {
   var items = [];
   var parcourir = function (parent, niveau) {
     enfantsDe(parent).forEach(function (x) {
-      if (exclure.indexOf(x.id) < 0) items.push({ libelle: (niveau ? '   '.repeat(niveau) + '↳ ' : '') + (x.titre || 'Sans titre'), fn: function () { surChoix(x.id); } });
+      if (exclure.indexOf(x.id) < 0) items.push({ libelle: (niveau ? '   '.repeat(niveau) + '↳ ' : '') + (x.titre || 'Untitled'), fn: function () { surChoix(x.id); } });
       parcourir(x.id, niveau + 1);
     });
   };
   parcourir(null, 0);
-  if (!items.length) items.push({ libelle: 'Aucune autre page', fn: function () {} });
-  ouvrirMenu(ancre, items, { titre: 'Lier une page de notes' });
+  if (!items.length) items.push({ libelle: 'No other page', fn: function () {} });
+  ouvrirMenu(ancre, items, { titre: 'Link a notes page' });
 }
-/* Pastille d'une tâche (dans les notes) : priorité, colonne, titre. */
+/* Task chip (in the notes): priority, column, title. */
 function chipTacheHtml(t) {
   var ref = aujourdhui();
   var pe = prioriteEffective(t, ref);
   var st = STATUTS_TACHE.filter(function (s) { return s.id === t.statut; })[0];
-  return '<button type="button" class="chip-tache' + (t.statut === 'fait' ? ' fait' : '') + '" data-action="tache" data-id="' + echapper(t.id) + '" title="Ouvrir la fiche"><span class="kb-priorite ' + pe.niveau + '"></span><span class="chip-tache-statut">' + echapper(st ? st.nom : t.statut) + '</span><span class="chip-tache-titre">' + echapper(t.titre) + '</span></button>';
+  return '<button type="button" class="chip-tache' + (t.statut === 'fait' ? ' fait' : '') + '" data-action="tache" data-id="' + echapper(t.id) + '" title="Open task sheet"><span class="kb-priorite ' + pe.niveau + '"></span><span class="chip-tache-statut">' + echapper(st ? st.nom : t.statut) + '</span><span class="chip-tache-titre">' + echapper(t.titre) + '</span></button>';
 }
 
-/* ---------- Étapes, pièces, avancement (mutations directes) ----------
-   Chaque fonction enregistre puis redessine la section de la fiche si
-   elle est ouverte, et les cartes derrière. */
+/* ---------- Steps, attachments, progress (direct mutations) ----------
+   Each function saves, then redraws the section of the sheet if it is
+   open, and the cards behind it. */
 
 function ficheOuverte(t) { return document.querySelector('.modal[data-tache="' + t.id + '"]'); }
 function apresMutationTache(t, section) {
@@ -342,7 +345,7 @@ function supprimerAvancementTache(t, id) {
 
 function pieceParId(t, id) { return (t.pieces || []).filter(function (p) { return p.id === id; })[0] || null; }
 function ajouterPieceCode(t, o) {
-  var p = { id: uid('piece'), type: 'code', nom: String(o.nom || '').trim() || 'Extrait', langage: o.langage || 'texte', contenu: String(o.contenu || ''), ajouteLe: new Date().toISOString() };
+  var p = { id: uid('piece'), type: 'code', nom: String(o.nom || '').trim() || 'Snippet', langage: o.langage || 'texte', contenu: String(o.contenu || ''), ajouteLe: new Date().toISOString() };
   t.pieces.push(p);
   apresMutationTache(t, 'pieces');
   return p;
@@ -355,23 +358,23 @@ function ajouterPieceLien(t, o) {
   apresMutationTache(t, 'pieces');
   return p;
 }
-/* Fichiers : copiés dans le dossier de données (Pieces/<tâche>/) par
-   l'application ; sans chemins, un sélecteur de fichiers s'ouvre. */
+/* Files: copied into the data folder (Pieces/<task>/) by the
+   app; without paths, a file picker opens. */
 function ajouterPiecesFichiers(t, chemins) {
-  if (!estApp()) { notifier('Les fichiers joints sont disponibles dans l\'application macOS.'); return Promise.resolve(false); }
+  if (!estApp()) { notifier('Attached files are available in the desktop app.'); return Promise.resolve(false); }
   return window.sablier.pieces.ajouter(t.id, chemins || null).then(function (res) {
     if (!res || res.annule) return false;
-    if (!res.ok) { notifier('Fichier non joint : ' + (res.message || 'erreur'), { type: 'erreur' }); return false; }
+    if (!res.ok) { notifier('File not attached: ' + (res.message || 'error'), { type: 'erreur' }); return false; }
     (res.pieces || []).forEach(function (p) {
       t.pieces.push({ id: uid('piece'), type: 'fichier', nom: p.nom, fichier: p.fichier, taille: p.taille, image: !!p.image, ajouteLe: new Date().toISOString() });
     });
-    if (res.erreurs && res.erreurs.length) notifier(res.erreurs.join(' ; '), { type: 'erreur' });
-    else if (res.pieces && res.pieces.length) notifier(res.pieces.length > 1 ? res.pieces.length + ' fichiers joints.' : 'Fichier joint : ' + res.pieces[0].nom, { type: 'succes' });
+    if (res.erreurs && res.erreurs.length) notifier(res.erreurs.join('; '), { type: 'erreur' });
+    else if (res.pieces && res.pieces.length) notifier(res.pieces.length > 1 ? res.pieces.length + ' files attached.' : 'File attached: ' + res.pieces[0].nom, { type: 'succes' });
     apresMutationTache(t, 'pieces');
     return true;
   });
 }
-/* Renvoie une promesse tenue quand la question (pour un fichier) est tranchée. */
+/* Returns a promise that resolves once the question (for a file) is settled. */
 function supprimerPieceTache(t, pieceId) {
   var p = pieceParId(t, pieceId);
   if (!p) return Promise.resolve(false);
@@ -381,7 +384,7 @@ function supprimerPieceTache(t, pieceId) {
     apresMutationTache(t, 'pieces');
     return true;
   };
-  if (p.type === 'fichier') return confirmer('Retirer « ' + p.nom + ' » de la tâche ? Le fichier ira dans la corbeille.', { ok: 'Retirer', danger: true, titre: 'Retirer une pièce jointe' }).then(function (ok) { return ok ? faire() : false; });
+  if (p.type === 'fichier') return confirmer('Remove "' + p.nom + '" from the task? The file will go to the trash.', { ok: 'Remove', danger: true, titre: 'Remove an attachment' }).then(function (ok) { return ok ? faire() : false; });
   return Promise.resolve(faire());
 }
 function ouvrirPieceTache(t, pieceId) {
@@ -392,42 +395,41 @@ function ouvrirPieceTache(t, pieceId) {
 }
 function urlPiece(p) { return estApp() && p.fichier ? window.sablier.pieces.url(p.fichier) : ''; }
 
-/* ---------- Fiche d'une tâche ---------- */
+/* ---------- Task sheet ---------- */
 
 function texteAidePriorite(priorite, echeance, statut) {
   var ref = aujourdhui();
   var pe = prioriteEffective({ priorite: priorite, echeance: echeance || null, statut: statut }, ref);
   var niveau = LIBELLES_PRIORITE[pe.niveau].toLowerCase();
-  if (pe.origine === 'echeance') return 'Priorité effective : ' + niveau + ', relevée par l\'échéance (' + libelleDelai(joursEntre(ref, echeance)) + '). Un choix manuel n\'est jamais abaissé.';
-  if (pe.origine === 'defaut') return 'Sans échéance, la priorité automatique reste basse : donnez une date pour qu\'elle monte toute seule (moins de 5 jours : haute ; jusqu\'à 14 jours : moyenne).';
-  return 'Priorité effective : ' + niveau + '.' + (echeance ? ' L\'échéance la relèvera d\'elle-même en approchant.' : '');
+  if (pe.origine === 'echeance') return 'Effective priority: ' + niveau + ', raised by the due date (' + libelleDelai(joursEntre(ref, echeance)) + '). A manual choice is never lowered.';
+  if (pe.origine === 'defaut') return 'Without a due date, the automatic priority stays low: set a date so it rises on its own (under 5 days: high; up to 14 days: medium).';
+  return 'Effective priority: ' + niveau + '.' + (echeance ? ' The due date will raise it on its own as it gets closer.' : '');
 }
 
 function champsPrincipauxHtml(v) {
-  var optionsPrio = [['auto', 'Automatique, selon l\'échéance'], ['haute', 'Haute'], ['moyenne', 'Moyenne'], ['basse', 'Basse']];
-  return champHtml('tcTitre', 'Titre', 'text', v.titre, { attrs: 'placeholder="ex. Campagne pilote sur 20 clients"' })
+  var optionsPrio = [['auto', 'Automatic, based on due date'], ['haute', 'High'], ['moyenne', 'Medium'], ['basse', 'Low']];
+  return champHtml('tcTitre', 'Title', 'text', v.titre, { attrs: 'placeholder="e.g. Pilot campaign with 20 clients"' })
     + '<div class="grid-4" style="margin-top:12px;">'
-    + '<div class="field"><label for="tcStatut">Colonne</label><select id="tcStatut">' + STATUTS_TACHE.map(function (s) { return '<option value="' + s.id + '"' + (s.id === v.statut ? ' selected' : '') + '>' + echapper(s.nom) + '</option>'; }).join('') + '</select></div>'
-    + '<div class="field"><label for="tcAxe">Axe</label><select id="tcAxe">' + optionsAxesHtml(v.axe) + '</select></div>'
-    + '<div class="field"><label for="tcPriorite">Priorité</label><select id="tcPriorite">' + optionsPrio.map(function (p) { return '<option value="' + p[0] + '"' + (p[0] === v.priorite ? ' selected' : '') + '>' + echapper(p[1]) + '</option>'; }).join('') + '</select></div>'
-    + champHtml('tcEcheance', 'Échéance', 'date', v.echeance || '')
+    + '<div class="field"><label for="tcStatut">Column</label><select id="tcStatut">' + STATUTS_TACHE.map(function (s) { return '<option value="' + s.id + '"' + (s.id === v.statut ? ' selected' : '') + '>' + echapper(s.nom) + '</option>'; }).join('') + '</select></div>'
+    + '<div class="field"><label for="tcAxe">Area</label><select id="tcAxe">' + optionsAxesHtml(v.axe) + '</select></div>'
+    + '<div class="field"><label for="tcPriorite">Priority</label><select id="tcPriorite">' + optionsPrio.map(function (p) { return '<option value="' + p[0] + '"' + (p[0] === v.priorite ? ' selected' : '') + '>' + echapper(p[1]) + '</option>'; }).join('') + '</select></div>'
+    + champHtml('tcEcheance', 'Due date', 'date', v.echeance || '')
     + '</div>'
     + '<p class="hint" id="tcPrioAide" style="margin:6px 0 0;">' + echapper(texteAidePriorite(v.priorite, v.echeance, v.statut)) + '</p>'
     + '<div style="margin-top:12px;">' + champHtml('tcDescription', 'Description', 'textarea', v.description, { attrs: 'rows="3"' }) + '</div>';
 }
 
-/* Les champs principaux tels qu'ils sont dans la fiche ouverte (pour la
-   rouvrir sans perdre la saisie après une boîte de dialogue). */
+/* The main fields as they are in the open sheet (to reopen it without
+   losing what was typed after a dialog). */
 function brouillonFiche(m) {
   if (!m || !m.querySelector('#tcTitre')) return null;
   return { titre: m.querySelector('#tcTitre').value, statut: m.querySelector('#tcStatut').value, axe: m.querySelector('#tcAxe').value, priorite: m.querySelector('#tcPriorite').value, echeance: m.querySelector('#tcEcheance').value, description: m.querySelector('#tcDescription').value };
 }
 
-/* Fiche : les champs principaux s'enregistrent avec le bouton ; les
-   sections de suivi (étapes, pièces, notes, avancement) s'enregistrent
-   au fil de l'eau. prefill : valeurs de départ d'une nouvelle tâche
-   (titre, description, notes liées…) ; brouillon : champs en cours de
-   saisie à restaurer par-dessus la tâche. */
+/* Sheet: the main fields are saved with the button; the tracking
+   sections (steps, attachments, notes, progress) are saved as you go.
+   prefill: starting values of a new task (title, description, linked
+   notes...); brouillon: fields being typed, to restore over the task. */
 function ouvrirEditionTache(id, statutInitial, prefill, brouillon) {
   var t = id ? tacheParId(id) : null;
   if (id && !t) return;
@@ -435,12 +437,12 @@ function ouvrirEditionTache(id, statutInitial, prefill, brouillon) {
   if (!axeParId(v.axe)) v.axe = axeParDefaut(v.axe);
   v.priorite = normaliserPriorite(v.priorite);
   var m = ouvrirModale({
-    titre: t ? 'Tâche' : 'Nouvelle tâche',
+    titre: t ? 'Task' : 'New task',
     classe: t ? 'modal-wide modal-fiche' : '',
-    sousTitre: t ? [t.creeLe ? 'Créée le ' + libelleDate(String(t.creeLe).slice(0, 10), 'moyen') : '', t.faitLe ? 'terminée le ' + libelleDate(t.faitLe, 'moyen') : '', t.modifieLe ? 'modifiée le ' + libelleDate(String(t.modifieLe).slice(0, 10), 'moyen') : ''].filter(Boolean).join(' · ') : (v.notes && v.notes.length ? 'Liée à la page « ' + ((pageParId(v.notes[0]) || {}).titre || 'Sans titre') + ' »' : ''),
-    corps: champsPrincipauxHtml(v) + (t ? '<div class="fiche-sections" id="tcSections">' + sectionsFicheHtml(t) + '</div>' : '<p class="hint" style="margin-top:10px;">Étapes, pièces jointes, notes liées et journal d\'avancement se remplissent dans la fiche, une fois la tâche créée.</p>'),
-    pied: (t ? '<button class="btn btn-danger-ligne btn-petit" data-role="supprimer">Supprimer</button>' + (t.statut !== 'fait' ? '<button class="btn btn-or-ligne btn-petit" data-role="chrono">Démarrer le chrono</button>' : '') : '')
-      + '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">' + (t ? 'Fermer' : 'Annuler') + '</button><button class="btn" data-role="ok">' + (t ? 'Enregistrer' : 'Créer la tâche') + '</button></div>',
+    sousTitre: t ? [t.creeLe ? 'Created on ' + libelleDate(String(t.creeLe).slice(0, 10), 'moyen') : '', t.faitLe ? 'completed on ' + libelleDate(t.faitLe, 'moyen') : '', t.modifieLe ? 'modified on ' + libelleDate(String(t.modifieLe).slice(0, 10), 'moyen') : ''].filter(Boolean).join(' · ') : (v.notes && v.notes.length ? 'Linked to the page "' + ((pageParId(v.notes[0]) || {}).titre || 'Untitled') + '"' : ''),
+    corps: champsPrincipauxHtml(v) + (t ? '<div class="fiche-sections" id="tcSections">' + sectionsFicheHtml(t) + '</div>' : '<p class="hint" style="margin-top:10px;">Steps, attachments, linked notes and the progress log are filled in on the task sheet, once the task is created.</p>'),
+    pied: (t ? '<button class="btn btn-danger-ligne btn-petit" data-role="supprimer">Delete</button>' + (t.statut !== 'fait' ? '<button class="btn btn-or-ligne btn-petit" data-role="chrono">Start the timer</button>' : '') : '')
+      + '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">' + (t ? 'Close' : 'Cancel') + '</button><button class="btn" data-role="ok">' + (t ? 'Save' : 'Create task') + '</button></div>',
   });
   var modale = m.querySelector('.modal');
   if (t) modale.dataset.tache = t.id;
@@ -463,7 +465,7 @@ function ouvrirEditionTache(id, statutInitial, prefill, brouillon) {
       var n = creerTache({ titre: titre, statut: statut, axe: m.querySelector('#tcAxe').value, priorite: m.querySelector('#tcPriorite').value, echeance: m.querySelector('#tcEcheance').value || null, description: m.querySelector('#tcDescription').value, notes: v.notes });
       fermerModale();
       rafraichir();
-      notifier('Tâche créée : « ' + n.titre + ' ».', { type: 'succes', action: { libelle: 'Ouvrir la fiche', fn: function () { ouvrirEditionTache(n.id); } } });
+      notifier('Task created: "' + n.titre + '".', { type: 'succes', action: { libelle: 'Open task sheet', fn: function () { ouvrirEditionTache(n.id); } } });
       return;
     }
     var ancien = t.statut;
@@ -477,13 +479,13 @@ function ouvrirEditionTache(id, statutInitial, prefill, brouillon) {
     sauver('chantiers');
     fermerModale();
     rafraichir();
-    notifier('Tâche enregistrée.', { type: 'succes' });
+    notifier('Task saved.', { type: 'succes' });
   });
   m.querySelector('#tcTitre').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); m.querySelector('[data-role=ok]').click(); } });
   if (t) brancherSectionsFiche(m, t);
 }
 
-/* ---------- Sections de la fiche ---------- */
+/* ---------- Sections of the sheet ---------- */
 
 function sectionsFicheHtml(t) {
   return sectionEtapesHtml(t) + sectionPiecesHtml(t) + sectionNotesHtml(t) + sectionAvancementHtml(t) + sectionTempsHtml(t);
@@ -491,8 +493,8 @@ function sectionsFicheHtml(t) {
 function sectionHtml(nom, titre, compteur, actions, corps) {
   return '<section class="fiche-section" data-section="' + nom + '"><div class="fiche-section-entete"><h4>' + echapper(titre) + (compteur ? ' <span class="nb">' + echapper(compteur) + '</span>' : '') + '</h4><div class="actions">' + (actions || '') + '</div></div><div class="fiche-section-corps">' + corps + '</div></section>';
 }
-/* Redessine une section en conservant ce qui était en cours de frappe
-   dans ses champs (et le focus). */
+/* Redraws a section, keeping what was being typed in its fields
+   (and the focus). */
 function rafraichirSectionFiche(m, t, nom) {
   var ancienne = m.querySelector('.fiche-section[data-section="' + nom + '"]');
   if (!ancienne) return;
@@ -512,62 +514,62 @@ function sectionEtapesHtml(t) {
   var etapes = t.etapes || [];
   var faites = etapesFaites(t);
   var corps = (etapes.length ? '<ul class="etapes">' + etapes.map(function (e) {
-    return '<li class="etape' + (e.fait ? ' fait' : '') + '" data-etape="' + echapper(e.id) + '"><input type="checkbox" data-fiche="etape-basculer" data-id="' + echapper(e.id) + '"' + (e.fait ? ' checked' : '') + '><span class="etape-texte" data-fiche="etape-modifier" data-id="' + echapper(e.id) + '" title="Cliquer pour modifier">' + echapper(e.texte) + '</span>' + boutonIcone('etape-supprimer', 'corbeille', 'Retirer l\'étape', 'danger', e.id).replace('data-action=', 'data-fiche=') + '</li>';
+    return '<li class="etape' + (e.fait ? ' fait' : '') + '" data-etape="' + echapper(e.id) + '"><input type="checkbox" data-fiche="etape-basculer" data-id="' + echapper(e.id) + '"' + (e.fait ? ' checked' : '') + '><span class="etape-texte" data-fiche="etape-modifier" data-id="' + echapper(e.id) + '" title="Click to edit">' + echapper(e.texte) + '</span>' + boutonIcone('etape-supprimer', 'corbeille', 'Remove the step', 'danger', e.id).replace('data-action=', 'data-fiche=') + '</li>';
   }).join('') + '</ul>' : '')
     + (etapes.length ? '<div class="kb-progres" style="margin:8px 0 10px;"><span style="width:' + Math.round(100 * faites / etapes.length) + '%"></span></div>' : '')
-    + '<div class="etape-ajout"><input type="text" id="tcNouvelleEtape" class="champ" placeholder="Nouvelle étape, puis Entrée"><button type="button" class="btn btn-ghost btn-petit" data-fiche="etape-ajouter">Ajouter</button></div>';
-  return sectionHtml('etapes', 'Étapes', etapes.length ? faites + '/' + etapes.length : '', '', corps);
+    + '<div class="etape-ajout"><input type="text" id="tcNouvelleEtape" class="champ" placeholder="New step, then Enter"><button type="button" class="btn btn-ghost btn-petit" data-fiche="etape-ajouter">Add</button></div>';
+  return sectionHtml('etapes', 'Steps', etapes.length ? faites + '/' + etapes.length : '', '', corps);
 }
 
 function pieceHtml(t, p) {
   var quand = p.ajouteLe ? libelleDate(p.ajouteLe.slice(0, 10), 'moyen') : '';
   if (p.type === 'code') {
-    return '<div class="piece piece-code" data-piece="' + echapper(p.id) + '"><div class="piece-entete">' + icone('code', 14) + '<b>' + echapper(p.nom) + '</b><span class="petit">' + echapper(p.langage || 'texte') + (quand ? ' · ' + quand : '') + '</span>'
-      + '<span class="piece-actions">' + boutonIcone('piece-copier', 'copie', 'Copier le code', '', p.id).replace('data-action=', 'data-fiche=') + boutonIcone('piece-modifier', 'crayon', 'Modifier', '', p.id).replace('data-action=', 'data-fiche=') + boutonIcone('piece-supprimer', 'corbeille', 'Retirer', 'danger', p.id).replace('data-action=', 'data-fiche=') + '</span></div>'
+    return '<div class="piece piece-code" data-piece="' + echapper(p.id) + '"><div class="piece-entete">' + icone('code', 14) + '<b>' + echapper(p.nom) + '</b><span class="petit">' + echapper(libelleLangage(p.langage || 'texte')) + (quand ? ' · ' + quand : '') + '</span>'
+      + '<span class="piece-actions">' + boutonIcone('piece-copier', 'copie', 'Copy the code', '', p.id).replace('data-action=', 'data-fiche=') + boutonIcone('piece-modifier', 'crayon', 'Edit', '', p.id).replace('data-action=', 'data-fiche=') + boutonIcone('piece-supprimer', 'corbeille', 'Remove', 'danger', p.id).replace('data-action=', 'data-fiche=') + '</span></div>'
       + '<pre><code>' + echapper(p.contenu) + '</code></pre></div>';
   }
   if (p.type === 'lien') {
     return '<div class="piece piece-ligne" data-piece="' + echapper(p.id) + '">' + icone('externe', 15) + '<button type="button" class="lien piece-nom" data-fiche="piece-ouvrir" data-id="' + echapper(p.id) + '" title="' + echapper(p.url) + '">' + echapper(p.nom) + '</button><span class="petit piece-sous">' + echapper(p.url) + '</span>'
-      + '<span class="piece-actions">' + boutonIcone('piece-modifier', 'crayon', 'Modifier', '', p.id).replace('data-action=', 'data-fiche=') + boutonIcone('piece-supprimer', 'corbeille', 'Retirer', 'danger', p.id).replace('data-action=', 'data-fiche=') + '</span></div>';
+      + '<span class="piece-actions">' + boutonIcone('piece-modifier', 'crayon', 'Edit', '', p.id).replace('data-action=', 'data-fiche=') + boutonIcone('piece-supprimer', 'corbeille', 'Remove', 'danger', p.id).replace('data-action=', 'data-fiche=') + '</span></div>';
   }
   if (p.image) {
-    return '<div class="piece piece-image" data-piece="' + echapper(p.id) + '"><button type="button" class="piece-vignette" data-fiche="piece-ouvrir" data-id="' + echapper(p.id) + '" title="Ouvrir ' + echapper(p.nom) + '"><img src="' + echapper(urlPiece(p)) + '" alt="' + echapper(p.nom) + '"></button>'
-      + '<div class="piece-legende"><span class="piece-nom" title="' + echapper(p.nom) + '">' + echapper(p.nom) + '</span><span class="piece-actions">' + boutonIcone('piece-reveler', 'dossier', 'Afficher dans le Finder', '', p.id).replace('data-action=', 'data-fiche=') + boutonIcone('piece-supprimer', 'corbeille', 'Retirer', 'danger', p.id).replace('data-action=', 'data-fiche=') + '</span></div></div>';
+    return '<div class="piece piece-image" data-piece="' + echapper(p.id) + '"><button type="button" class="piece-vignette" data-fiche="piece-ouvrir" data-id="' + echapper(p.id) + '" title="Open ' + echapper(p.nom) + '"><img src="' + echapper(urlPiece(p)) + '" alt="' + echapper(p.nom) + '"></button>'
+      + '<div class="piece-legende"><span class="piece-nom" title="' + echapper(p.nom) + '">' + echapper(p.nom) + '</span><span class="piece-actions">' + boutonIcone('piece-reveler', 'dossier', 'Show in file manager', '', p.id).replace('data-action=', 'data-fiche=') + boutonIcone('piece-supprimer', 'corbeille', 'Remove', 'danger', p.id).replace('data-action=', 'data-fiche=') + '</span></div></div>';
   }
   return '<div class="piece piece-ligne" data-piece="' + echapper(p.id) + '">' + icone('fichier', 15) + '<button type="button" class="lien piece-nom" data-fiche="piece-ouvrir" data-id="' + echapper(p.id) + '">' + echapper(p.nom) + '</button><span class="petit piece-sous">' + (p.taille ? fmtTaille(p.taille) : '') + (quand ? ' · ' + quand : '') + '</span>'
-    + '<span class="piece-actions">' + boutonIcone('piece-reveler', 'dossier', 'Afficher dans le Finder', '', p.id).replace('data-action=', 'data-fiche=') + boutonIcone('piece-supprimer', 'corbeille', 'Retirer', 'danger', p.id).replace('data-action=', 'data-fiche=') + '</span></div>';
+    + '<span class="piece-actions">' + boutonIcone('piece-reveler', 'dossier', 'Show in file manager', '', p.id).replace('data-action=', 'data-fiche=') + boutonIcone('piece-supprimer', 'corbeille', 'Remove', 'danger', p.id).replace('data-action=', 'data-fiche=') + '</span></div>';
 }
 function sectionPiecesHtml(t) {
   var pieces = t.pieces || [];
   var images = pieces.filter(function (p) { return p.type === 'fichier' && p.image; });
   var autres = pieces.filter(function (p) { return !(p.type === 'fichier' && p.image); });
-  var actions = '<button type="button" class="btn btn-ghost btn-petit" data-fiche="piece-fichier">' + icone('trombone', 13) + ' Fichier ou image…</button>'
-    + '<button type="button" class="btn btn-ghost btn-petit" data-fiche="piece-lien">' + icone('externe', 13) + ' Lien</button>'
+  var actions = '<button type="button" class="btn btn-ghost btn-petit" data-fiche="piece-fichier">' + icone('trombone', 13) + ' File or image…</button>'
+    + '<button type="button" class="btn btn-ghost btn-petit" data-fiche="piece-lien">' + icone('externe', 13) + ' Link</button>'
     + '<button type="button" class="btn btn-ghost btn-petit" data-fiche="piece-code">' + icone('code', 13) + ' Code</button>';
   var corps = (images.length ? '<div class="pieces-grille">' + images.map(function (p) { return pieceHtml(t, p); }).join('') + '</div>' : '')
     + (autres.length ? '<div class="pieces-liste">' + autres.map(function (p) { return pieceHtml(t, p); }).join('') + '</div>' : '')
-    + (!pieces.length ? '<div class="fiche-vide">Glissez des fichiers ou des images ici, ou ajoutez un lien, un extrait de code.</div>' : '<div class="hint" style="margin-top:6px;">Vous pouvez aussi glisser des fichiers depuis le Finder sur cette fiche.</div>');
-  return sectionHtml('pieces', 'Pièces jointes', pieces.length ? String(pieces.length) : '', actions, corps);
+    + (!pieces.length ? '<div class="fiche-vide">Drag files or images here, or add a link or a code snippet.</div>' : '<div class="hint" style="margin-top:6px;">You can also drag files from your file manager onto this sheet.</div>');
+  return sectionHtml('pieces', 'Attachments', pieces.length ? String(pieces.length) : '', actions, corps);
 }
 
 function sectionNotesHtml(t) {
   var pages = (t.notes || []).map(pageParId).filter(Boolean);
-  var actions = '<button type="button" class="btn btn-ghost btn-petit" data-fiche="note-lier">' + icone('lien', 13) + ' Lier une page…</button>'
-    + '<button type="button" class="btn btn-ghost btn-petit" data-fiche="note-nouvelle">' + icone('note', 13) + ' Nouvelle page liée</button>';
+  var actions = '<button type="button" class="btn btn-ghost btn-petit" data-fiche="note-lier">' + icone('lien', 13) + ' Link a page…</button>'
+    + '<button type="button" class="btn btn-ghost btn-petit" data-fiche="note-nouvelle">' + icone('note', 13) + ' New linked page</button>';
   var corps = pages.length ? '<div class="notes-liees">' + pages.map(function (p) {
-    var chemin = cheminDe(p.id).slice(0, -1).map(function (x) { return x.titre || 'Sans titre'; }).join(' › ');
-    return '<div class="chip-note"><button type="button" class="chip-note-ouvrir" data-fiche="note-ouvrir" data-id="' + echapper(p.id) + '" title="Ouvrir la page">' + icone('note', 14) + '<span>' + (chemin ? '<span class="petit">' + echapper(chemin) + ' › </span>' : '') + echapper(p.titre || 'Sans titre') + '</span></button>' + boutonIcone('note-delier', 'corbeille', 'Retirer le lien (la page reste)', 'danger', p.id).replace('data-action=', 'data-fiche=') + '</div>';
-  }).join('') + '</div>' : '<div class="fiche-vide">Aucune page liée. Une page de notes peut porter le détail, les comptes rendus, les décisions.</div>';
-  return sectionHtml('notes', 'Notes liées', pages.length ? String(pages.length) : '', actions, corps);
+    var chemin = cheminDe(p.id).slice(0, -1).map(function (x) { return x.titre || 'Untitled'; }).join(' › ');
+    return '<div class="chip-note"><button type="button" class="chip-note-ouvrir" data-fiche="note-ouvrir" data-id="' + echapper(p.id) + '" title="Open the page">' + icone('note', 14) + '<span>' + (chemin ? '<span class="petit">' + echapper(chemin) + ' › </span>' : '') + echapper(p.titre || 'Untitled') + '</span></button>' + boutonIcone('note-delier', 'corbeille', 'Remove the link (the page stays)', 'danger', p.id).replace('data-action=', 'data-fiche=') + '</div>';
+  }).join('') + '</div>' : '<div class="fiche-vide">No linked page. A notes page can hold the details, meeting minutes and decisions.</div>';
+  return sectionHtml('notes', 'Linked notes', pages.length ? String(pages.length) : '', actions, corps);
 }
 
 function sectionAvancementHtml(t) {
   var liste = trierPar(t.avancement || [], function (a) { return (a.date || '') + (a.creeLe || ''); }, true);
-  var corps = '<div class="avancement-ajout"><textarea id="tcAvancement" rows="2" placeholder="Où en est-on ? Un point daté, en une ou deux phrases (⌘ Entrée pour ajouter)."></textarea><button type="button" class="btn btn-ghost btn-petit" data-fiche="avancement-ajouter">Ajouter le point</button></div>'
+  var corps = '<div class="avancement-ajout"><textarea id="tcAvancement" rows="2" placeholder="Where do things stand? A dated update, in one or two sentences (Ctrl+Enter to add)."></textarea><button type="button" class="btn btn-ghost btn-petit" data-fiche="avancement-ajouter">Add the update</button></div>'
     + (liste.length ? '<div class="avancement">' + liste.map(function (a) {
-      return '<div class="avancement-entree"><div class="avancement-date">' + echapper(libelleDate(a.date, 'moyen')) + '</div><div class="avancement-texte">' + echapper(a.texte).replace(/\n/g, '<br>') + '</div>' + boutonIcone('avancement-supprimer', 'corbeille', 'Retirer ce point', 'danger', a.id).replace('data-action=', 'data-fiche=') + '</div>';
+      return '<div class="avancement-entree"><div class="avancement-date">' + echapper(libelleDate(a.date, 'moyen')) + '</div><div class="avancement-texte">' + echapper(a.texte).replace(/\n/g, '<br>') + '</div>' + boutonIcone('avancement-supprimer', 'corbeille', 'Remove this update', 'danger', a.id).replace('data-action=', 'data-fiche=') + '</div>';
     }).join('') + '</div>' : '');
-  return sectionHtml('avancement', 'Journal d\'avancement', liste.length ? String(liste.length) : '', '', corps);
+  return sectionHtml('avancement', 'Progress log', liste.length ? String(liste.length) : '', '', corps);
 }
 
 function sectionTempsHtml(t) {
@@ -575,9 +577,9 @@ function sectionTempsHtml(t) {
   var c = chronoEnCours();
   var enCours = c && c.tache === t.id;
   var lignes = trierPar(entreesJournal().filter(function (e) { return e.tache === t.id; }), function (e) { return e.date + (e.debut || ''); }, true).slice(0, 5);
-  var corps = '<div class="temps-resume"><b>' + fmtDuree(temps.minutes) + '</b> <span class="petit">sur ' + temps.lignes + (temps.lignes > 1 ? ' lignes du journal' : ' ligne du journal') + (enCours ? ' · chrono en cours' : '') + '</span></div>'
-    + (lignes.length ? '<ul class="temps-lignes">' + lignes.map(function (e) { return '<li><span class="date">' + libelleDate(e.date, 'jour') + '</span><span class="titre">' + echapper(e.intervention) + (e.detail ? ' <span class="petit">' + echapper(e.detail) + '</span>' : '') + '</span><span class="num">' + fmtDuree(dureeEntree(e)) + '</span></li>'; }).join('') + '</ul>' : '<div class="fiche-vide">Aucune ligne du journal ne cite cette tâche. Le chrono lancé depuis la carte les rattache tout seul.</div>');
-  return sectionHtml('temps', 'Temps passé', '', (t.statut !== 'fait' && !enCours ? '<button type="button" class="btn btn-or-ligne btn-petit" data-fiche="chrono">' + icone('play', 12) + ' Chrono</button>' : ''), corps);
+  var corps = '<div class="temps-resume"><b>' + fmtDuree(temps.minutes) + '</b> <span class="petit">across ' + temps.lignes + (temps.lignes > 1 ? ' log entries' : ' log entry') + (enCours ? ' · timer running' : '') + '</span></div>'
+    + (lignes.length ? '<ul class="temps-lignes">' + lignes.map(function (e) { return '<li><span class="date">' + libelleDate(e.date, 'jour') + '</span><span class="titre">' + echapper(e.intervention) + (e.detail ? ' <span class="petit">' + echapper(e.detail) + '</span>' : '') + '</span><span class="num">' + fmtDuree(dureeEntree(e)) + '</span></li>'; }).join('') + '</ul>' : '<div class="fiche-vide">No log entry mentions this task. A timer started from the card links its entries automatically.</div>');
+  return sectionHtml('temps', 'Time spent', '', (t.statut !== 'fait' && !enCours ? '<button type="button" class="btn btn-or-ligne btn-petit" data-fiche="chrono">' + icone('play', 12) + ' Timer</button>' : ''), corps);
 }
 
 function brancherSectionsFiche(m, t) {
@@ -590,13 +592,13 @@ function brancherSectionsFiche(m, t) {
     else if (a === 'etape-modifier') {
       var e = t.etapes.filter(function (x) { return x.id === id; })[0];
       var br = brouillonFiche(m);
-      if (e) demander({ titre: 'Modifier l\'étape', libelle: 'Étape', valeur: e.texte, ok: 'Enregistrer' }).then(function (v) { if (v != null) modifierEtapeTache(t, id, v); ouvrirEditionTache(t.id, null, null, br); });
+      if (e) demander({ titre: 'Edit the step', libelle: 'Step', valeur: e.texte, ok: 'Save' }).then(function (v) { if (v != null) modifierEtapeTache(t, id, v); ouvrirEditionTache(t.id, null, null, br); });
     }
     else if (a === 'piece-fichier') ajouterPiecesFichiers(t, null);
     else if (a === 'piece-lien') ouvrirEditionLien(t, null, brouillonFiche(m));
     else if (a === 'piece-code') ouvrirEditionCode(t, null, brouillonFiche(m));
     else if (a === 'piece-modifier') { var p = pieceParId(t, id); if (p && p.type === 'code') ouvrirEditionCode(t, p.id, brouillonFiche(m)); else if (p && p.type === 'lien') ouvrirEditionLien(t, p.id, brouillonFiche(m)); }
-    else if (a === 'piece-copier') { var pc = pieceParId(t, id); if (pc && navigator.clipboard) navigator.clipboard.writeText(pc.contenu || '').then(function () { notifier('Code copié.'); }); }
+    else if (a === 'piece-copier') { var pc = pieceParId(t, id); if (pc && navigator.clipboard) navigator.clipboard.writeText(pc.contenu || '').then(function () { notifier('Code copied.'); }); }
     else if (a === 'piece-ouvrir') ouvrirPieceTache(t, id);
     else if (a === 'piece-reveler') { var pr = pieceParId(t, id); if (pr && estApp() && pr.fichier) window.sablier.pieces.reveler(pr.fichier); }
     else if (a === 'piece-supprimer') { var pS = pieceParId(t, id); if (pS && pS.type === 'fichier') { var brS = brouillonFiche(m); supprimerPieceTache(t, id).then(function () { ouvrirEditionTache(t.id, null, null, brS); }); } else supprimerPieceTache(t, id); }
@@ -605,7 +607,7 @@ function brancherSectionsFiche(m, t) {
       var page = creerPageNotesSilencieuse(t.titre, null);
       lierTacheANote(t.id, page.id);
       apresMutationTache(t, 'notes');
-      notifier('Page « ' + page.titre + ' » créée et liée.', { type: 'succes', action: { libelle: 'Ouvrir', fn: function () { fermerModale(); ouvrirPageNotes(page.id); } } });
+      notifier('Page "' + page.titre + '" created and linked.', { type: 'succes', action: { libelle: 'Open', fn: function () { fermerModale(); ouvrirPageNotes(page.id); } } });
     }
     else if (a === 'note-ouvrir') { fermerModale(); ouvrirPageNotes(id); }
     else if (a === 'note-delier') { delierTacheDeNote(t.id, id); apresMutationTache(t, 'notes'); }
@@ -621,7 +623,7 @@ function brancherSectionsFiche(m, t) {
     if (ev.target.id === 'tcNouvelleEtape' && ev.key === 'Enter') { ev.preventDefault(); var texteE = ev.target.value; ev.target.value = ''; if (ajouterEtapeTache(t, texteE)) { var i2 = m.querySelector('#tcNouvelleEtape'); if (i2) { i2.value = ''; i2.focus(); } } else ev.target.value = texteE; }
     if (ev.target.id === 'tcAvancement' && ev.key === 'Enter' && (ev.metaKey || ev.ctrlKey)) { ev.preventDefault(); var texteP = ev.target.value; ev.target.value = ''; if (ajouterAvancementTache(t, texteP)) { var ta3 = m.querySelector('#tcAvancement'); if (ta3) { ta3.value = ''; ta3.focus(); } } else ev.target.value = texteP; }
   });
-  /* Glisser des fichiers du Finder sur la fiche. */
+  /* Drag files from the file manager onto the sheet. */
   ['dragenter', 'dragover'].forEach(function (type) {
     m.addEventListener(type, function (ev) {
       if (!ev.dataTransfer || Array.prototype.indexOf.call(ev.dataTransfer.types || [], 'Files') < 0) return;
@@ -634,21 +636,21 @@ function brancherSectionsFiche(m, t) {
     m.querySelector('.modal').classList.remove('depot');
     if (!ev.dataTransfer || !ev.dataTransfer.files || !ev.dataTransfer.files.length) return;
     ev.preventDefault();
-    if (!estApp()) { notifier('Les fichiers joints sont disponibles dans l\'application macOS.'); return; }
+    if (!estApp()) { notifier('Attached files are available in the desktop app.'); return; }
     var chemins = Array.prototype.map.call(ev.dataTransfer.files, function (f) { return window.sablier.fichiers.cheminDe(f); }).filter(Boolean);
     if (chemins.length) ajouterPiecesFichiers(t, chemins);
   });
 }
 
-/* Petites modales d'édition d'un lien ou d'un extrait de code. Elles
-   remplacent la fiche à l'écran puis la rouvrent. */
+/* Small dialogs to edit a link or a code snippet. They replace the
+   sheet on screen, then reopen it. */
 function ouvrirEditionLien(t, pieceId, brouillon) {
   var p = pieceId ? pieceParId(t, pieceId) : null;
   var m = ouvrirModale({
-    titre: p ? 'Modifier le lien' : 'Ajouter un lien',
+    titre: p ? 'Edit the link' : 'Add a link',
     classe: 'modal-etroite',
-    corps: champHtml('plUrl', 'Adresse', 'url', p ? p.url : '', { attrs: 'placeholder="https://…"' }) + '<div style="margin-top:10px;">' + champHtml('plNom', 'Libellé (facultatif)', 'text', p ? p.nom : '') + '</div>',
-    pied: '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">Annuler</button><button class="btn" data-role="ok">' + (p ? 'Enregistrer' : 'Ajouter') + '</button></div>',
+    corps: champHtml('plUrl', 'Address', 'url', p ? p.url : '', { attrs: 'placeholder="https://…"' }) + '<div style="margin-top:10px;">' + champHtml('plNom', 'Label (optional)', 'text', p ? p.nom : '') + '</div>',
+    pied: '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">Cancel</button><button class="btn" data-role="ok">' + (p ? 'Save' : 'Add') + '</button></div>',
     auFermer: function () { ouvrirEditionTache(t.id, null, null, brouillon); },
   });
   var valider = function () {
@@ -667,12 +669,12 @@ function ouvrirEditionLien(t, pieceId, brouillon) {
 function ouvrirEditionCode(t, pieceId, brouillon) {
   var p = pieceId ? pieceParId(t, pieceId) : null;
   var m = ouvrirModale({
-    titre: p ? 'Modifier l\'extrait de code' : 'Ajouter un extrait de code',
+    titre: p ? 'Edit the code snippet' : 'Add a code snippet',
     classe: 'modal-wide',
-    corps: '<div class="grid-2">' + champHtml('pcNom', 'Titre', 'text', p ? p.nom : '', { attrs: 'placeholder="ex. requête de contrôle"' })
-      + '<div class="field"><label for="pcLangage">Langage</label><select id="pcLangage">' + LANGAGES_CODE.map(function (l) { return '<option value="' + l + '"' + (p && p.langage === l ? ' selected' : '') + '>' + l + '</option>'; }).join('') + '</select></div></div>'
+    corps: '<div class="grid-2">' + champHtml('pcNom', 'Title', 'text', p ? p.nom : '', { attrs: 'placeholder="e.g. check query"' })
+      + '<div class="field"><label for="pcLangage">Language</label><select id="pcLangage">' + LANGAGES_CODE.map(function (l) { return '<option value="' + l + '"' + (p && p.langage === l ? ' selected' : '') + '>' + libelleLangage(l) + '</option>'; }).join('') + '</select></div></div>'
       + '<div class="field" style="margin-top:10px;"><label for="pcContenu">Code</label><textarea id="pcContenu" class="code" rows="12" spellcheck="false">' + echapper(p ? p.contenu : '') + '</textarea></div>',
-    pied: '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">Annuler</button><button class="btn" data-role="ok">' + (p ? 'Enregistrer' : 'Ajouter') + '</button></div>',
+    pied: '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">Cancel</button><button class="btn" data-role="ok">' + (p ? 'Save' : 'Add') + '</button></div>',
     auFermer: function () { ouvrirEditionTache(t.id, null, null, brouillon); },
   });
   m.querySelector('#pcContenu').addEventListener('keydown', function (ev) {
@@ -690,11 +692,11 @@ function ouvrirEditionCode(t, pieceId, brouillon) {
   });
 }
 
-/* ---------- Glisser-déposer au pointeur ----------
-   La carte saisie quitte sa colonne et flotte sous le pointeur avec un
-   léger balancement (inclinaison liée à la vitesse). Un emplacement vide
-   se déplace dans les colonnes pour montrer où elle se posera ; les autres
-   cartes glissent pour lui faire place. Un simple clic ouvre la fiche. */
+/* ---------- Pointer drag and drop ----------
+   The grabbed card leaves its column and floats under the pointer with a
+   slight sway (tilt tied to the speed). An empty slot moves through the
+   columns to show where it will land; the other cards slide to make room
+   for it. A simple click opens the sheet. */
 
 function debutPointeurTaches(ev) {
   if (ev.button !== 0 || GLISSER) return;
@@ -757,8 +759,8 @@ function mouvementPointeurTaches(ev) {
   placerEmplacement(ev.clientX, ev.clientY);
 }
 
-/* Déplace l'emplacement vide dans la colonne survolée, entre les cartes
-   selon la hauteur du pointeur, et fait glisser les cartes voisines. */
+/* Moves the empty slot into the hovered column, between the cards
+   according to the pointer height, and slides the neighbouring cards. */
 function placerEmplacement(x, y) {
   var g = GLISSER;
   var sous = document.elementFromPoint(x, y);

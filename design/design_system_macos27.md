@@ -1,129 +1,129 @@
-# DESIGN SYSTEM — « GRAPHITE » · HYBRIDE ARC × macOS 27
+# DESIGN SYSTEM: "GRAPHITE" · ARC × macOS 27 HYBRID
 
-> **À déposer à la racine (ou dans `design/`) de chaque projet.** Toute interface, vue ou composant généré dans ce projet applique ce document. Il décrit un langage visuel unique pour toutes mes apps : la matière et la profondeur de macOS 27 (verre, lumière, rayons concentriques), le cadrage d'Arc (contenu en retrait dans la fenêtre), et une retenue professionnelle sur la couleur.
+> **Drop this at the root (or in `design/`) of every project.** Every interface, view or component generated in this project applies this document. It describes a single visual language for all my apps: the material and depth of macOS 27 (glass, light, concentric radii), the framing of Arc (content inset in the window), and a professional restraint with colour.
 >
-> **Seule chose à personnaliser par projet :** la section 0.3 (couleur d'accent, nom, icône). Tout le reste est commun.
+> **The only thing to customise per project:** section 0.3 (accent colour, name, icon). Everything else is shared.
 
 ---
 
-## 0. PRINCIPES
+## 0. PRINCIPLES
 
-### 0.1 Les cinq règles qui priment sur tout le reste
+### 0.1 The five rules that override everything else
 
-1. **La couleur est une information, pas une décoration.** L'interface est graphite (neutres froids) à plus de 90 %. Une seule couleur d'accent par app. Chaque usage de couleur doit répondre à « qu'est-ce que ça signale ? ».
-2. **La profondeur vient de la matière, pas de la couleur.** Verre dépoli, ombres douces, liseré spéculaire de 1 px en haut des surfaces. Jamais de halo coloré sous une carte, jamais de dégradé multicolore.
-3. **Le natif d'abord.** Si la plateforme fournit le composant (SwiftUI, AppKit), on l'utilise et on le règle ; on ne le redessine pas. Les specs CSS ci-dessous servent aux apps web et de référence visuelle pour le natif (voir section 8).
-4. **Les chiffres d'abord.** Ce sont des outils de travail : hiérarchie nette, densité maîtrisée, chiffres en `tabular-nums`, aucune décoration qui concurrence la donnée.
-5. **Deux apparences à égalité.** Clair et sombre sont conçus ensemble ; le sombre est l'apparence de référence des maquettes, pas la seule.
+1. **Colour is information, not decoration.** The interface is graphite (cool neutrals) for more than 90%. One accent colour per app. Every use of colour must answer "what does this signal?".
+2. **Depth comes from material, not from colour.** Frosted glass, soft shadows, a 1 px specular rim on top of surfaces. Never a coloured halo under a card, never a multicolour gradient.
+3. **Native first.** If the platform provides the component (SwiftUI, AppKit), use it and tune it; do not redraw it. The CSS specs below are for web apps and serve as a visual reference for native (see section 8).
+4. **Numbers first.** These are work tools: clear hierarchy, controlled density, figures in `tabular-nums`, no decoration that competes with the data.
+5. **Two appearances on equal footing.** Light and dark are designed together; dark is the reference appearance of the mockups, not the only one.
 
-### 0.2 Budget couleur (à respecter à l'écran, pas seulement dans le code)
+### 0.2 Colour budget (to respect on screen, not only in code)
 
-| Usage | Couleur autorisée |
+| Use | Allowed colour |
 | --- | --- |
-| Fonds, cartes, bordures, texte, icônes de navigation | Neutres uniquement |
-| Élément de navigation actif | Fond neutre + **icône** en accent (le texte reste neutre) |
-| Bouton primaire, focus, interrupteur activé, lien, sélection de ligne | Accent |
-| Série principale ou valeur mise en avant d'un graphique | Accent ; les autres séries en neutres |
-| Données catégorielles (catégories, modèles, familles) | Palette catégorielle sourdine, 6 teintes max + « Autres » en gris |
-| États (succès, alerte, erreur) | Couleurs sémantiques, uniquement pour un état réel |
-| Carte « vedette » (une seule par écran au maximum) | Liseré supérieur teinté accent |
-| Lumière ambiante | Un halo accent très faible sous la sidebar, rien dans le contenu |
+| Backgrounds, cards, borders, text, navigation icons | Neutrals only |
+| Active navigation item | Neutral background + **icon** in accent (the text stays neutral) |
+| Primary button, focus, enabled switch, link, row selection | Accent |
+| Main series or highlighted value of a chart | Accent; the other series in neutrals |
+| Categorical data (categories, models, families) | Muted categorical palette, 6 hues max + "Other" in grey |
+| States (success, warning, error) | Semantic colours, only for a real state |
+| "Featured" card (one per screen at most) | Accent-tinted top rim |
+| Ambient light | One very faint accent halo under the sidebar, nothing in the content |
 
-**Repère visuel :** sur une capture d'écran, l'accent occupe moins de 5 % de la surface. Si on le remarque avant les chiffres, il y en a trop.
+**Visual check:** on a screenshot, the accent covers less than 5% of the surface. If you notice it before the numbers, there is too much.
 
-**Interdits :** liserés de couleurs différentes par carte, `box-shadow` coloré (glow), texte en dégradé, mesh gradients saturés, fonds de carte teintés par catégorie, plus de deux teintes non neutres dans un même composant hors graphique catégoriel.
+**Forbidden:** rims of different colours per card, coloured `box-shadow` (glow), gradient text, saturated mesh gradients, card backgrounds tinted by category, more than two non-neutral hues in the same component outside a categorical chart.
 
-### 0.3 Personnalisation par projet
+### 0.3 Per-project customisation
 
 ```css
 :root {
-  --accent-h: 220;    /* Sablier : bleu acier #5B8DEF (l'ambre se confondait avec l'orange des alertes) */
+  --accent-h: 220;    /* Sablier: steel blue #5B8DEF (amber was confused with the orange of the alerts) */
   --accent-s: 82%;
-  --accent-l: 65%;    /* en sombre ; la version claire est dérivée plus bas */
+  --accent-l: 65%;    /* in dark; the light version is derived further down */
 }
 ```
 
-Accents conseillés (un seul par app, choisi pour son identité, jamais deux) :
-terracotta `#D97757` · bleu acier `#5B8DEF` · vert sauge `#5FA37A` · ambre `#D9A04A` · violet ardoise `#8B7FD1` · graphite pur (pas d'accent, sélection en blanc) pour les outils très sobres.
+Suggested accents (one per app, chosen for its identity, never two):
+terracotta `#D97757` · steel blue `#5B8DEF` · sage green `#5FA37A` · amber `#D9A04A` · slate violet `#8B7FD1` · pure graphite (no accent, selection in white) for very sober tools.
 
-Option « voix » : une app éditoriale peut utiliser **New York** (serif système) pour les titres de page uniquement. Tout le reste reste en SF Pro.
+"Voice" option: an editorial app can use **New York** (the system serif) for page titles only. Everything else stays in SF Pro. Open replacement bundled in `css/fonts` (used where the Apple fonts are not available, such as on Linux and in the PDFs): Charter for New York.
 
 ---
 
-## 1. ARCHITECTURE SPATIALE (ADN ARC + macOS)
+## 1. SPATIAL ARCHITECTURE (ARC + macOS DNA)
 
-L'app se comporte comme une fenêtre macOS 27, pas comme une page web.
+The app behaves like a macOS 27 window, not like a web page.
 
-1. **Fenêtre (App Shell)**
+1. **Window (App Shell)**
    - `display: flex; height: 100vh; overflow: hidden;`
-   - En web : coins de fenêtre `--radius-window: 22px` (quand la fenêtre est simulée dans une maquette ou une app Electron/Tauri sans cadre).
-   - Feux tricolores : `12px` de diamètre, espacés de `8px`, en haut à gauche de la sidebar (`top: 18px; left: 18px`). Couleurs système `#FF5F57`, `#FEBC2E`, `#28C840` avec un anneau intérieur `inset 0 0 0 0.5px rgba(0,0,0,0.2)`. Fenêtre inactive : les trois en `rgba(255,255,255,0.14)` (sombre) / `rgba(0,0,0,0.12)` (clair).
-   - En natif : **ne jamais les dessiner**, utiliser ceux du système (voir section 8).
+   - On the web: window corners `--radius-window: 22px` (when the window is simulated in a mockup or in a frameless Electron/Tauri app).
+   - Traffic lights: `12px` in diameter, spaced `8px` apart, at the top left of the sidebar (`top: 18px; left: 18px`). System colours `#FF5F57`, `#FEBC2E`, `#28C840` with an inner ring `inset 0 0 0 0.5px rgba(0,0,0,0.2)`. Inactive window: all three in `rgba(255,255,255,0.14)` (dark) / `rgba(0,0,0,0.12)` (light).
+   - Native: **never draw them**, use the system ones (see section 8).
 
-2. **Rail d'espaces (optionnel, apps multi-contextes uniquement)**
-   - Rail vertical de `52px` à gauche de la sidebar, icônes `32×32px`, `border-radius: 9px`.
-   - Icônes **monochromes** sur fond neutre `--fill-1` ; l'espace actif a un fond `--fill-3` et un point accent de `4px` à gauche. Pas de dégradés.
+2. **Spaces rail (optional, multi-context apps only)**
+   - Vertical rail of `52px` to the left of the sidebar, icons `32×32px`, `border-radius: 9px`.
+   - **Monochrome** icons on a neutral `--fill-1` background; the active space has a `--fill-3` background and a `4px` accent dot on the left. No gradients.
 
-3. **Sidebar (verre)**
-   - `width: 240px` (redimensionnable `200–280px`), transparente : elle laisse voir le matériau de la fenêtre (le fond d'écran flouté).
-   - Matériau : `background: var(--glass-sidebar); backdrop-filter: blur(48px) saturate(140%);`
-   - En-tête : nom de l'app (`15px`, `600`) + icône de l'app `20px`.
-   - Titres de groupe : `11px`, `600`, `var(--text-tertiary)`, `padding: 14px 10px 4px`.
-   - Items : `height: 30px; padding: 0 10px; border-radius: 8px; gap: 10px;` icône `16px` en `--text-secondary`, texte `13px` en `--text-secondary`.
-   - Survol : fond `var(--fill-1)`.
-   - Actif : la **bulle Liquid Glass** de la section 5.I (une seule pour toute la liste, elle glisse d'un item à l'autre), texte `--text-primary` en `500`, **icône en accent**. Les items n'ont pas de fond actif propre.
+3. **Sidebar (glass)**
+   - `width: 240px` (resizable `200-280px`), transparent: it lets the window material show through (the blurred wallpaper).
+   - Material: `background: var(--glass-sidebar); backdrop-filter: blur(48px) saturate(140%);`
+   - Header: app name (`15px`, `600`) + app icon `20px`.
+   - Group titles: `11px`, `600`, `var(--text-tertiary)`, `padding: 14px 10px 4px`.
+   - Items: `height: 30px; padding: 0 10px; border-radius: 8px; gap: 10px;` icon `16px` in `--text-secondary`, text `13px` in `--text-secondary`.
+   - Hover: `var(--fill-1)` background.
+   - Active: the **Liquid Glass bubble** of section 5.I (a single one for the whole list, sliding from item to item), text `--text-primary` at `500`, **icon in accent**. The items have no active background of their own.
 
-4. **Scène en retrait (Inset Main Stage) — la signature Arc**
-   - Marge périphérique `margin: 8px 8px 8px 0` (`--stage-inset`).
-   - **Rayons concentriques** (règle macOS 27) : `rayon intérieur = rayon extérieur − marge`. Fenêtre `22px` − `8px` → scène `14px`.
-   - Fond : `var(--bg-stage)` (quasi opaque : la lisibilité prime sur la transparence).
-   - Contour : `box-shadow: 0 0 0 1px var(--border-subtle), var(--specular-top), 0 12px 40px rgba(0,0,0,0.35);`
-   - Seule la scène défile (`overflow-y: auto`), la sidebar et la toolbar restent fixes.
+4. **Inset Main Stage: the Arc signature**
+   - Outer margin `margin: 8px 8px 8px 0` (`--stage-inset`).
+   - **Concentric radii** (macOS 27 rule): `inner radius = outer radius − margin`. Window `22px` − `8px` → stage `14px`.
+   - Background: `var(--bg-stage)` (nearly opaque: legibility beats transparency).
+   - Outline: `box-shadow: 0 0 0 1px var(--border-subtle), var(--specular-top), 0 12px 40px rgba(0,0,0,0.35);`
+   - Only the stage scrolls (`overflow-y: auto`); the sidebar and the toolbar stay fixed.
 
-5. **Toolbar de la scène**
+5. **Stage toolbar**
    - `position: sticky; top: 0; z-index: 40; height: 52px; padding: 0 16px;`
-   - Matériau : `background: var(--glass-toolbar); backdrop-filter: blur(24px) saturate(160%);` + filet bas `1px var(--border-subtle)` qui n'apparaît qu'une fois le contenu défilé.
-   - Gauche : flèches `‹ ›` (boutons `28×28px`, `border-radius: 8px`), puis le titre de la page (`15px`, `600`) une fois l'en-tête défilé.
-   - Centre : barre de commande `⌘K` — `width: 320px; height: 30px; border-radius: 9999px; background: var(--fill-1); border: 1px solid var(--border-subtle);` placeholder en `--text-tertiary`, raccourci `⌘K` dans une touche `--fill-2`.
-   - Droite : filtres globaux de la vue (contrôle segmenté de période, menu de filtre), puis compte/réglages.
+   - Material: `background: var(--glass-toolbar); backdrop-filter: blur(24px) saturate(160%);` + a `1px var(--border-subtle)` bottom rule that only appears once the content has scrolled.
+   - Left: `‹ ›` arrows (`28×28px` buttons, `border-radius: 8px`), then the page title (`15px`, `600`) once the header has scrolled away.
+   - Centre: `⌘K` command bar: `width: 320px; height: 30px; border-radius: 9999px; background: var(--fill-1); border: 1px solid var(--border-subtle);` placeholder in `--text-tertiary`, the `⌘K` shortcut in a `--fill-2` key.
+   - Right: the view's global filters (segmented period control, filter menu), then account/settings.
 
 ---
 
-## 2. MATIÈRE & LUMIÈRE
+## 2. MATERIAL & LIGHT
 
-1. **Lumière ambiante (version sobre)**
-   - En natif, elle vient gratuitement du fond d'écran à travers le verre de la sidebar : **ne rien ajouter**.
-   - En web : un fond de fenêtre `--bg-root` + **au plus deux halos** sous la sidebar uniquement : `width: 520px; height: 520px; border-radius: 50%; filter: blur(120px); pointer-events: none;`
-     - Halo 1 (haut-gauche) : accent à `opacity: 0.14`.
-     - Halo 2 (bas-gauche) : bleu-gris `#5A6B85` à `opacity: 0.12`.
-   - **Aucun halo dans la scène.** La scène est un espace de travail calme.
+1. **Ambient light (sober version)**
+   - Natively, it comes for free from the wallpaper through the sidebar glass: **add nothing**.
+   - On the web: a `--bg-root` window background + **at most two halos** under the sidebar only: `width: 520px; height: 520px; border-radius: 50%; filter: blur(120px); pointer-events: none;`
+     - Halo 1 (top left): accent at `opacity: 0.14`.
+     - Halo 2 (bottom left): blue-grey `#5A6B85` at `opacity: 0.12`.
+   - **No halo in the stage.** The stage is a calm workspace.
 
-2. **Liseré spéculaire (1px Specular Rim)** — la lumière vient d'en haut
-   - Toute surface élevée (scène, carte, popover, bouton en verre) a un reflet neutre sur son bord supérieur : `inset 0 1px 0 0 var(--rim)`.
-   - Bords latéraux et inférieur : `1px var(--border-subtle)`.
-   - Liseré coloré (accent) : réservé à **une** carte vedette par écran, et à l'élément focalisé.
+2. **Specular rim (1px Specular Rim)**: light comes from above
+   - Every raised surface (stage, card, popover, glass button) has a neutral highlight on its top edge: `inset 0 1px 0 0 var(--rim)`.
+   - Side and bottom edges: `1px var(--border-subtle)`.
+   - Coloured (accent) rim: reserved for **one** featured card per screen, and for the focused element.
 
-3. **Niveaux de surface**
+3. **Surface levels**
 
-| Niveau | Rôle | Sombre | Clair |
+| Level | Role | Dark | Light |
 | --- | --- | --- | --- |
-| 0 | Fond de fenêtre | `#0B0C0E` | `#E6E7EA` |
-| 1 | Scène | `rgba(18,18,21,0.94)` | `rgba(246,246,248,0.94)` |
-| 2 | Carte | dégradé `rgba(255,255,255,0.045) → 0.025` | `#FFFFFF` |
-| 3 | Carte survolée / élément actif | dégradé `0.07 → 0.04` | `#FFFFFF` + ombre plus marquée |
-| 4 | Popover, menu, palette ⌘K, module d'état | `rgba(32,32,37,0.78)` + `blur(40px) saturate(160%)` | `rgba(255,255,255,0.80)` + `blur(40px) saturate(180%)` |
+| 0 | Window background | `#0B0C0E` | `#E6E7EA` |
+| 1 | Stage | `rgba(18,18,21,0.94)` | `rgba(246,246,248,0.94)` |
+| 2 | Card | gradient `rgba(255,255,255,0.045) → 0.025` | `#FFFFFF` |
+| 3 | Hovered card / active element | gradient `0.07 → 0.04` | `#FFFFFF` + stronger shadow |
+| 4 | Popover, menu, ⌘K palette, status module | `rgba(32,32,37,0.78)` + `blur(40px) saturate(160%)` | `rgba(255,255,255,0.80)` + `blur(40px) saturate(180%)` |
 
-Ombre du niveau 4 : `0 24px 64px -12px rgba(0,0,0,0.55), 0 0 0 1px var(--border-subtle), var(--specular-top)`.
+Level 4 shadow: `0 24px 64px -12px rgba(0,0,0,0.55), 0 0 0 1px var(--border-subtle), var(--specular-top)`.
 
 ---
 
-## 3. TOKENS CSS DE RÉFÉRENCE
+## 3. REFERENCE CSS TOKENS
 
 ```css
 :root {
   color-scheme: dark;
 
-  /* Accent (seule valeur à changer par projet, voir 0.3) */
+  /* Accent (the only value to change per project, see 0.3) */
   --accent-h: 15; --accent-s: 62%; --accent-l: 60%;
   --accent:        hsl(var(--accent-h) var(--accent-s) var(--accent-l));
   --accent-strong: hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) - 8%));
@@ -140,58 +140,58 @@ Ombre du niveau 4 : `0 24px 64px -12px rgba(0,0,0,0.55), 0 0 0 1px var(--border-
   --surface-card-hover: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.04) 100%);
   --surface-floating:   rgba(32, 32, 37, 0.78);
 
-  /* Remplissages neutres (contrôles, pistes, survols) */
+  /* Neutral fills (controls, tracks, hovers) */
   --fill-1: rgba(255,255,255,0.05);
   --fill-2: rgba(255,255,255,0.08);
   --fill-3: rgba(255,255,255,0.11);
 
-  /* Bordures & lumière */
+  /* Borders & light */
   --border-subtle: rgba(255,255,255,0.07);
   --border-strong: rgba(255,255,255,0.12);
   --rim:           rgba(255,255,255,0.10);
   --specular-top:  inset 0 1px 0 0 var(--rim);
   --shadow-card:   0 1px 2px rgba(0,0,0,0.25), 0 8px 24px -12px rgba(0,0,0,0.5);
 
-  /* Texte */
+  /* Text */
   --text-primary:   rgba(255,255,255,0.94);
   --text-secondary: rgba(255,255,255,0.62);
   --text-tertiary:  rgba(255,255,255,0.40);
 
-  /* Sémantique (états réels uniquement) */
+  /* Semantic (real states only) */
   --positive: #4CB782; --warning: #E0A443; --negative: #E5675C;
 
-  /* Graphiques */
-  --chart-neutral: rgba(255,255,255,0.26);   /* séries secondaires, barres de classement */
-  --chart-track:   rgba(255,255,255,0.06);   /* pistes, cases vides */
+  /* Charts */
+  --chart-neutral: rgba(255,255,255,0.26);   /* secondary series, ranking bars */
+  --chart-track:   rgba(255,255,255,0.06);   /* tracks, empty cells */
   --chart-grid:    rgba(255,255,255,0.06);
   --cat-1: var(--accent); --cat-2: #7F95B2; --cat-3: #8FA58A;
   --cat-4: #C2AE8C;       --cat-5: #A190B8; --cat-6: #6F7A86;
   --cat-other: rgba(255,255,255,0.20);
 
-  /* Rayons (concentriques) & espacements */
+  /* Radii (concentric) & spacing */
   --radius-window: 22px;
   --stage-inset:   8px;
   --radius-stage:  14px;   /* = window − inset */
   --radius-card:   12px;
-  --radius-inner:  8px;    /* vignettes, items de liste, boutons carrés */
+  --radius-inner:  8px;    /* thumbnails, list items, square buttons */
   --radius-pill:   9999px;
-  --space-page:    28px;   /* marge intérieure de la scène */
+  --space-page:    28px;   /* inner margin of the stage */
   --gap-grid:      14px;
 
-  /* Mouvement */
+  /* Motion */
   --spring-apple:    cubic-bezier(0.22, 1, 0.36, 1);
   --duration-fast:   160ms;
   --duration-normal: 280ms;
 
-  /* Bulle Liquid Glass (section 5.I) */
+  /* Liquid Glass bubble (section 5.I) */
   --spring-bubble:   linear(0, 0.22 7%, 0.62 16%, 0.94 26%, 1.07 34%, 1.09 40%, 1.05 50%, 1 60%, 0.985 70%, 1 85%, 1);
-  --duration-bubble: 550ms;   /* glissement + rebond jusqu'au repos */
-  --bubble-stretch:  0.16;    /* étirement de goutte au départ (+16 % dans le sens du trajet) */
-  --bubble-lift:     4px;     /* croissance par côté quand on la tient */
-  --lens-scale:      1.2;     /* grossissement des titres sous la bulle tenue */
+  --duration-bubble: 550ms;   /* slide + bounce until it settles */
+  --bubble-stretch:  0.16;    /* drop stretch at the start (+16% along the direction of travel) */
+  --bubble-lift:     4px;     /* growth per side when held */
+  --lens-scale:      1.2;     /* magnification of the titles under the held bubble */
 }
 
-/* Apparence claire. Pour suivre le système, dupliquer ce bloc dans
+/* Light appearance. To follow the system, duplicate this block inside
    @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { … } } */
 :root[data-theme="light"] {
   color-scheme: light;
@@ -229,167 +229,168 @@ Ombre du niveau 4 : `0 24px 64px -12px rgba(0,0,0,0.55), 0 0 0 1px var(--border-
 
 ---
 
-## 4. TYPOGRAPHIE (SF PRO, échelle macOS)
+## 4. TYPOGRAPHY (SF PRO, macOS scale)
 
-- **Police :** `font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", system-ui, sans-serif;` avec `-webkit-font-smoothing: antialiased;`.
-- **Corps de texte macOS = 13 px**, pas 14–16 px : c'est ce qui rend une app « native » plutôt que « site web ».
+- **Font:** `font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", system-ui, sans-serif;` with `-webkit-font-smoothing: antialiased;`.
+- **Open replacements bundled in `css/fonts`** (for platforms without the Apple fonts, and for the PDFs): **Inter** replaces SF Pro, **Charter** replaces New York, **JetBrains Mono** replaces SF Mono, and **Nunito Sans** replaces Avenir Next (used in the PDFs).
+- **macOS body text = 13 px**, not 14-16 px: this is what makes an app feel "native" rather than like a "website".
 
-| Rôle | Taille | Graisse | Interlettrage | Couleur |
+| Role | Size | Weight | Letter spacing | Colour |
 | --- | --- | --- | --- | --- |
-| Titre de vue (Large Title) | `28px` | `700` | `-0.022em` | primaire |
-| Hero (accueil, récap uniquement) | `34px` | `700` | `-0.025em` | primaire |
-| Titre de section / carte | `13px` | `600` | `-0.005em` | primaire |
-| Sous-titre de carte | `12px` | `400` | `0` | tertiaire |
-| Corps | `13px` | `400`, `line-height: 1.45` | `0` | secondaire |
-| Sur-titre (eyebrow) | `11px` | `600`, MAJUSCULES | `0.06em` | tertiaire |
-| Libellé / légende / badge | `11–12px` | `500` | `0.01em` | tertiaire |
-| Valeur KPI | `26px` | `600` | `-0.02em` | primaire |
-| Grand chiffre (vedette) | `40px` | `600` | `-0.03em` | primaire |
+| View title (Large Title) | `28px` | `700` | `-0.022em` | primary |
+| Hero (home, recap only) | `34px` | `700` | `-0.025em` | primary |
+| Section / card title | `13px` | `600` | `-0.005em` | primary |
+| Card subtitle | `12px` | `400` | `0` | tertiary |
+| Body | `13px` | `400`, `line-height: 1.45` | `0` | secondary |
+| Eyebrow | `11px` | `600`, UPPERCASE | `0.06em` | tertiary |
+| Label / caption / badge | `11-12px` | `500` | `0.01em` | tertiary |
+| KPI value | `26px` | `600` | `-0.02em` | primary |
+| Big number (featured) | `40px` | `600` | `-0.03em` | primary |
 
-- Toute donnée chiffrée (KPI, tableaux, axes, durées) : `font-variant-numeric: tabular-nums;`.
-- Unités en plus petit que le chiffre (`48 h` → « 48 » `26px`, « h » `17px` secondaire).
-- Pas d'ombre portée sur le texte, sauf un titre posé sur une image.
+- Any numeric data (KPIs, tables, axes, durations): `font-variant-numeric: tabular-nums;`.
+- Units smaller than the number (`48 h` → "48" at `26px`, "h" at `17px` secondary).
+- No drop shadow on text, except a title placed over an image.
 
 ---
 
-## 5. COMPOSANTS
+## 5. COMPONENTS
 
-### A. En-tête de vue (remplace le « hero Apple TV »)
-- Par défaut : sur-titre optionnel + titre de vue `28px` + une phrase de contexte (`13px`, secondaire, `max-width: 720px`) + actions à droite. `padding: 24px var(--space-page) 20px`.
-- **Hero** : réservé à l'accueil, au récap et à l'onboarding. Fond = dégradé radial **de l'accent seul**, très doux, qui se fond dans la scène : `radial-gradient(120% 140% at 0% 0%, var(--accent-soft) 0%, transparent 55%)`. Hauteur `160–220px`. Pas de mesh, pas d'image abstraite multicolore.
-- Bouton primaire : `background: var(--accent); color: var(--on-accent); height: 30px; padding: 0 14px; border-radius: 8px; font: 500 13px;` + `box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 1px 2px rgba(0,0,0,0.3)`.
-- Bouton secondaire (verre) : `background: var(--fill-2); color: var(--text-primary); box-shadow: var(--specular-top), 0 0 0 1px var(--border-subtle);`
-- Boutons pilules (`9999px`) seulement dans la toolbar et le hero ; ailleurs, rayon `8px` (style macOS).
+### A. View header (replaces the "Apple TV hero")
+- By default: optional eyebrow + `28px` view title + one sentence of context (`13px`, secondary, `max-width: 720px`) + actions on the right. `padding: 24px var(--space-page) 20px`.
+- **Hero**: reserved for home, recap and onboarding. Background = radial gradient of **the accent alone**, very soft, fading into the stage: `radial-gradient(120% 140% at 0% 0%, var(--accent-soft) 0%, transparent 55%)`. Height `160-220px`. No mesh, no abstract multicolour image.
+- Primary button: `background: var(--accent); color: var(--on-accent); height: 30px; padding: 0 14px; border-radius: 8px; font: 500 13px;` + `box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 1px 2px rgba(0,0,0,0.3)`.
+- Secondary (glass) button: `background: var(--fill-2); color: var(--text-primary); box-shadow: var(--specular-top), 0 0 0 1px var(--border-subtle);`
+- Pill buttons (`9999px`) only in the toolbar and the hero; elsewhere, radius `8px` (macOS style).
 
-### B. Grille Bento & cartes
-- `display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--gap-grid);` — les cartes occupent 3, 4, 6, 8 ou 12 colonnes. Repli `auto-fill, minmax(260px, 1fr)` sous `900px`.
-- Carte : `background: var(--surface-card); border-radius: var(--radius-card); padding: 16px 18px; box-shadow: 0 0 0 1px var(--border-subtle), var(--specular-top), var(--shadow-card);`
-- En-tête de carte : icône `14px` en `--text-tertiary` + titre `13px/600` + sous-titre `12px` tertiaire ; action discrète à droite (segmenté ou menu `…`).
-- **Carte vedette** (une par écran max) : remplacer `var(--specular-top)` par `inset 0 1px 0 0 var(--accent-rim)` et ajouter en fond `radial-gradient(80% 120% at 0% 0%, var(--accent-soft), transparent 60%)`.
-- Vignette/icône : conteneur `28×28px` (liste) ou `36×36px` (carte), `border-radius: var(--radius-inner)`, fond `var(--fill-2)`, icône en `--text-secondary`. Pas de fond teinté par catégorie.
+### B. Bento grid & cards
+- `display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--gap-grid);`: cards span 3, 4, 6, 8 or 12 columns. Fallback `auto-fill, minmax(260px, 1fr)` below `900px`.
+- Card: `background: var(--surface-card); border-radius: var(--radius-card); padding: 16px 18px; box-shadow: 0 0 0 1px var(--border-subtle), var(--specular-top), var(--shadow-card);`
+- Card header: `14px` icon in `--text-tertiary` + `13px/600` title + `12px` tertiary subtitle; discreet action on the right (segmented control or `…` menu).
+- **Featured card** (one per screen max): replace `var(--specular-top)` with `inset 0 1px 0 0 var(--accent-rim)` and add the background `radial-gradient(80% 120% at 0% 0%, var(--accent-soft), transparent 60%)`.
+- Thumbnail/icon: `28×28px` container (list) or `36×36px` (card), `border-radius: var(--radius-inner)`, `var(--fill-2)` background, icon in `--text-secondary`. No background tinted by category.
 
-### C. Tuile KPI
-- Libellé (`12px`, secondaire, icône `13px` tertiaire) → valeur (`26px/600`, tabular) → contexte (`12px`, tertiaire).
-- Variation : `▲ 12 %` en `--positive` / `▼` en `--negative` seulement si la comparaison a un sens ; sinon contexte neutre.
-- Mini-sparkline optionnelle à droite, trait `1.5px` en `--chart-neutral`, dernier point en accent.
+### C. KPI tile
+- Label (`12px`, secondary, `13px` tertiary icon) → value (`26px/600`, tabular) → context (`12px`, tertiary).
+- Change: `▲ 12 %` in `--positive` / `▼` in `--negative` only if the comparison is meaningful; otherwise neutral context.
+- Optional mini-sparkline on the right, `1.5px` stroke in `--chart-neutral`, last point in accent.
 
-### D. Graphiques (règles communes)
-- **Une couleur pour la donnée, l'accent pour l'insight.** Barres et séries en `--chart-neutral` ; l'accent marque la série principale, la valeur max, la période en cours ou la moyenne glissante.
-- Cartes de chaleur (calendrier, semaine type) : rampe mono-teinte de l'accent, `5` paliers (`--chart-track`, puis accent à `0.20 / 0.38 / 0.62 / 1`). Cases `border-radius: 3–4px`.
-- Classements (top outils, top fichiers) : barre `4px` de haut, `border-radius: 2px`, piste `--chart-track`, barre `--chart-neutral`, n°1 en `--text-secondary` (un neutre plus clair). L'accent sur le n°1 est réservé au **classement principal de la page** : avec plusieurs classements, des leaders tous en accent font une page bariolée.
-- Catégoriel (donut, barres empilées) : `--cat-1…6`, triées par valeur, le reste regroupé en « Autres » `--cat-other`. Donut : épaisseur `14%` du rayon, `2px` d'espace entre segments, total au centre.
-- Grilles horizontales seulement, `1px --chart-grid`, axes en `11px` tertiaire tabular. Pas de bordure de zone de tracé.
-- Survol : infobulle niveau 4 ; les autres séries passent à `opacity: 0.35`.
+### D. Charts (common rules)
+- **One colour for the data, the accent for the insight.** Bars and series in `--chart-neutral`; the accent marks the main series, the max value, the current period or the moving average.
+- Heatmaps (calendar, typical week): single-hue accent ramp, `5` steps (`--chart-track`, then accent at `0.20 / 0.38 / 0.62 / 1`). Cells with `border-radius: 3-4px`.
+- Rankings (top tools, top files): `4px` tall bar, `border-radius: 2px`, `--chart-track` track, `--chart-neutral` bar, #1 in `--text-secondary` (a lighter neutral). The accent on #1 is reserved for the **page's main ranking**: with several rankings, leaders all in accent make a gaudy page.
+- Categorical (donut, stacked bars): `--cat-1…6`, sorted by value, the rest grouped as "Other" in `--cat-other`. Donut: thickness `14%` of the radius, `2px` gap between segments, total in the centre.
+- Horizontal grid lines only, `1px --chart-grid`, axes at `11px` tertiary tabular. No plot-area border.
+- Hover: level 4 tooltip; the other series drop to `opacity: 0.35`.
 
-### E. Module d'état (bas de sidebar)
-- **Optionnel** : seulement si l'app a une activité vivante (synchronisation, analyse, tâche, serveur). Sinon, bas de sidebar = profil/réglages.
+### E. Status module (sidebar bottom)
+- **Optional**: only if the app has a live activity (sync, analysis, task, server). Otherwise, the sidebar bottom = profile/settings.
 - `margin: 10px; padding: 10px 12px; border-radius: 12px; background: var(--surface-floating); backdrop-filter: blur(24px); box-shadow: 0 0 0 1px var(--border-subtle), var(--specular-top), 0 8px 24px rgba(0,0,0,0.3);`
-- Contenu : point d'état `6px` (accent si en cours, `--positive` si à jour, animé en pulsation lente seulement pendant une activité), deux lignes (`12px/600` + `11px` tertiaire, sous-titre court : `240px` de sidebar laissent ~20 caractères), un bouton `…` `28×28px` qui ouvre un menu (actualiser, sources, réglages ; nom du compte en en-tête de section). Les actions vivent dans le menu et sous leur raccourci clavier, pas en boutons alignés qui tronquent le texte.
+- Content: `6px` status dot (accent if in progress, `--positive` if up to date, with a slow pulse only during an activity), two lines (`12px/600` + `11px` tertiary, short subtitle: a `240px` sidebar leaves ~20 characters), a `28×28px` `…` button that opens a menu (refresh, sources, settings; account name as a section header). Actions live in the menu and under their keyboard shortcut, not in aligned buttons that truncate the text.
 
-### F. Contrôles & formulaires
-- **Contrôle segmenté** : conteneur `background: var(--fill-1); padding: 2px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--border-subtle);` segments `height: 24px; padding: 0 10px; font: 500 12px;` ; segment actif marqué par la **bulle Liquid Glass** (section 5.I, rayon `6px`), texte `--text-primary` ; inactifs en `--text-secondary`. **Pas d'accent** sur le segmenté.
-- **Pastilles de filtre** (catégories, statuts) : `height: 26px; border-radius: 7px; background: var(--fill-1); border: 1px solid var(--border-subtle)`, point `6px` de la couleur catégorielle ; la pastille choisie perd fond et bordure et reçoit la bulle Liquid Glass.
-- **Champ de saisie** : `height: 30px; background: var(--fill-1); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0 10px;` focus : `border-color: var(--accent-rim); box-shadow: 0 0 0 3px var(--accent-soft);`
-- **Interrupteur, case à cocher, radio** : accent quand actif, `--fill-3` sinon.
-- **Tags / badges** : `height: 20px; padding: 0 7px; border-radius: 6px; background: var(--fill-2); font: 500 11px; color: var(--text-secondary);` + éventuel point `6px` de la couleur catégorielle. Jamais de fond coloré plein.
+### F. Controls & forms
+- **Segmented control**: container `background: var(--fill-1); padding: 2px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--border-subtle);` segments `height: 24px; padding: 0 10px; font: 500 12px;`; the active segment is marked by the **Liquid Glass bubble** (section 5.I, radius `6px`), text `--text-primary`; inactive ones in `--text-secondary`. **No accent** on the segmented control.
+- **Filter chips** (categories, statuses): `height: 26px; border-radius: 7px; background: var(--fill-1); border: 1px solid var(--border-subtle)`, `6px` dot in the categorical colour; the chosen chip loses its background and border and receives the Liquid Glass bubble.
+- **Input field**: `height: 30px; background: var(--fill-1); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0 10px;` focus: `border-color: var(--accent-rim); box-shadow: 0 0 0 3px var(--accent-soft);`
+- **Switch, checkbox, radio**: accent when active, `--fill-3` otherwise.
+- **Tags / badges**: `height: 20px; padding: 0 7px; border-radius: 6px; background: var(--fill-2); font: 500 11px; color: var(--text-secondary);` + optional `6px` dot in the categorical colour. Never a solid coloured background.
 
-### G. Listes & tableaux
-- Lignes `32px` (dense) ou `44px` (avec sous-titre), filets `1px var(--border-subtle)`, pas de zébrage.
-- En-têtes de colonnes `11px/600` tertiaires, triables (chevron `10px`).
-- Ligne survolée `var(--fill-1)` ; ligne sélectionnée `var(--accent-soft)` + `inset 2px 0 0 var(--accent)`.
-- Colonnes numériques alignées à droite, `tabular-nums`.
-- Inspecteur (détail à droite) : panneau `320–360px`, même matériau que les cartes, séparé par un filet.
+### G. Lists & tables
+- Rows `32px` (dense) or `44px` (with subtitle), `1px var(--border-subtle)` rules, no zebra striping.
+- Column headers `11px/600` tertiary, sortable (`10px` chevron).
+- Hovered row `var(--fill-1)`; selected row `var(--accent-soft)` + `inset 2px 0 0 var(--accent)`.
+- Numeric columns right-aligned, `tabular-nums`.
+- Inspector (detail on the right): `320-360px` panel, same material as the cards, separated by a rule.
 
-### H. Popovers, menus, palette ⌘K
-- Niveau 4. `border-radius: 14px` (palette) / `10px` (menu). Voile derrière une palette modale : `rgba(0,0,0,0.25)` sans flou.
-- Palette : champ `50px` sans bordure (texte `16px`), résultats groupés par sur-titres (Sessions récentes / Sessions, Pages, Actions), lignes `38px` avec vignette d'icône `24px` en `--fill-2`, raccourci affiché à droite en touches `--fill-2`. La ligne active porte la bulle Liquid Glass (sans glisser : elle suit les flèches ↑↓ et le survol). ↵ ouvre, esc ou un clic sur le voile ferme. Pied de palette : rappel des touches.
-- Une recherche sans résultat exact propose toujours une action de repli (« Toutes les sessions contenant « … » »).
+### H. Popovers, menus, ⌘K palette
+- Level 4. `border-radius: 14px` (palette) / `10px` (menu). Scrim behind a modal palette: `rgba(0,0,0,0.25)` with no blur.
+- Palette: `50px` borderless field (`16px` text), results grouped under eyebrows (Recent sessions / Sessions, Pages, Actions), `38px` rows with a `24px` icon thumbnail in `--fill-2`, shortcut shown on the right in `--fill-2` keys. The active row carries the Liquid Glass bubble (without sliding: it follows the ↑↓ arrows and the hover). ↵ opens, esc or a click on the scrim closes. Palette footer: reminder of the keys.
+- A search with no exact result always offers a fallback action ("All sessions containing "…"").
 
-### I. Sélection Liquid Glass (la bulle)
-La sélection d'un groupe (segments, sidebar, barre d'onglets, pastilles, lignes de palette) est **une seule bulle de verre** qui se déplace d'un élément à l'autre, comme la barre d'Apple Music. Elle ne s'utilise pas pour les lignes de tableau (sélection en `--accent-soft`, section G).
+### I. Liquid Glass selection (the bubble)
+The selection of a group (segments, sidebar, tab bar, chips, palette rows) is **a single glass bubble** that moves from one element to another, like the Apple Music bar. It is not used for table rows (selection in `--accent-soft`, section G).
 
-**Au repos**
-- Matière : verre `regular` (macOS 26+ `glassEffect`) sur un voile `--fill-2` (sombre) / `rgba(255,255,255,0.55)` (clair), liseré spéculaire blanc `0.18` / `0.9`, ombre `0 1.5px 3px rgba(0,0,0,0.28)`.
-- Rayon : celui de l'élément (`6px` segments, `7px` pastilles, `8px` lignes).
+**At rest**
+- Material: `regular` glass (macOS 26+ `glassEffect`) over a `--fill-2` veil (dark) / `rgba(255,255,255,0.55)` (light), white specular rim `0.18` / `0.9`, shadow `0 1.5px 3px rgba(0,0,0,0.28)`.
+- Radius: that of the element (`6px` segments, `7px` chips, `8px` rows).
 
-**Changement de sélection (clic, clavier)**
-- La bulle glisse vers le nouvel élément sur un ressort rebondi : `var(--spring-bubble)` sur `var(--duration-bubble)` (SwiftUI : `.spring(response: 0.42, dampingFraction: 0.66)`).
-- Effet goutte : au départ, `scale` `1 + var(--bubble-stretch)` dans le sens du trajet et `1 − 0.4 × stretch` en travers pendant `120ms`, puis retour à `1` sur un ressort rebondi (`.bouncy(duration: 0.45, extraBounce: 0.2)`).
-- Le texte de l'élément devient `--text-primary` en fondu `200ms`.
+**Selection change (click, keyboard)**
+- The bubble slides to the new element on a bouncy spring: `var(--spring-bubble)` over `var(--duration-bubble)` (SwiftUI: `.spring(response: 0.42, dampingFraction: 0.66)`).
+- Drop effect: at the start, `scale` `1 + var(--bubble-stretch)` along the direction of travel and `1 − 0.4 × stretch` across it for `120ms`, then back to `1` on a bouncy spring (`.bouncy(duration: 0.45, extraBounce: 0.2)`).
+- The element's text becomes `--text-primary` with a `200ms` fade.
 
-**Attraper et glisser**
-- Appui sur l'élément **déjà sélectionné** : la bulle se soulève tout de suite. Appui sur un **autre** élément : rien ne bouge tant que le pointeur n'a pas parcouru `4px` ; un simple clic reste un clic (l'élément gère sa sélection).
-- Soulevée : `+ var(--bubble-lift)` de chaque côté, verre `clear` (plus transparent), ombre `0 4px 8px`. Elle suit le pointeur sur un ressort interactif (`response 0.22, damping 0.78`) et prend progressivement la taille des deux éléments entre lesquels elle se trouve.
-- Étirement de vitesse : `stretch = min(0.2, |vitesse| / 3000 px/s)` le long du trajet.
-- **Loupe** : sous la bulle tenue, le contenu est flouté par le verre (matériau `regular`) et les titres réapparaissent grossis `× var(--lens-scale)`, centrés sur le pointeur, découpés à la forme de la bulle, avec le liseré spéculaire par-dessus.
-- Retour haptique `alignment` (trackpad) à chaque élément franchi.
-- Relâchement : la bulle se pose sur l'élément le plus proche (ressort rebondi + effet goutte) et le sélectionne.
+**Grab and drag**
+- Pressing the **already selected** element: the bubble lifts immediately. Pressing **another** element: nothing moves until the pointer has travelled `4px`; a simple click stays a click (the element handles its own selection).
+- Lifted: `+ var(--bubble-lift)` on each side, `clear` glass (more transparent), shadow `0 4px 8px`. It follows the pointer on an interactive spring (`response 0.22, damping 0.78`) and gradually takes the size of the two elements it lies between.
+- Speed stretch: `stretch = min(0.2, |speed| / 3000 px/s)` along the path.
+- **Lens**: under the held bubble, the content is blurred by the glass (`regular` material) and the titles reappear magnified `× var(--lens-scale)`, centred on the pointer, clipped to the bubble's shape, with the specular rim on top.
+- `alignment` haptic feedback (trackpad) on each element crossed.
+- Release: the bubble settles on the nearest element (bouncy spring + drop effect) and selects it.
 
-**Accessibilité** : avec « Réduire les animations », glissement simple `ease-out 150ms`, ni goutte, ni étirement, ni loupe.
+**Accessibility**: with "Reduce motion", a simple `ease-out 150ms` slide, no drop, no stretch, no lens.
 
-**En web** : un élément `.bubble` en `position: absolute` dans le conteneur, déplacé uniquement par `transform: translate() scale()` (jamais `left/width` animés) avec `transition: transform var(--duration-bubble) var(--spring-bubble)` ; la goutte en `@keyframes` (`scale` étiré à `22%` puis `1`). Glisser : `pointerdown` / `pointermove` / `pointerup` avec `setPointerCapture`, transition coupée pendant le suivi. Verre : `backdrop-filter: blur(20px) saturate(180%)` + voile + liseré. Loupe : clone du rang d'éléments dans la bulle, `transform: scale(var(--lens-scale))` avec `transform-origin` au pointeur, `clip-path` à la forme de la bulle.
+**On the web**: a `.bubble` element in `position: absolute` inside the container, moved only by `transform: translate() scale()` (never animated `left/width`) with `transition: transform var(--duration-bubble) var(--spring-bubble)`; the drop effect in `@keyframes` (`scale` stretched to `22%` then `1`). Drag: `pointerdown` / `pointermove` / `pointerup` with `setPointerCapture`, transition turned off while tracking. Glass: `backdrop-filter: blur(20px) saturate(180%)` + veil + rim. Lens: a clone of the row of elements inside the bubble, `transform: scale(var(--lens-scale))` with `transform-origin` at the pointer, `clip-path` to the bubble's shape.
 
 ---
 
 ## 6. MICRO-INTERACTIONS
 
-1. **Survol de carte cliquable** : `transition: background var(--duration-fast) ease, box-shadow var(--duration-normal) var(--spring-apple);` → fond `--surface-card-hover` et `--rim` plus lumineux. **Pas de translation ni de mise à l'échelle** sur les cartes de données (ça bouge les chiffres) ; `translateY(-1px)` toléré sur des tuiles de navigation.
-2. **Pression** : boutons uniquement, `:active { transform: scale(0.97); transition-duration: 80ms; }`.
-3. **Apparition** : popovers `opacity 0 → 1` + `scale(0.98) → 1`, `var(--duration-fast) var(--spring-apple)`. Changement de vue : fondu `120ms`, jamais de glissement latéral.
-4. **Réduction des animations** : `@media (prefers-reduced-motion: reduce)` coupe transitions et pulsations.
-5. **Fluidité : jamais d'animation pendant un rendu lourd.** Afficher une nouvelle page coûte souvent `100–200ms` de mise en page sur le fil principal (SwiftUI, gros DOM) ; une animation lancée dans cette même image se fige en plein vol, c'est le « lag » qu'on voit.
-   - Changement de page : **la page s'affiche d'abord, l'animation démarre juste après**, sur un fil principal libre (SwiftUI : deux sauts `DispatchQueue.main.async` ; web : deux `requestAnimationFrame`). Un départ décalé de ~`100ms` ne se voit pas, un arrêt en plein vol si.
-   - Données recalculées qui redessinent la page (changement de période, de filtre) : les appliquer **une fois la bulle posée** (`~400ms` après l'action), pas pendant son rebond.
-   - Ne pas déclencher l'animation dès l'appui de souris si un clic va changer de page : elle serait coupée par le rendu.
-   - Mesure : journaliser les intervalles de plus de `30ms` entre deux ticks d'un minuteur du fil principal pendant les changements de vue ; aucune ne doit tomber pendant une animation.
-6. **Barres de défilement** : `::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-thumb { background: var(--fill-3); border-radius: 9999px; border: 2px solid transparent; background-clip: content-box; } ::-webkit-scrollbar-track { background: transparent; }`
+1. **Hover on a clickable card**: `transition: background var(--duration-fast) ease, box-shadow var(--duration-normal) var(--spring-apple);` → `--surface-card-hover` background and a brighter `--rim`. **No translation or scaling** on data cards (it moves the numbers); `translateY(-1px)` tolerated on navigation tiles.
+2. **Press**: buttons only, `:active { transform: scale(0.97); transition-duration: 80ms; }`.
+3. **Appearance**: popovers `opacity 0 → 1` + `scale(0.98) → 1`, `var(--duration-fast) var(--spring-apple)`. View change: `120ms` fade, never a sideways slide.
+4. **Reduced motion**: `@media (prefers-reduced-motion: reduce)` turns off transitions and pulses.
+5. **Smoothness: never animate during a heavy render.** Showing a new page often costs `100-200ms` of layout on the main thread (SwiftUI, big DOM); an animation started in that same frame freezes mid-flight, which is the "lag" you see.
+   - Page change: **the page shows first, the animation starts right after**, on a free main thread (SwiftUI: two `DispatchQueue.main.async` hops; web: two `requestAnimationFrame`). A start delayed by ~`100ms` is not visible, a mid-flight stop is.
+   - Recomputed data that redraws the page (period change, filter change): apply it **once the bubble has settled** (`~400ms` after the action), not during its bounce.
+   - Do not trigger the animation on mouse-down if a click is going to change the page: it would be cut off by the render.
+   - Measurement: log the intervals longer than `30ms` between two ticks of a main-thread timer during view changes; none should fall during an animation.
+6. **Scrollbars**: `::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-thumb { background: var(--fill-3); border-radius: 9999px; border: 2px solid transparent; background-clip: content-box; } ::-webkit-scrollbar-track { background: transparent; }`
 
 ---
 
-## 7. ACCESSIBILITÉ
+## 7. ACCESSIBILITY
 
-- Contraste texte ≥ 4.5:1 (le tertiaire n'est jamais utilisé pour une information indispensable).
-- L'accent ne porte jamais seul une information : la valeur, la forme ou le libellé la portent aussi.
-- Focus clavier visible partout (anneau accent de la section F).
-- Graphiques : chaque série a un libellé ou une légende textuelle ; les rampes de chaleur ont une légende « Moins → Plus ».
+- Text contrast ≥ 4.5:1 (tertiary is never used for essential information).
+- The accent never carries information alone: the value, the shape or the label carries it too.
+- Keyboard focus visible everywhere (accent ring from section F).
+- Charts: every series has a label or a text legend; heatmap ramps have a "Less → More" legend.
 
 ---
 
-## 8. IMPLÉMENTATION NATIVE (SwiftUI / AppKit, macOS 26+)
+## 8. NATIVE IMPLEMENTATION (SwiftUI / AppKit, macOS 26+)
 
-Sur Mac, ce système s'obtient d'abord avec les composants du système, puis en réglant les couleurs :
+On the Mac, this system is obtained first with the system components, then by tuning the colours:
 
 | Concept | SwiftUI |
 | --- | --- |
-| Fenêtre + feux tricolores | `WindowGroup` standard, `.windowStyle(.hiddenTitleBar)` ou `.windowToolbarStyle(.unified)` — jamais de faux feux |
-| Sidebar en verre | `NavigationSplitView` : la colonne latérale reçoit le matériau système (Liquid Glass sur macOS 26+, `.sidebar` avant) ; ne pas lui poser de fond opaque |
-| Scène en retrait | contenu de détail avec `.padding(8)` puis `.background(Theme.stage, in: .rect(cornerRadius: 14, style: .continuous))` et un `.overlay` de contour `1px` + reflet supérieur |
-| Toolbar | `.toolbar { }` avec `ToolbarItem(placement: .principal)` pour la recherche, `.searchable` si le comportement standard suffit |
-| Verre (niveau 4, module d'état) | macOS 26+ : `.glassEffect(.regular, in: .rect(cornerRadius: 12))`, regroupés dans un `GlassEffectContainer` ; repli : `.background(.regularMaterial, in: …)` |
-| Boutons | `.buttonStyle(.glassProminent)` (primaire) / `.buttonStyle(.glass)` (secondaire) sur macOS 26+ ; `.borderedProminent` / `.bordered` avant |
-| Accent | `.tint(Theme.accent)` à la racine ; une `Color` adaptative clair/sombre |
-| Chiffres | `.monospacedDigit()` |
-| Graphiques | Swift Charts : `.foregroundStyle(Theme.chartNeutral)` par défaut, `Theme.accent` pour la série mise en avant |
-| Rayons | `RoundedRectangle(cornerRadius:style: .continuous)` partout (courbe squircle) |
-| Bulle Liquid Glass (5.I) | Chaque élément publie son cadre dans un `coordinateSpace` nommé via une `PreferenceKey` ; le conteneur dessine **une** bulle en `.background` à ce cadre. Glisser : `DragGesture(minimumDistance: 0)` en `.simultaneousGesture` (les boutons gardent le clic). Effet goutte : `.keyframeAnimator(trigger:)` (`CubicKeyframe` puis `SpringKeyframe` `.bouncy`). Verre : `.glassEffect(lifted ? .clear : .regular, in: shape)`. Loupe : copie du contenu en `.overlay`, `.scaleEffect(1.2, anchor: pointeur)`, `.mask` à la forme de la bulle, sur un fond `.regularMaterial`. Haptique : `NSHapticFeedbackManager.defaultPerformer.perform(.alignment, …)`. Pour des lignes librement placées sans glisser (palette) : `matchedGeometryEffect(isSource: false)` |
-| Fluidité (6.5) | La bulle affiche une sélection « montrée » mise à jour après le rendu : `.onChange(of: selection) { DispatchQueue.main.async { DispatchQueue.main.async { withAnimation(spring) { shown = new } } } }` ; données recalculées appliquées après `≥ 0.4 s` |
-| Historique de navigation | Pile retour / avant dans le modèle, flèches ‹ › de la toolbar, `⌘[` / `⌘]` dans un menu « Aller à » |
+| Window + traffic lights | Standard `WindowGroup`, `.windowStyle(.hiddenTitleBar)` or `.windowToolbarStyle(.unified)`; never fake lights |
+| Glass sidebar | `NavigationSplitView`: the sidebar column receives the system material (Liquid Glass on macOS 26+, `.sidebar` before); do not give it an opaque background |
+| Inset stage | detail content with `.padding(8)` then `.background(Theme.stage, in: .rect(cornerRadius: 14, style: .continuous))` and an `.overlay` with a `1px` outline + top highlight |
+| Toolbar | `.toolbar { }` with `ToolbarItem(placement: .principal)` for the search, `.searchable` if the standard behaviour is enough |
+| Glass (level 4, status module) | macOS 26+: `.glassEffect(.regular, in: .rect(cornerRadius: 12))`, grouped in a `GlassEffectContainer`; fallback: `.background(.regularMaterial, in: …)` |
+| Buttons | `.buttonStyle(.glassProminent)` (primary) / `.buttonStyle(.glass)` (secondary) on macOS 26+; `.borderedProminent` / `.bordered` before |
+| Accent | `.tint(Theme.accent)` at the root; an adaptive light/dark `Color` |
+| Numbers | `.monospacedDigit()` |
+| Charts | Swift Charts: `.foregroundStyle(Theme.chartNeutral)` by default, `Theme.accent` for the highlighted series |
+| Radii | `RoundedRectangle(cornerRadius:style: .continuous)` everywhere (squircle curve) |
+| Liquid Glass bubble (5.I) | Each element publishes its frame in a named `coordinateSpace` through a `PreferenceKey`; the container draws **one** bubble in `.background` at that frame. Drag: `DragGesture(minimumDistance: 0)` as a `.simultaneousGesture` (buttons keep the click). Drop effect: `.keyframeAnimator(trigger:)` (`CubicKeyframe` then `SpringKeyframe` `.bouncy`). Glass: `.glassEffect(lifted ? .clear : .regular, in: shape)`. Lens: copy of the content in `.overlay`, `.scaleEffect(1.2, anchor: pointer)`, `.mask` to the bubble's shape, on a `.regularMaterial` background. Haptics: `NSHapticFeedbackManager.defaultPerformer.perform(.alignment, …)`. For freely placed rows without dragging (palette): `matchedGeometryEffect(isSource: false)` |
+| Smoothness (6.5) | The bubble shows a "shown" selection updated after the render: `.onChange(of: selection) { DispatchQueue.main.async { DispatchQueue.main.async { withAnimation(spring) { shown = new } } } }`; recomputed data applied after `≥ 0.4 s` |
+| Navigation history | Back / forward stack in the model, ‹ › toolbar arrows, `⌘[` / `⌘]` in a "Go" menu |
 
-Toujours encadrer les API récentes : `if #available(macOS 26, *) { … } else { … }`.
+Always wrap recent APIs: `if #available(macOS 26, *) { … } else { … }`.
 
 ---
 
-## 9. CHECKLIST AVANT DE LIVRER UNE VUE
+## 9. CHECKLIST BEFORE SHIPPING A VIEW
 
-- [ ] **Graphite d'abord** : sur une capture, l'accent représente moins de 5 % de la surface et on voit les chiffres avant la couleur.
-- [ ] **Un seul accent** dans toute l'app ; aucune autre teinte hors sémantique et graphiques catégoriels.
-- [ ] **Cadre Arc** : scène détachée de `8px` (haut, droite, bas), rayon `14px` concentrique au rayon de fenêtre.
-- [ ] **Verre** : sidebar translucide, popovers niveau 4 ; scène quasi opaque.
-- [ ] **Liseré spéculaire** neutre en haut de chaque surface ; liseré accent sur une carte vedette au plus.
-- [ ] **Typo macOS** : corps `13px`, titres de vue `28px`, chiffres en `tabular-nums`.
-- [ ] **Graphiques** : neutre pour la donnée, accent pour l'insight, palette catégorielle sourdine ≤ 6 + Autres.
-- [ ] **Clair et sombre** vérifiés tous les deux.
-- [ ] **Natif** : aucun composant système redessiné (feux, sidebar, menus) quand l'app est en SwiftUI.
-- [ ] **Bulle Liquid Glass** : une seule bulle par groupe de sélection ; elle glisse, rebondit, s'attrape et grossit les titres comme une loupe ; un clic reste un clic.
-- [ ] **Fluidité** : aucune animation ne démarre dans l'image qui construit une nouvelle page ; aucun blocage de plus de `30ms` pendant une animation.
-- [ ] **Réduire les animations** respecté (pas de rebond, d'étirement ni de loupe).
+- [ ] **Graphite first**: on a screenshot, the accent is less than 5% of the surface and you see the numbers before the colour.
+- [ ] **A single accent** in the whole app; no other hue outside semantics and categorical charts.
+- [ ] **Arc frame**: stage detached by `8px` (top, right, bottom), `14px` radius concentric with the window radius.
+- [ ] **Glass**: translucent sidebar, level 4 popovers; nearly opaque stage.
+- [ ] **Neutral specular rim** on top of every surface; accent rim on one featured card at most.
+- [ ] **macOS typography**: `13px` body, `28px` view titles, figures in `tabular-nums`.
+- [ ] **Charts**: neutral for data, accent for the insight, muted categorical palette ≤ 6 + Other.
+- [ ] **Light and dark** both checked.
+- [ ] **Native**: no system component redrawn (lights, sidebar, menus) when the app is in SwiftUI.
+- [ ] **Liquid Glass bubble**: a single bubble per selection group; it slides, bounces, can be grabbed and magnifies the titles like a lens; a click stays a click.
+- [ ] **Smoothness**: no animation starts in the frame that builds a new page; no block longer than `30ms` during an animation.
+- [ ] **Reduce motion** respected (no bounce, stretch or lens).

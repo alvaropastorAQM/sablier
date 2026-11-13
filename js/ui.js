@@ -1,14 +1,14 @@
 /* ============================================================
-   INTERFACE : navigation entre pages, notifications, modales,
-   menus flottants, petits composants partagés.
+   INTERFACE: navigation between pages, notifications, modals,
+   floating menus, small shared components.
    ============================================================ */
 'use strict';
 
 var PAGE_COURANTE = 'tableau';
-var PAGES = {};   // nom de page -> fonction de rendu (remplie par les modules page-*.js)
+var PAGES = {};   // page name -> render function (filled by the page-*.js modules)
 
-/* Anciens noms de pages : « chantiers » est devenu « taches », et le
-   journal vit dans la page du relevé mensuel. */
+/* Old page names: "chantiers" became "taches", and the log lives in the
+   monthly statement page. */
 function afficherPage(nom) {
   if (nom === 'chantiers') nom = 'taches';
   if (nom === 'journal') nom = 'releve';
@@ -21,8 +21,8 @@ function afficherPage(nom) {
   rafraichir();
 }
 
-/* Re-dessine la page courante et les éléments permanents (pastilles,
-   chrono, rappels). À appeler après toute modification des données. */
+/* Redraws the current page and the permanent elements (badges, timer,
+   reminders). Call it after any change to the data. */
 function rafraichir() {
   var rendu = PAGES[PAGE_COURANTE];
   if (typeof rendu === 'function') rendu();
@@ -33,7 +33,7 @@ function rafraichir() {
   if (typeof poserBullesBientot === 'function') poserBullesBientot();
 }
 
-/* ---------- Notification discrète (barre d'état) ---------- */
+/* ---------- Discreet notification (status bar) ---------- */
 var NOTIF_TIMER = null;
 function notifier(texte, options) {
   var o = options || {};
@@ -52,7 +52,7 @@ function notifier(texte, options) {
   NOTIF_TIMER = setTimeout(function () { bar.classList.remove('show'); }, o.duree || (o.action ? 9000 : 3800));
 }
 
-/* ---------- Modales ---------- */
+/* ---------- Modals ---------- */
 function ouvrirModale(o) {
   fermerModale();
   var racine = document.getElementById('modaleRacine');
@@ -61,7 +61,7 @@ function ouvrirModale(o) {
   overlay.innerHTML =
     '<div class="modal' + (o.classe ? ' ' + o.classe : '') + '" role="dialog" aria-modal="true">'
     + '<div class="modal-head"><div><h3>' + echapper(o.titre || '') + '</h3>' + (o.sousTitre ? '<div class="modal-subtitle">' + echapper(o.sousTitre) + '</div>' : '') + '</div>'
-    + '<button class="modal-close" title="Fermer" aria-label="Fermer">✕</button></div>'
+    + '<button class="modal-close" title="Close" aria-label="Close">✕</button></div>'
     + '<div class="modal-body">' + (o.corps || '') + '</div>'
     + (o.pied ? '<div class="modal-foot">' + o.pied + '</div>' : '')
     + '</div>';
@@ -73,8 +73,8 @@ function ouvrirModale(o) {
   if (premier && !o.sansFocus) setTimeout(function () { premier.focus(); }, 30);
   return overlay;
 }
-/* Ferme toute modale ouverte. Le rappel « auFermer » est détaché avant
-   d'être appelé : il peut lui-même rouvrir une modale sans boucler. */
+/* Closes any open modal. The "auFermer" callback is detached before
+   being called: it can itself reopen a modal without looping. */
 function fermerModale() {
   var racine = document.getElementById('modaleRacine');
   if (!racine) return;
@@ -90,16 +90,16 @@ function modaleOuverte() {
   return !!(racine && racine.children.length);
 }
 
-/* Confirmation : renvoie une promesse booléenne. */
+/* Confirmation: returns a boolean promise. */
 function confirmer(texte, options) {
   var o = options || {};
   return new Promise(function (resoudre) {
     var m = ouvrirModale({
-      titre: o.titre || 'Confirmer',
+      titre: o.titre || 'Confirm',
       classe: 'modal-etroite',
       corps: '<p style="margin:0; font-size:13.5px; color:var(--text-secondary); line-height:1.6;">' + echapper(texte) + '</p>',
-      pied: '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">Annuler</button>'
-        + '<button class="btn ' + (o.danger ? 'btn-danger-ligne' : '') + '" data-role="ok">' + echapper(o.ok || 'Confirmer') + '</button></div>',
+      pied: '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">Cancel</button>'
+        + '<button class="btn ' + (o.danger ? 'btn-danger-ligne' : '') + '" data-role="ok">' + echapper(o.ok || 'Confirm') + '</button></div>',
       auFermer: function () { resoudre(false); },
       sansFocus: true,
     });
@@ -109,7 +109,7 @@ function confirmer(texte, options) {
   });
 }
 
-/* Petite question à réponse texte, date ou texte long. */
+/* Small prompt with a text, date or long text answer. */
 function demander(o) {
   return new Promise(function (resoudre) {
     var champHtmlLocal = o.type === 'textarea'
@@ -120,7 +120,7 @@ function demander(o) {
       classe: o.type === 'textarea' ? '' : 'modal-etroite',
       corps: (o.texte ? '<p class="petit" style="margin:0 0 12px;">' + echapper(o.texte) + '</p>' : '')
         + '<div class="field"><label>' + echapper(o.libelle || '') + '</label>' + champHtmlLocal + '</div>',
-      pied: '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">Annuler</button><button class="btn" data-role="ok">' + echapper(o.ok || 'Valider') + '</button></div>',
+      pied: '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">Cancel</button><button class="btn" data-role="ok">' + echapper(o.ok || 'OK') + '</button></div>',
       auFermer: function () { resoudre(null); },
     });
     var champ = m.querySelector('#demanderValeur');
@@ -131,7 +131,7 @@ function demander(o) {
   });
 }
 
-/* ---------- Menu flottant ---------- */
+/* ---------- Floating menu ---------- */
 function ouvrirMenu(ancre, items, options) {
   fermerMenu();
   var menu = document.createElement('div');
@@ -146,7 +146,7 @@ function ouvrirMenu(ancre, items, options) {
       + (it.icone ? '<span class="ic">' + it.icone + '</span>' : '')
       + '<span>' + echapper(it.libelle) + (it.sous ? '<span class="sous">' + echapper(it.sous) + '</span>' : '') + '</span></button>';
   });
-  if (!html) html = '<div class="menu-blocs-titre">Rien à proposer</div>';
+  if (!html) html = '<div class="menu-blocs-titre">Nothing to suggest</div>';
   menu.innerHTML = html;
   document.body.appendChild(menu);
   var r = ancre.getBoundingClientRect();
@@ -180,9 +180,9 @@ function fermerMenu() {
   document.removeEventListener('keydown', fermerMenuEchap);
 }
 
-/* ---------- Composants partagés ---------- */
+/* ---------- Shared components ---------- */
 function optionsAxesHtml(valeur, avecVide) {
-  var html = avecVide ? '<option value="">Tous les axes</option>' : '';
+  var html = avecVide ? '<option value="">All areas</option>' : '';
   axes().forEach(function (a) {
     html += '<option value="' + echapper(a.id) + '"' + (a.id === valeur ? ' selected' : '') + '>' + echapper(a.nom) + '</option>';
   });
@@ -197,14 +197,14 @@ function selectMoisHtml(id, moisChoisi, options) {
   html += '</select>';
   return html;
 }
-/* Les options seules, pour reconstruire une liste de mois sans refaire le select. */
+/* Just the options, to rebuild a list of months without redoing the select. */
 function optionsMoisHtml(liste, moisChoisi) {
   return (liste || []).map(function (m) {
     return '<option value="' + m + '"' + (m === moisChoisi ? ' selected' : '') + '>' + capitaliser(libelleMois(m)) + '</option>';
   }).join('');
 }
-/* Les mois du contrat, élargis aux mois qui portent des saisies ou des
-   factures, et au mois courant. */
+/* The contract months, extended to the months that hold log entries or
+   invoices, and to the current month. */
 function moisDuContrat() {
   var c = ETAT.reglages.contrat || {};
   var debut = c.debut ? moisDe(c.debut) : moisCourant();
@@ -222,10 +222,10 @@ function moisDuContrat() {
   return listeMois(debut, fin);
 }
 
-/* ---------- Mois de facturation et report ----------
-   Un travail se facture sur son mois, ou sur un mois suivant : jamais
-   avant qu'il n'ait été fait. Le mois du travail reste toujours offert,
-   pour que le report se défasse aussi simplement qu'il se pose. */
+/* ---------- Billing month and moving work ----------
+   Work is billed in its own month or a later one: never before it was
+   done. The month of the work is always offered, so that moving work
+   can be undone as easily as it is done. */
 
 function moisFacturationPossibles(moisTravail, moisChoisi) {
   var plancher = moisTravail || moisCourant();
@@ -235,11 +235,11 @@ function moisFacturationPossibles(moisTravail, moisChoisi) {
   var six = ajouterMois(plancher, 6);
   return listeMois(plancher, six > dernier ? six : dernier);
 }
-/* Les tâches proposées pour lier une ligne du journal : en cours, puis à
-   faire, puis faites (une ligne peut rejoindre une tâche déjà terminée). */
+/* The tasks offered for linking a log entry: in progress, then to do,
+   then done (an entry can join a task that is already finished). */
 function optionsTachesHtml(valeur) {
-  var libelles = { 'en-cours': 'En cours', 'a-faire': 'À faire', 'fait': 'Fait' };
-  var html = '<option value=""' + (!valeur ? ' selected' : '') + '>Aucune</option>';
+  var libelles = { 'en-cours': 'In progress', 'a-faire': 'To do', 'fait': 'Done' };
+  var html = '<option value=""' + (!valeur ? ' selected' : '') + '>None</option>';
   ['en-cours', 'a-faire', 'fait'].forEach(function (statut) {
     var liste = trierTaches(taches().filter(function (t) { return t.statut === statut; }));
     if (!liste.length) return;
@@ -249,45 +249,45 @@ function optionsTachesHtml(valeur) {
   });
   return html;
 }
-/* Toutes les lignes du même travail : elles se reportent ensemble. */
+/* All the entries of the same work item: they move together. */
 function lignesMemeIntervention(e) {
   if (!e || !e.date) return e ? [e] : [];
   var cle = cleTravail(e);
   return entreesJournal().filter(function (x) { return x && x.date && cleTravail(x) === cle; });
 }
-/* Vrai si une ligne de ce travail est déjà figée sur une facture : le mois
-   de facturation ne bouge plus. */
+/* True if an entry of this work item is already locked on an invoice: the
+   billing month no longer changes. */
 function interventionFigee(e) {
   var lesFactures = factures();
   return lignesMemeIntervention(e).some(function (x) { return !peutReporter(x, lesFactures); });
 }
-/* Le texte d'aide sous le choix du mois de facturation. */
+/* The help text under the billing month choice. */
 function aideMoisFacturation(moisTravail, moisChoisi) {
-  if (!moisChoisi || moisChoisi === moisTravail) return 'Par défaut, le mois du travail. Choisissez un mois plus tard pour porter ce travail sur un relevé et une facture ultérieurs.';
-  if (moisChoisi < moisTravail) return 'Un travail ne se facture pas avant d\'avoir été fait : choisissez ' + libelleMois(moisTravail) + ' ou un mois plus tard.';
+  if (!moisChoisi || moisChoisi === moisTravail) return 'By default, the month of the work. Choose a later month to put this work on a later statement and invoice.';
+  if (moisChoisi < moisTravail) return 'Work cannot be billed before it is done: choose ' + libelleMois(moisTravail) + ' or a later month.';
   var lesFactures = factures().filter(function (f) { return f.mois === moisChoisi; });
-  return 'Le journal garde la date du travail ; le relevé ' + deLibelleMois(moisChoisi) + ' le porte.'
-    + (lesFactures.length ? ' Ce mois porte déjà ' + (lesFactures.length > 1 ? lesFactures.length + ' factures' : 'la facture n° ' + lesFactures[0].numero) + ' : le report donnera lieu à une facture supplémentaire.' : '');
+  return 'The log keeps the date of the work; the ' + libelleMois(moisChoisi) + ' statement carries it.'
+    + (lesFactures.length ? ' That month already has ' + (lesFactures.length > 1 ? lesFactures.length + ' invoices' : 'invoice no. ' + lesFactures[0].numero) + ': moving work there will need an additional invoice.' : '');
 }
-/* Une ligne qui rejoint une intervention déjà reportée prend son mois de
-   facturation : une intervention ne se coupe pas en deux. */
+/* An entry that joins a work item that was already moved takes its
+   billing month: a work item is never split in two. */
 function heriterMoisFacturation(e) {
   var soeurs = lignesMemeIntervention(e).filter(function (x) { return x.id !== e.id; });
   if (!soeurs.length) return null;
-  /* Le mois d'une sœur déjà portée par une facture fait foi. */
+  /* The month of a sibling already carried by an invoice prevails. */
   var lesFactures = factures();
   var reference = soeurs.filter(function (x) { return !peutReporter(x, lesFactures); })[0] || soeurs[0];
   var m = moisFacturationDe(reference);
   e.moisFacturation = m && m !== moisDe(e.date) ? m : null;
   return e.moisFacturation;
 }
-/* Écrit le mois de facturation sur des lignes du journal (null pour revenir
-   au mois du travail), en refusant celles qu'une facture a figées. */
+/* Writes the billing month on log entries (null to go back to the month
+   of the work), skipping those an invoice has locked. */
 function appliquerMoisFacturation(lignes, mois) {
   var lesFactures = factures();
   var modifiables = (lignes || []).filter(function (e) {
-    /* Jamais avant que le travail n'ait été fait : une facture ne peut pas
-       porter une prestation postérieure à son mois. */
+    /* Never before the work was done: an invoice cannot carry a service
+       dated after its month. */
     if (mois && e && e.date && mois < moisDe(e.date)) return false;
     return peutReporter(e, lesFactures);
   });
@@ -305,7 +305,7 @@ function appliquerMoisFacturation(lignes, mois) {
   return n;
 }
 
-/* Pastilles de la barre latérale. */
+/* Sidebar badges. */
 function rendrePastilles() {
   var m = moisCourant();
   var minutesMois = totauxEntrees(entreesDuMois(entreesJournal(), m), ETAT.reglages).minutesFacturables;
@@ -320,10 +320,10 @@ function rendrePastilles() {
   if (pe) pe.textContent = proches ? String(proches) : '';
   var impayees = factures().filter(function (f) { return f.statut !== 'payee'; }).length;
   var pr = document.getElementById('pastilleReleve');
-  if (pr) { pr.textContent = impayees ? String(impayees) : ''; pr.title = impayees ? impayees + (impayees > 1 ? ' factures à encaisser' : ' facture à encaisser') : ''; }
+  if (pr) { pr.textContent = impayees ? String(impayees) : ''; pr.title = impayees ? impayees + (impayees > 1 ? ' invoices awaiting payment' : ' invoice awaiting payment') : ''; }
 }
 
-/* Raccourci de construction d'une ligne de formulaire. */
+/* Shortcut for building a form row. */
 function champHtml(id, libelle, type, valeur, extra) {
   return '<div class="field' + (extra && extra.classe ? ' ' + extra.classe : '') + '"><label for="' + id + '">' + echapper(libelle) + '</label>'
     + (type === 'textarea'
@@ -332,7 +332,7 @@ function champHtml(id, libelle, type, valeur, extra) {
     + '</div>';
 }
 
-/* ---------- Icônes en SVG (traits fins, couleur courante) ---------- */
+/* ---------- SVG icons (thin strokes, current colour) ---------- */
 var ICONES = {
   play: '<path d="M6.5 4.5v11l9-5.5z" fill="currentColor" stroke="none"/>',
   stop: '<rect x="5" y="5" width="10" height="10" rx="1.5" fill="currentColor" stroke="none"/>',

@@ -1,30 +1,31 @@
 /* ============================================================
-   SABLIER : feuille de styles de l'interface.
+   SABLIER: the interface stylesheet.
 
-   Design « Graphite » (design/design_system_macos27.md) :
-   - neutres froids sur plus de 90 % de l'écran, un seul accent, le
-     bleu acier, réservé à ce qui signale quelque chose (page active,
-     bouton principal, focus, mois en cours) ;
-   - la profondeur vient de la matière : verre de la barre latérale,
-     liseré de lumière en haut des surfaces, ombres douces ;
-   - la scène en retrait façon Arc, rayons concentriques ;
-   - typographie de macOS (SF Pro, corps à 13 px, chiffres tabulaires) ;
-   - sombre et clair suivent le réglage du Mac.
-   Les PDF (js/gabarits.js) gardent leur propre charte.
-   Jamais de tiret cadratin dans les textes de l'interface.
+   "Graphite" design (design/design_system_macos27.md):
+   - cool neutrals over more than 90% of the screen, a single accent, steel
+     blue, reserved for what signals something (active page, primary
+     button, focus, current month);
+   - depth comes from material: sidebar glass, a light rim on top of
+     surfaces, soft shadows;
+   - the inset stage, Arc style, with concentric radii;
+   - macOS typography (SF Pro, 13 px body, tabular figures; the open
+     replacement font is Inter, bundled in css/fonts);
+   - dark and light follow the system setting.
+   The PDFs (js/gabarits.js) keep their own style.
+   Never an em dash in interface text.
    ============================================================ */
 
 :root {
   color-scheme: dark;
 
-  /* ---------- Accent : bleu acier (section 0.3 du design) ---------- */
+  /* ---------- Accent: steel blue (design section 0.3) ---------- */
   --accent-h: 220; --accent-s: 82%; --accent-l: 65%;
   --accent:        hsl(var(--accent-h) var(--accent-s) var(--accent-l));
   --accent-strong: hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) - 8%));
   --accent-soft:   hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.14);
   --accent-rim:    hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.55);
   --accent-texte:  var(--accent);
-  /* Fond des boutons principaux : assez sombre pour un texte blanc lisible. */
+  /* Primary button background: dark enough for legible white text. */
   --accent-bouton: hsl(var(--accent-h) 70% 52%);
   --on-accent:     #FFFFFF;
 
@@ -37,12 +38,12 @@
   --surface-card-hover: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.04) 100%);
   --surface-floating:   rgba(32, 32, 37, 0.78);
 
-  /* ---------- Remplissages neutres ---------- */
+  /* ---------- Neutral fills ---------- */
   --fill-1: rgba(255,255,255,0.05);
   --fill-2: rgba(255,255,255,0.08);
   --fill-3: rgba(255,255,255,0.11);
 
-  /* ---------- Bordures, lumière, ombres ---------- */
+  /* ---------- Borders, light, shadows ---------- */
   --border-subtle: rgba(255,255,255,0.07);
   --border-strong: rgba(255,255,255,0.12);
   --rim:           rgba(255,255,255,0.10);
@@ -53,23 +54,23 @@
   --anneau-focus:  0 0 0 1px var(--accent-rim), 0 0 0 4px var(--accent-soft);
   --voile-modale:  rgba(0,0,0,0.25);
 
-  /* ---------- Texte ---------- */
+  /* ---------- Text ---------- */
   --text-primary:   rgba(255,255,255,0.94);
   --text-secondary: rgba(255,255,255,0.62);
   --text-tertiary:  rgba(255,255,255,0.40);
 
-  /* ---------- États réels uniquement ---------- */
+  /* ---------- Real states only ---------- */
   --positive: #4CB782; --warning: #E0A443; --negative: #E5675C;
   --pos: var(--positive); --warn: var(--warning); --neg: var(--negative);
 
-  /* ---------- Graphiques ---------- */
+  /* ---------- Charts ---------- */
   --chart-neutral: rgba(255,255,255,0.26);
   --chart-track:   rgba(255,255,255,0.06);
   --chart-grid:    rgba(255,255,255,0.06);
-  /* Points d'axe : les couleurs des axes, éclaircies pour le fond sombre. */
+  /* Area dots: the area colours, lightened for the dark background. */
   --axe-dose: 72%;
 
-  /* ---------- Rayons et espacements ---------- */
+  /* ---------- Radii and spacing ---------- */
   --radius-window: 22px;
   --stage-inset:   8px;
   --radius-stage:  14px;
@@ -79,18 +80,18 @@
   --space-page:    28px;
   --gap-grid:      14px;
 
-  /* ---------- Typographie ---------- */
+  /* ---------- Typography ---------- */
   --font-ui:    "Inter", system-ui, sans-serif;
   --font-serif: "Charter", Georgia, serif;
   --font-mono:  "JetBrains Mono", Menlo, Consolas, monospace;
 
-  /* ---------- Mouvement ---------- */
+  /* ---------- Motion ---------- */
   --spring-apple:    cubic-bezier(0.22, 1, 0.36, 1);
   --ease-out:        var(--spring-apple);
   --duration-fast:   160ms;
   --duration-normal: 280ms;
 
-  /* ---------- Bulle Liquid Glass (section 5.I) ---------- */
+  /* ---------- Liquid Glass bubble (section 5.I) ---------- */
   --spring-bubble:   linear(0, 0.22 7%, 0.62 16%, 0.94 26%, 1.07 34%, 1.09 40%, 1.05 50%, 1 60%, 0.985 70%, 1 85%, 1);
   --duration-bubble: 550ms;
   --bulle-voile:     rgba(255,255,255,0.08);
@@ -147,7 +148,7 @@
    ============================================================ */
 * { box-sizing: border-box; }
 html { background: var(--bg-root); }
-/* Dans l'application, le verre du système (vibrancy) remplace le fond. */
+/* In the app, the system glass (vibrancy) replaces the background. */
 html.vibrance { background: transparent; }
 html, body { margin: 0; padding: 0; height: 100%; }
 body {
@@ -182,11 +183,11 @@ a { color: var(--accent-texte); }
 .cache { display: none !important; }
 
 /* ============================================================
-   FENÊTRE : barre latérale en verre + scène en retrait
+   WINDOW: glass sidebar + inset stage
    ============================================================ */
 .wrap { display: flex; height: 100vh; overflow: hidden; position: relative; isolation: isolate; }
-/* Hors de l'application (navigateur, captures) : lumière ambiante, deux
-   halos au plus, sous la barre latérale seulement. */
+/* Outside the app (browser, screenshots): ambient light, two halos
+   at most, under the sidebar only. */
 html:not(.vibrance) .wrap::before, html:not(.vibrance) .wrap::after {
   content: ""; position: absolute; left: -260px; z-index: -1;
   width: 520px; height: 520px; border-radius: 50%;
@@ -204,11 +205,11 @@ html:not(.vibrance) .wrap::after { bottom: -240px; background: #5A6B85; opacity:
   user-select: none;
 }
 html.vibrance .lateral { background: transparent; backdrop-filter: none; }
-/* La barre latérale sert de zone de préhension de la fenêtre (barre de
-   titre masquée) ; les boutons restent cliquables. */
+/* The sidebar works as the window drag area (title bar hidden);
+   the buttons stay clickable. */
 .lateral { -webkit-app-region: drag; }
 .lateral button, .lateral .tabs, .lateral-pied { -webkit-app-region: no-drag; }
-/* Sous les feux tricolores du système. */
+/* Below the system traffic lights. */
 .marque { display: flex; align-items: center; gap: 8px; padding: 50px 20px 14px; }
 .marque-x { width: 20px; height: 20px; flex: none; display: flex; align-items: center; justify-content: center; color: var(--accent); }
 .marque-x svg { width: 20px; height: 20px; }
@@ -245,7 +246,7 @@ html.vibrance .lateral { background: transparent; backdrop-filter: none; }
 .tab-pastille:empty { display: none; }
 .lateral .tab-btn-rappels.urgent .tab-pastille { background: color-mix(in srgb, var(--negative) 22%, transparent); color: var(--negative); }
 
-/* Module d'état (bas de la barre latérale) : le chrono. */
+/* Status module (bottom of the sidebar): the timer. */
 .lateral-pied {
   margin: 10px; padding: 10px 12px;
   border-radius: 12px;
@@ -273,7 +274,7 @@ html.vibrance .lateral { background: transparent; backdrop-filter: none; }
 .btn-lateral:active { transform: scale(0.97); transition-duration: 80ms; }
 .btn-lateral:focus-visible { box-shadow: var(--anneau-focus); }
 
-/* La scène : seule elle défile. Rayon 14 px = fenêtre 22 px moins 8 px. */
+/* The stage: the only part that scrolls. Radius 14 px = window 22 px minus 8 px. */
 .principal {
   flex: 1; min-width: 0;
   margin: var(--stage-inset) var(--stage-inset) var(--stage-inset) 0;
@@ -285,8 +286,8 @@ html.vibrance .lateral { background: transparent; backdrop-filter: none; }
 }
 
 /* ============================================================
-   BULLE LIQUID GLASS : une seule par groupe de sélection
-   (js/bulle.js la place et la fait glisser)
+   LIQUID GLASS BUBBLE: a single one per selection group
+   (js/bulle.js places it and makes it slide)
    ============================================================ */
 .bulle {
   position: absolute; top: 0; left: 0; z-index: 0;
@@ -346,13 +347,13 @@ html.vibrance .lateral { background: transparent; backdrop-filter: none; }
   border-radius: 10px;
   padding: 12px 14px;
 }
-/* Carte vedette (une par écran au plus) : liseré accent et lumière douce. */
+/* Featured card (one per screen at most): accent rim and soft light. */
 .jr-saisie, .card-rappels {
   background: radial-gradient(80% 120% at 0% 0%, var(--accent-soft), transparent 60%), var(--surface-card);
   box-shadow: 0 0 0 1px var(--border-subtle), inset 0 1px 0 0 var(--accent-rim), var(--shadow-card);
 }
 
-/* En-tête de vue */
+/* View header */
 .page-titre { margin: 0 0 4px; font-size: 28px; font-weight: 700; letter-spacing: -0.022em; line-height: 1.2; color: var(--text-primary); }
 .page-sous { margin: 0 0 18px; font-size: 13px; color: var(--text-secondary); max-width: 720px; }
 .page-entete { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 4px 0 0; margin-bottom: 20px; }
@@ -361,7 +362,7 @@ html.vibrance .lateral { background: transparent; backdrop-filter: none; }
 .page-entete .page-titre, .page-entete .page-sous { margin-bottom: 0; }
 .page-entete .page-titre { margin-bottom: 4px; }
 
-/* Sur-titres de section */
+/* Section eyebrows */
 .libelle, .dash-titre-liste, .reglage-bloc h3, .kb-colonne-titre {
   font-family: var(--font-ui);
   font-size: 11px; font-weight: 600;
@@ -371,7 +372,7 @@ html.vibrance .lateral { background: transparent; backdrop-filter: none; }
 }
 
 /* ============================================================
-   BOUTONS
+   BUTTONS
    ============================================================ */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -423,7 +424,7 @@ html.vibrance .lateral { background: transparent; backdrop-filter: none; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
 /* ============================================================
-   CHAMPS DE SAISIE
+   INPUT FIELDS
    ============================================================ */
 .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .field label { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
@@ -459,8 +460,8 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent-bouton); wi
 .span-3 { grid-column: span 3; }
 
 /* ============================================================
-   ÉTIQUETTES, POINTS, JAUGES
-   Jamais de fond coloré : un fond neutre et un point de couleur.
+   LABELS, DOTS, GAUGES
+   Never a coloured background: a neutral background and a colour dot.
    ============================================================ */
 .puce, .fa-statut {
   display: inline-flex; align-items: center; gap: 5px;
@@ -476,13 +477,13 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent-bouton); wi
 .puce.pos::before, .fa-statut.payee::before { background: var(--positive); }
 .puce.neg::before, .fa-statut.retard::before { background: var(--negative); }
 .puce.warn::before, .fa-statut.emise::before { background: var(--warning); }
-/* Lien vers la tâche à laquelle une ligne du journal est rattachée. */
+/* Link to the task a log entry is attached to. */
 button.puce.tache {
   font: inherit; font-size: 11px; font-weight: 500; border: none; cursor: pointer;
   max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; gap: 4px;
 }
 button.puce.tache:hover { background: var(--fill-3); color: var(--text-primary); }
-/* Étiquette d'axe : fond neutre, point de la couleur de l'axe. */
+/* Area label: neutral background, dot in the area colour. */
 .puce-axe {
   --axe: var(--text-tertiary);
   display: inline-flex; align-items: center; gap: 6px;
@@ -501,7 +502,7 @@ button.puce.tache:hover { background: var(--fill-3); color: var(--text-primary);
 .jauge.or > span { background: var(--accent); }
 
 /* ============================================================
-   ALERTES ET NOTIFICATIONS
+   ALERTS AND NOTIFICATIONS
    ============================================================ */
 .alert {
   padding: 10px 14px; border-radius: 10px; margin-bottom: 14px;
@@ -536,7 +537,7 @@ button.puce.tache:hover { background: var(--fill-3); color: var(--text-primary);
 .status-bar.show { opacity: 1; transform: none; pointer-events: auto; }
 
 /* ============================================================
-   FENÊTRES MODALES ET MENUS (verre flottant, niveau 4)
+   MODAL WINDOWS AND MENUS (floating glass, level 4)
    ============================================================ */
 .modal-overlay {
   position: fixed; inset: 0;
@@ -573,7 +574,7 @@ button.puce.tache:hover { background: var(--fill-3); color: var(--text-primary);
 .modal-foot .a-droite { margin-left: auto; display: flex; gap: 8px; }
 
 /* ============================================================
-   TABLEAU DE BORD
+   DASHBOARD
    ============================================================ */
 .dash-actions { display: flex; gap: 8px; margin: 2px 0 18px; flex-wrap: wrap; align-items: center; }
 .dash-tuiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--gap-grid); margin-bottom: var(--gap-grid); }
@@ -601,7 +602,7 @@ button.puce.tache:hover { background: var(--fill-3); color: var(--text-primary);
 .dash-graph { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr); gap: var(--gap-grid); margin-bottom: var(--gap-grid); }
 .dash-graph .card { margin-bottom: 0; }
 
-/* Barres horizontales (répartition par axe) : barre neutre, point d'axe. */
+/* Horizontal bars (breakdown by area): neutral bar, area dot. */
 .rep-lignes { display: flex; flex-direction: column; gap: 10px; }
 .rep-ligne { display: grid; grid-template-columns: minmax(120px, 1.1fr) minmax(0, 2fr) 74px; align-items: center; gap: 12px; font-size: 12px; }
 .rep-nom { color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -612,7 +613,7 @@ button.puce.tache:hover { background: var(--fill-3); color: var(--text-primary);
 .rep-val { text-align: right; font-weight: 500; color: var(--text-primary); }
 .rep-val small { color: var(--text-tertiary); font-weight: 400; }
 
-/* Graphique en barres (SVG) : neutre pour la donnée, accent pour le mois en cours. */
+/* Bar chart (SVG): neutral for data, accent for the current month. */
 .gr-conteneur { width: 100%; }
 .gr-conteneur svg { width: 100%; height: auto; display: block; }
 .gr-barre { fill: var(--chart-neutral); transition: fill var(--duration-fast) ease; }
@@ -627,14 +628,14 @@ button.puce.tache:hover { background: var(--fill-3); color: var(--text-primary);
 .gr-grille { stroke: var(--chart-grid); stroke-width: 1; }
 
 /* ============================================================
-   NAVIGATION PAR MOIS
+   MONTH NAVIGATION
    ============================================================ */
 .mois-nav { display: inline-flex; align-items: center; gap: 6px; }
 .mois-nav .mois-libelle { font-size: 15px; font-weight: 600; color: var(--text-primary); min-width: 170px; text-align: center; text-transform: capitalize; }
 .mois-nav select { width: auto; }
 
 /* ============================================================
-   JOURNAL
+   LOG
    ============================================================ */
 .jr-grille { display: grid; grid-template-columns: 150px 240px minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; align-items: end; }
 .jr-grille .jr-actions-saisie { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding-bottom: 1px; }
@@ -669,7 +670,7 @@ button.puce.tache:hover { background: var(--fill-3); color: var(--text-primary);
 .jr-duree-saisie { display: flex; align-items: center; gap: 8px; }
 
 /* ============================================================
-   TABLEAUX (relevé, factures)
+   TABLES (statement, invoices)
    ============================================================ */
 .tableau { width: 100%; border-collapse: collapse; font-size: 13px; }
 .tableau th {
@@ -698,7 +699,7 @@ button.puce.tache:hover { background: var(--fill-3); color: var(--text-primary);
 .rl-travaux { margin-top: 6px; }
 .rl-travaux li { margin: 4px 0; color: var(--text-secondary); }
 .rl-travaux li::marker { color: var(--text-tertiary); }
-/* Journal et relevé : une ligne par journée, dépliée au clic sur ses lignes de journal. */
+/* Log and statement: one row per day, expanded by clicking its log entries. */
 .rl-jours .rl-jour { cursor: pointer; }
 .rl-jours .rl-jour td { vertical-align: middle; }
 .rl-chevron { display: inline-flex; margin-right: 8px; color: var(--text-tertiary); vertical-align: -1px; transition: transform var(--duration-fast) ease; }
@@ -710,7 +711,7 @@ button.puce.tache:hover { background: var(--fill-3); color: var(--text-primary);
 .rl-jours .rl-recu td:first-child { color: var(--text-secondary); }
 .rl-travaux + .lien { margin-top: 2px; }
 
-/* Choix des interventions à reporter sur un autre mois de facturation. */
+/* Choice of work items to move to another billing month. */
 .rp-liste { max-height: 260px; overflow-y: auto; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--border-subtle); }
 .rp-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--border-subtle); }
 .rp-item:last-child { border-bottom: none; }
@@ -721,7 +722,7 @@ button.puce.tache:hover { background: var(--fill-3); color: var(--text-primary);
 .rp-chiffres { color: var(--text-secondary); font-size: 12px; white-space: nowrap; }
 
 /* ============================================================
-   TÂCHES (tableau en colonnes)
+   TASKS (column board)
    ============================================================ */
 .kb-outils { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
 .kb-outils select { width: auto; }
@@ -749,7 +750,7 @@ button.puce.tache:hover { background: var(--fill-3); color: var(--text-primary);
   transition: background var(--duration-fast) ease;
 }
 .kb-carte:hover { background: var(--surface-card-hover); }
-/* La carte en cours de glisser flotte au-dessus de tout, hors des colonnes. */
+/* The card being dragged floats above everything, outside the columns. */
 .kb-carte.kb-flottante {
   position: fixed; z-index: 500; margin: 0;
   pointer-events: none; cursor: grabbing;
@@ -759,7 +760,7 @@ button.puce.tache:hover { background: var(--fill-3); color: var(--text-primary);
   will-change: transform;
 }
 .kb-carte.kb-flottante .kb-carte-actions { opacity: 0; }
-/* L'emplacement libre qui montre où la carte se posera. */
+/* The free slot that shows where the card will land. */
 .kb-placeholder { border: 1.5px dashed var(--accent-rim); border-radius: 10px; background: var(--accent-soft); flex: none; }
 body.kb-glisser-actif { cursor: grabbing; user-select: none; -webkit-user-select: none; }
 .kb-colonne.survol .vide { display: none; }
@@ -792,7 +793,7 @@ body.kb-glisser-actif { cursor: grabbing; user-select: none; -webkit-user-select
 .kb-compteurs span { display: inline-flex; align-items: center; gap: 4px; }
 
 /* ============================================================
-   NOTES (pages et éditeur continu)
+   NOTES (pages and continuous editor)
    ============================================================ */
 .nt-disposition { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 18px; min-height: calc(100vh - 120px); }
 .nt-rail { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
@@ -820,11 +821,11 @@ body.kb-glisser-actif { cursor: grabbing; user-select: none; -webkit-user-select
   font-size: 28px; font-weight: 700; letter-spacing: -0.022em; color: var(--text-primary);
   margin: 0 0 10px; padding: 4px 0; outline: none; line-height: 1.2;
 }
-.nt-titre:empty::before { content: 'Sans titre'; color: var(--text-tertiary); }
+.nt-titre:empty::before { content: 'Untitled'; color: var(--text-tertiary); }
 .nt-outils { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle); font-size: 12px; color: var(--text-tertiary); }
 .nt-outils .a-droite { margin-left: auto; display: flex; gap: 6px; }
 
-/* Barre d'outils, collée en haut pendant le défilement (verre flottant) */
+/* Toolbar, stuck to the top while scrolling (floating glass) */
 .nt-barre {
   position: sticky; top: 0; z-index: 5;
   display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
@@ -834,7 +835,7 @@ body.kb-glisser-actif { cursor: grabbing; user-select: none; -webkit-user-select
   border-radius: 10px;
   box-shadow: 0 0 0 1px var(--border-subtle), var(--specular-top), var(--shadow-card);
 }
-/* Sous le bandeau du chrono quand il tourne */
+/* Below the timer banner when it is running */
 .principal:has(.chrono-bandeau.visible) .nt-barre { top: 62px; }
 .nt-outil {
   all: unset; box-sizing: border-box; cursor: default;
@@ -855,7 +856,7 @@ body.kb-glisser-actif { cursor: grabbing; user-select: none; -webkit-user-select
 .nt-barre .sep { width: 1px; height: 18px; background: var(--border-strong); margin: 0 4px; }
 .nt-barre .a-droite { margin-left: auto; display: inline-flex; gap: 2px; }
 
-/* La page : une seule zone d'écriture, une ligne par retour à la ligne */
+/* The page: a single writing area, one line per line break */
 .nt-doc:focus-visible, .nt-titre:focus-visible { box-shadow: none; }
 .nt-doc {
   outline: none; min-height: 55vh; padding: 2px 2px 140px; max-width: 860px;
@@ -898,13 +899,13 @@ body.kb-glisser-actif { cursor: grabbing; user-select: none; -webkit-user-select
 }
 .ligne-case.coche { color: var(--text-tertiary); text-decoration: line-through; text-decoration-color: var(--text-tertiary); }
 
-/* Citation : un filet neutre, comme un retrait de texte. */
+/* Quote: a neutral rule, like a text indent. */
 .ligne-citation { --marque: 16px; color: var(--text-secondary); font-family: var(--font-serif); font-size: 15px; }
 .ligne-citation::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--border-strong); }
 .ligne-citation:not(.ligne-citation + .ligne-citation) { margin-top: 6px; }
 .ligne-citation:not(:has(+ .ligne-citation)) { margin-bottom: 6px; }
 
-/* Encadré : un fond neutre, sans filet de couleur. */
+/* Callout: a neutral background, no coloured rule. */
 .ligne-encadre { --marque: 12px; background: var(--fill-2); padding-right: 14px; color: var(--text-secondary); }
 .ligne-encadre:not(.ligne-encadre + .ligne-encadre) { margin-top: 8px; padding-top: 7px; border-top-left-radius: 8px; border-top-right-radius: 8px; }
 .ligne-encadre:not(:has(+ .ligne-encadre)) { margin-bottom: 8px; padding-bottom: 7px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
@@ -921,22 +922,22 @@ body.kb-glisser-actif { cursor: grabbing; user-select: none; -webkit-user-select
 .ligne-separateur { padding: 11px 0; cursor: default; }
 .ligne-separateur hr { border: none; border-top: 1px solid var(--border-strong); margin: 0; }
 
-/* Indication grise sur une ligne vide (celle du curseur, ou la page vide) */
+/* Grey hint on an empty line (the cursor's line, or the empty page) */
 .ligne.indice::after, .nt-doc.doc-vide > .ligne:first-child::after {
   position: absolute; top: 0; left: calc(var(--retrait) * 24px + var(--marque));
   color: var(--text-tertiary); pointer-events: none; white-space: nowrap; font-style: normal;
 }
-.ligne-p.indice::after, .nt-doc.doc-vide > .ligne:first-child::after { content: 'Écrivez, ou tapez / pour insérer un titre, une liste, une case à cocher…'; }
-.ligne-h1.indice::after { content: 'Titre 1'; }
-.ligne-h2.indice::after { content: 'Titre 2'; }
-.ligne-h3.indice::after { content: 'Titre 3'; }
-.ligne-puce.indice::after, .ligne-numero.indice::after { content: 'Élément de liste'; }
-.ligne-case.indice::after { content: 'À faire'; }
-.ligne-citation.indice::after { content: 'Citation'; }
-.ligne-encadre.indice::after { content: 'Point important'; top: 7px; }
-.ligne-idee.indice::after { content: 'Une idée : son titre, puis le détail à la ligne'; top: 7px; }
+.ligne-p.indice::after, .nt-doc.doc-vide > .ligne:first-child::after { content: 'Write, or type / to insert a heading, a list, a checkbox…'; }
+.ligne-h1.indice::after { content: 'Heading 1'; }
+.ligne-h2.indice::after { content: 'Heading 2'; }
+.ligne-h3.indice::after { content: 'Heading 3'; }
+.ligne-puce.indice::after, .ligne-numero.indice::after { content: 'List item'; }
+.ligne-case.indice::after { content: 'To do'; }
+.ligne-citation.indice::after { content: 'Quote'; }
+.ligne-encadre.indice::after { content: 'Key point'; top: 7px; }
+.ligne-idee.indice::after { content: 'An idea: its title, then the details on the next line'; top: 7px; }
 
-/* Bouton d'une idée ou d'une ligne reliée à une tâche */
+/* Button of an idea or of a line linked to a task */
 .ligne.avec-outils { padding-right: 172px; }
 .ligne-outils { position: absolute; right: 0; top: 0; user-select: none; -webkit-user-select: none; line-height: 1; }
 .ligne-idee .ligne-outils { right: 8px; top: 6px; }
@@ -955,7 +956,7 @@ body.kb-glisser-actif { cursor: grabbing; user-select: none; -webkit-user-select
 .ligne-action.liee { color: var(--positive); }
 
 .menu-blocs {
-  position: absolute; z-index: 1100;   /* au-dessus des modales (1000), sous la barre d'état (1200) */
+  position: absolute; z-index: 1100;   /* above the modals (1000), below the status bar (1200) */
   background: var(--surface-floating);
   backdrop-filter: blur(40px) saturate(160%);
   border-radius: 10px;
@@ -984,7 +985,7 @@ body.kb-glisser-actif { cursor: grabbing; user-select: none; -webkit-user-select
 .menu-blocs .sep { border-top: 1px solid var(--border-subtle); margin: 4px 0; }
 
 /* ============================================================
-   ÉCHÉANCES
+   DEADLINES
    ============================================================ */
 .ec-groupe { margin-bottom: 18px; }
 .ec-groupe-titre { margin: 0 0 8px; }
@@ -1008,12 +1009,12 @@ body.kb-glisser-actif { cursor: grabbing; user-select: none; -webkit-user-select
 .ec-titre .puce svg { vertical-align: -1px; }
 
 /* ============================================================
-   FACTURES ET RECETTES
+   INVOICES AND INCOME
    ============================================================ */
 .fa-trimestre.actif td { background: var(--fill-1); }
 
 /* ============================================================
-   RÉGLAGES
+   SETTINGS
    ============================================================ */
 .reglage-bloc { border-top: 1px solid var(--border-subtle); padding: 16px 2px; }
 .reglage-bloc:first-of-type { border-top: none; padding-top: 4px; }
@@ -1045,7 +1046,7 @@ body.kb-glisser-actif { cursor: grabbing; user-select: none; -webkit-user-select
 .nuance.active { border-color: var(--text-primary); }
 
 /* ============================================================
-   MODE D'EMPLOI
+   USER GUIDE
    ============================================================ */
 .guide-flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 6px; }
 .guide-flow-step { border-radius: 10px; padding: 12px 14px; background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--border-subtle); }
@@ -1079,9 +1080,9 @@ kbd {
 }
 
 /* ============================================================
-   BANDEAU DU CHRONO EN COURS
-   En haut de la scène, sur toutes les pages, collé au bord supérieur
-   quand la page défile : verre de barre d'outils, point d'état.
+   RUNNING TIMER BANNER
+   At the top of the stage, on every page, stuck to the top edge
+   when the page scrolls: toolbar glass, status dot.
    ============================================================ */
 .chrono-bandeau { display: none; }
 .chrono-bandeau.visible {
@@ -1102,8 +1103,8 @@ kbd {
 .chrono-bandeau-actions { display: flex; gap: 8px; flex: none; }
 
 /* ============================================================
-   CONTRÔLE SEGMENTÉ (relevé du mois / factures) : la bulle marque le
-   segment choisi, jamais l'accent
+   SEGMENTED CONTROL (month statement / invoices): the bubble marks the
+   chosen segment, never the accent
    ============================================================ */
 .segments {
   position: relative;
@@ -1129,7 +1130,7 @@ kbd {
 .page-entete > .actions .btn svg { margin-right: 2px; }
 
 /* ============================================================
-   TÂCHES : fiche complète
+   TASKS: full detail sheet
    ============================================================ */
 .modal.modal-fiche { max-width: 900px; }
 .modal.depot { outline: 2px dashed var(--accent-rim); outline-offset: -6px; }
@@ -1191,7 +1192,7 @@ textarea.code { font-family: var(--font-mono); font-size: 12px; line-height: 1.5
 .temps-lignes .titre { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ============================================================
-   NOTES : tâches liées
+   NOTES: linked tasks
    ============================================================ */
 .nt-taches { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: -4px 0 14px; }
 .nt-taches .libelle { margin-right: 2px; }
@@ -1209,7 +1210,7 @@ textarea.code { font-family: var(--font-mono); font-size: 12px; line-height: 1.5
 .chip-tache.fait .chip-tache-titre { color: var(--text-tertiary); text-decoration: line-through; }
 
 /* ============================================================
-   TABLEAU DE BORD : listes lisibles (tuile de calendrier, J-n)
+   DASHBOARD: readable lists (calendar tile, D-n)
    ============================================================ */
 .dash-liste li.dash-ech, .dash-liste li.dash-tache { align-items: center; gap: 12px; }
 .dash-liste li.dash-tache { cursor: pointer; transition: background var(--duration-fast) ease; }
@@ -1225,7 +1226,7 @@ textarea.code { font-family: var(--font-mono); font-size: 12px; line-height: 1.5
 .dash-jours.neg { color: var(--negative); }
 
 /* ============================================================
-   RAPPELS : section du tableau de bord et panneau
+   REMINDERS: dashboard section and panel
    ============================================================ */
 .card-rappels h2 .nb { font-size: 11px; font-weight: 500; background: var(--fill-2); color: var(--text-secondary); border-radius: 9px; padding: 0 7px; }
 .rappels-groupe { margin-bottom: 16px; }
@@ -1254,7 +1255,7 @@ textarea.code { font-family: var(--font-mono); font-size: 12px; line-height: 1.5
 .modal-rappels .modal-foot { justify-content: space-between; }
 
 /* ============================================================
-   PETITS ÉCRANS ET MOUVEMENT RÉDUIT
+   SMALL SCREENS AND REDUCED MOTION
    ============================================================ */
 @media (max-width: 1100px) {
   .dash-graph { grid-template-columns: 1fr; }
@@ -1276,6 +1277,6 @@ textarea.code { font-family: var(--font-mono); font-size: 12px; line-height: 1.5
 }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition-duration: 0.01ms !important; }
-  /* La bulle glisse simplement, sans rebond ni goutte. */
+  /* The bubble just slides, with no bounce or drop effect. */
   .bulle { transition: transform 150ms ease-out !important; }
 }

@@ -1,6 +1,6 @@
 /* ============================================================
-   DÉMARRAGE : charge les données, branche les pages, écoute les
-   commandes du menu de l'application, lance la veille des rappels.
+   STARTUP: loads the data, wires up the pages, listens to the
+   application menu commands, starts the reminders watch.
    ============================================================ */
 'use strict';
 
@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('.tab-btn[data-icone]').forEach(function (b) {
     b.insertAdjacentHTML('afterbegin', '<span class="tab-ic" aria-hidden="true">' + icone(b.dataset.icone, 16) + '</span>');
   });
-  /* Fenêtre en verre du système (main.js) : le fond de la page s'efface. */
+  /* System glass window (main.js): the page background fades out. */
   if (/[?&]vibrance=1/.test(location.search)) document.documentElement.classList.add('vibrance');
   window.addEventListener('resize', poserBulles);
 
@@ -52,18 +52,18 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!dansNotes) document.execCommand(nom === 'annuler' ? 'undo' : 'redo');
         else if (Date.now() - HISTO_CLAVIER > 150) { if (nom === 'annuler') annulerNotes(); else retablirNotes(); }
       }
-      else if (nom.indexOf('erreur-ecriture:') === 0) notifier('Enregistrement impossible (' + nom.slice(16) + '). Vérifiez le disque et le dossier de données, puis exportez une sauvegarde.', { type: 'erreur', duree: 30000 });
+      else if (nom.indexOf('erreur-ecriture:') === 0) notifier('Could not save (' + nom.slice(16) + '). Check the disk and the data folder, then export a backup.', { type: 'erreur', duree: 30000 });
       else if (nom.indexOf('page:') === 0) afficherPage(nom.slice(5));
     });
   }
 
-  /* Un fichier ou un lien déposé hors d'une zone prévue ne doit pas
-     remplacer l'interface ; les zones de dépôt (fiche, blocs) gardent la
-     main puisqu'elles traitent l'événement avant. */
+  /* A file or link dropped outside a drop zone must not replace the
+     interface; the drop zones (task sheet, blocks) keep control since
+     they handle the event first. */
   ['dragover', 'drop'].forEach(function (type) {
     document.addEventListener(type, function (ev) { if (!ev.defaultPrevented) ev.preventDefault(); });
   });
-  /* Les écritures différées (notes) partent avant la fermeture de la fenêtre. */
+  /* Deferred writes (notes) are flushed before the window closes. */
   window.addEventListener('pagehide', function () { if (typeof notesSauverDiffere === 'function' && notesSauverDiffere.flush) notesSauverDiffere.flush(); });
 
   afficherPage('tableau');
@@ -71,9 +71,9 @@ document.addEventListener('DOMContentLoaded', function () {
   lancerVeilleRappels();
 
   if (premier) {
-    notifier('Bienvenue dans Sablier. Les axes du contrat, les échéances administratives et quelques tâches de départ sont prêts : tout se modifie.', { duree: 9000 });
+    notifier('Welcome to Sablier. The contract areas, the admin deadlines and a few starter tasks are ready: everything can be edited.', { duree: 9000 });
   } else if (chronoEnCours()) {
-    notifier('Un chrono tourne depuis ' + texteChrono(chronoEnCours()) + ' : ' + chronoEnCours().intervention, { action: { libelle: 'Arrêter', fn: function () { arreterChrono(); } } });
+    notifier('A timer has been running for ' + texteChrono(chronoEnCours()) + ': ' + chronoEnCours().intervention, { action: { libelle: 'Stop', fn: function () { arreterChrono(); } } });
   }
   window.SABLIER_PRET = true;
 });

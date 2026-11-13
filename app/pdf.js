@@ -1,9 +1,9 @@
 /* ============================================================
-   Sablier : génération de PDF à partir d'un document HTML.
+   Sablier: PDF generation from an HTML document.
 
-   Le HTML (relevé, facture) est rendu dans une fenêtre cachée puis
-   imprimé en PDF par Chromium : aucune bibliothèque, mêmes polices
-   polices livrées avec l'application (Charter, Nunito Sans).
+   The HTML (statement, invoice) is rendered in a hidden window and then
+   printed to PDF by Chromium: no library, same fonts as the ones shipped
+   with the application (Charter, Nunito Sans).
    ============================================================ */
 'use strict';
 
@@ -12,8 +12,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-/* Un PDF déjà enregistré peut être signé ou envoyé : le suivant prend le
-   premier nom libre (« Facture-2026-01 (2).pdf »). */
+/* An already saved PDF may have been signed or sent: the next one takes
+   the first free name ("Invoice-2026-01 (2).pdf"). */
 function cheminLibre(cible) {
   const ext = path.extname(cible);
   const base = cible.slice(0, cible.length - ext.length);
@@ -24,7 +24,7 @@ function cheminLibre(cible) {
 
 async function genererPdf(parent, html, nomFichier, dossierDefaut) {
   const { canceled, filePath } = await dialog.showSaveDialog(parent, {
-    title: 'Enregistrer le PDF',
+    title: 'Save the PDF',
     defaultPath: cheminLibre(path.join(dossierDefaut, nomFichier || 'document.pdf')),
     filters: [{ name: 'PDF', extensions: ['pdf'] }],
   });

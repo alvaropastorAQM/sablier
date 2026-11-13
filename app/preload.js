@@ -1,10 +1,9 @@
 /* ============================================================
-   Sablier : pont entre l'interface et l'application macOS.
+   Sablier: bridge between the interface and the desktop application.
 
-   Expose window.sablier. Les fichiers de données sont chargés une fois,
-   de façon synchrone, avant l'exécution des modules js/ ; chaque
-   écriture est répercutée au process principal qui la range dans le
-   dossier de données (écritures atomiques, différées).
+   Exposes window.sablier. The data files are loaded once, synchronously,
+   before the js/ modules run; each write is passed on to the main process,
+   which stores it in the data folder (atomic, delayed writes).
    ============================================================ */
 'use strict';
 
@@ -44,11 +43,11 @@ contextBridge.exposeInMainWorld('sablier', {
     reveler(chemin) { return ipcRenderer.invoke('fichier:reveler', chemin); },
     ouvrirUrl(url) { return ipcRenderer.invoke('fichier:ouvrir-url', url); },
     exporterTexte(nomFichier, contenu) { return ipcRenderer.invoke('fichier:exporter-texte', nomFichier, contenu); },
-    /* Chemin d'un fichier glissé depuis le Finder. */
+    /* Path of a file dragged from the file manager. */
     cheminDe(fichier) { try { return webUtils.getPathForFile(fichier); } catch (e) { return ''; } },
   },
 
-  /* Pièces jointes des tâches : copiées dans Donnees/Pieces/<tâche>/. */
+  /* Task attachments: copied into Donnees/Pieces/<task>/. */
   pieces: {
     ajouter(tacheId, chemins) { return ipcRenderer.invoke('pieces:ajouter', tacheId, chemins || null); },
     ouvrir(relatif) { return ipcRenderer.invoke('pieces:ouvrir', relatif); },
@@ -57,12 +56,12 @@ contextBridge.exposeInMainWorld('sablier', {
     url(relatif) { return 'sablier-piece://pieces/' + String(relatif || '').split('/').map(encodeURIComponent).join('/'); },
   },
 
-  /* Rappels : notification du Mac et pastille du Dock. */
+  /* Reminders: desktop notification and Dock badge. */
   rappels: {
     notifier(o) { return ipcRenderer.invoke('rappels:notifier', o); },
     badge(n) { return ipcRenderer.invoke('rappels:badge', n); },
   },
 
-  /* Commandes envoyées par le menu de l'application. */
+  /* Commands sent by the application menu. */
   surCommande(cb) { ipcRenderer.on('commande', (ev, nom) => cb(nom)); },
 });

@@ -1,4 +1,4 @@
-/* Tests du moteur de calcul : node tests/test-calculs.js */
+/* Tests of the calculation engine: node tests/test-calculs.js */
 'use strict';
 
 const assert = require('assert');
@@ -10,13 +10,13 @@ function test(nom, fn) { fn(); n++; console.log('  ✓ ' + nom); }
 
 const reglages = {
   tarifHoraire: 42.86, arrondi: 0.25, heuresJournee: 7, repereAnnuel: 192, delaiPaiement: 30,
-  mentionTVA: 'TVA non applicable, article 293 B du CGI',
+  mentionTVA: 'VAT not applicable, article 293 B of the French Tax Code (CGI)',
   contrat: { debut: '2026-10-01', fin: '2027-09-30' },
   cotisations: { tauxAcre: 19.4, finAcre: '2027-09-30', tauxPlein: 25.8 },
 };
 
-console.log('Durées et formats');
-test('parseDuree comprend les écritures courantes', () => {
+console.log('Durations and formats');
+test('parseDuree understands the usual notations', () => {
   assert.strictEqual(u.parseDuree('1h30'), 90);
   assert.strictEqual(u.parseDuree('1 h 30'), 90);
   assert.strictEqual(u.parseDuree('1:30'), 90);
@@ -29,29 +29,32 @@ test('parseDuree comprend les écritures courantes', () => {
   assert.strictEqual(u.parseDuree('abc'), null);
   assert.strictEqual(u.parseDuree(''), null);
 });
-test('minutesEntre passe minuit', () => {
+test('minutesEntre crosses midnight', () => {
   assert.strictEqual(u.minutesEntre('09:00', '10:45'), 105);
   assert.strictEqual(u.minutesEntre('23:30', '00:15'), 45);
 });
-test('fmtDuree et fmtHeuresDec', () => {
+test('fmtDuree and fmtHeuresDec', () => {
   assert.strictEqual(u.fmtDuree(135), '2 h 15');
   assert.strictEqual(u.fmtDuree(45), '45 min');
   assert.strictEqual(u.fmtDuree(120), '2 h');
-  assert.strictEqual(u.fmtHeuresDec(135), '2,25 h');
+  assert.strictEqual(u.fmtHeuresDec(135), '2.25 h');
 });
-test('dates : mois, trimestres', () => {
+test('dates: months, quarters', () => {
   assert.strictEqual(u.ajouterMois('2026-12', 1), '2027-01');
   assert.strictEqual(u.dernierJour('2027-02'), '2027-02-28');
   assert.deepStrictEqual(u.listeMois('2026-10', '2027-01'), ['2026-10', '2026-11', '2026-12', '2027-01']);
   const t = u.trimestreDe('2026-11-15');
-  assert.strictEqual(t.libelle, 'T4 2026');
+  assert.strictEqual(t.libelle, 'Q4 2026');
   assert.strictEqual(t.echeance, '2027-01-31');
-  assert.strictEqual(u.libelleDate('2026-10-01', 'long'), 'jeudi 1er octobre 2026');
+  assert.strictEqual(u.libelleDate('2026-10-01', 'long'), 'Thursday 1 October 2026');
+  assert.strictEqual(u.libelleDate('2026-10-01', 'moyen'), '1 Oct 2026');
+  assert.strictEqual(u.libelleDate('2026-10-01', 'jour'), 'Thu 1 Oct');
+  assert.strictEqual(u.libelleDate('2026-10-01', 'court'), '01/10/2026');
   assert.strictEqual(u.ajouterJours('2026-10-31', 30), '2026-11-30');
 });
 
-console.log('Arrondi et regroupement');
-test('arrondi au quart d\'heure supérieur', () => {
+console.log('Rounding and grouping');
+test('rounding up to the next quarter hour', () => {
   assert.strictEqual(c.arrondirMinutes(0, 0.25), 0);
   assert.strictEqual(c.arrondirMinutes(1, 0.25), 15);
   assert.strictEqual(c.arrondirMinutes(15, 0.25), 15);
@@ -69,7 +72,7 @@ const entrees = [
   { id: 'f', date: '2026-10-07', axe: 'projeta', intervention: 'Fiabilisation Projet A', detail: 'Tests', minutes: 35 },
   { id: 'g', date: '2026-11-02', axe: 'suivi', intervention: 'Point Partenaire', debut: '14:00', fin: '15:10' },
 ];
-test('les lignes d\'une même intervention s\'additionnent, au temps exact', () => {
+test('entries of the same work item add up, at exact time', () => {
   const groupes = c.regrouperInterventions(c.entreesDuMois(entrees, '2026-10'), reglages);
   assert.strictEqual(groupes.length, 3);
   const rech = groupes[0];
@@ -77,16 +80,16 @@ test('les lignes d\'une même intervention s\'additionnent, au temps exact', () 
   assert.strictEqual(rech.minutes, 120);
   assert.strictEqual(rech.minutesFacturables, 120);
   assert.deepStrictEqual(rech.details, ['Recherche en ligne', 'Rédaction de fiches', 'Synthèse']);
-  assert.strictEqual(rech.nature, 'Recherche d\'idées : Recherche en ligne, Rédaction de fiches, Synthèse');
+  assert.strictEqual(rech.nature, 'Recherche d\'idées: Recherche en ligne, Rédaction de fiches, Synthèse');
   const fiab = groupes[2];
   assert.strictEqual(fiab.minutes, 125);
   assert.strictEqual(fiab.minutesFacturables, 125);
   assert.strictEqual(u.arrondir2(fiab.montant), 89.29);
 });
-test('durée depuis début et fin quand la durée n\'est pas saisie', () => {
+test('duration from start and end when no duration is typed', () => {
   assert.strictEqual(c.dureeEntree(entrees[6]), 70);
 });
-test('relevé du mois : totaux, journées, montant', () => {
+test('monthly statement: totals, days, amount', () => {
   const r = c.releveDuMois(entrees, '2026-10', reglages, 12.5);
   assert.strictEqual(r.lignes.length, 3);
   assert.strictEqual(r.totalMinutes, 120 + 150 + 125);
@@ -98,7 +101,7 @@ test('relevé du mois : totaux, journées, montant', () => {
   assert.strictEqual(r.frais, 12.5);
   assert.strictEqual(r.total, u.arrondir2(r.montantHT + 12.5));
 });
-test('répartition par axe et heures par mois', () => {
+test('split by area and hours per month', () => {
   const rep = c.repartitionParAxe(entrees, reglages);
   assert.strictEqual(rep[0].axe, 'rapports');
   assert.strictEqual(rep[0].minutes, 150);
@@ -107,7 +110,7 @@ test('répartition par axe et heures par mois', () => {
   assert.strictEqual(parMois[1].minutesFacturables, 75);
   assert.strictEqual(parMois[2].minutes, 0);
 });
-test('avancement du contrat', () => {
+test('contract progress', () => {
   const av = c.avancementContrat(entrees, reglages, '2026-11-15');
   assert.strictEqual(av.nbMois, 12);
   assert.strictEqual(av.moisEcoules, 2);
@@ -115,19 +118,19 @@ test('avancement du contrat', () => {
   assert.strictEqual(av.minutesFacturables, 465);
   assert.strictEqual(av.attenduMinutes, 192 * 60 * 2 / 12);
 });
-test('libellés récents pour l\'autocomplétion', () => {
+test('recent labels for autocomplete', () => {
   const l = c.interventionsRecentes(entrees);
   assert.strictEqual(l[0], 'Point Partenaire');
   assert.strictEqual(l.length, 4);
 });
 
-console.log('Factures et trimestres');
-test('numérotation continue par année', () => {
+console.log('Invoices and quarters');
+test('continuous numbering per year', () => {
   assert.strictEqual(c.numeroFactureSuivant([], 2026), '2026-01');
   assert.strictEqual(c.numeroFactureSuivant([{ numero: '2026-01' }, { numero: '2026-02' }], 2026), '2026-03');
   assert.strictEqual(c.numeroFactureSuivant([{ numero: '2026-03' }], 2027), '2027-01');
 });
-test('construction d\'une facture figée', () => {
+test('building a frozen invoice', () => {
   const r = c.releveDuMois(entrees, '2026-10', reglages, 0);
   const f = c.construireFacture(r, reglages, { dateEmission: '2026-10-31', factures: [] });
   assert.strictEqual(f.numero, '2026-01');
@@ -138,12 +141,12 @@ test('construction d\'une facture figée', () => {
   assert.strictEqual(c.statutFacture(f, '2026-11-15'), 'emise');
   assert.strictEqual(c.statutFacture(f, '2026-12-01'), 'retard');
 });
-test('taux de cotisation ACRE puis plein', () => {
+test('ACRE contribution rate, then full rate', () => {
   assert.strictEqual(c.tauxCotisation('2027-06-01', reglages), 19.4);
   assert.strictEqual(c.tauxCotisation('2027-09-30', reglages), 19.4);
   assert.strictEqual(c.tauxCotisation('2027-10-01', reglages), 25.8);
 });
-test('recettes par trimestre civil', () => {
+test('income per calendar quarter', () => {
   const factures = [
     { numero: '2026-01', total: 300, statut: 'payee', datePaiement: '2026-11-20' },
     { numero: '2026-02', total: 450, statut: 'payee', datePaiement: '2026-12-28' },
@@ -154,7 +157,7 @@ test('recettes par trimestre civil', () => {
   const t4 = t.filter(x => x.cle === '2026-T4')[0];
   assert.strictEqual(t4.encaisse, 750);
   assert.strictEqual(t4.cotisations, u.arrondir2(750 * 0.194));
-  /* Première déclaration : octobre 2026 à mars 2027, prélevée le 30/04/2027. */
+  /* First declaration: October 2026 to March 2027, debited on 30/04/2027. */
   assert.strictEqual(t4.aDeclarer, false);
   assert.strictEqual(t4.echeance, '2027-04-30');
   assert.strictEqual(t4.premiere, true);
@@ -166,8 +169,8 @@ test('recettes par trimestre civil', () => {
   assert.strictEqual(t4b.cotisations, 258);
 });
 
-console.log('Non facturable, forfait, factures multiples');
-test('une ligne non facturable garde son temps mais vaut 0 €', () => {
+console.log('Non-billable, flat fee, multiple invoices');
+test('a non-billable entry keeps its time but is worth €0', () => {
   const lignes = [
     { id: 's1', date: '2026-07-06', axe: 'projeta', intervention: 'Fiabilisation', minutes: 90, facturable: false, motif: 'stage' },
     { id: 's2', date: '2026-07-06', axe: 'projeta', intervention: 'Fiabilisation', minutes: 35, facturable: false, motif: 'stage' },
@@ -186,7 +189,7 @@ test('une ligne non facturable garde son temps mais vaut 0 €', () => {
   assert.strictEqual(r.totalMinutesFacturables, 60);
   assert.strictEqual(r.montantHT, 42.86);
 });
-test('un forfait remplace heures × tarif et calcule la remise', () => {
+test('a flat fee replaces hours × rate and computes the discount', () => {
   const lignes = [
     { id: 'p1', date: '2026-10-01', axe: 'projeta', intervention: 'Reprise complète du catalogue', detail: 'fiches et DIC (4 h 20)', minutes: 1106, forfait: 600 },
     { id: 'o1', date: '2026-10-05', axe: 'rapports', intervention: 'Campagne T4', minutes: 60 },
@@ -206,7 +209,7 @@ test('un forfait remplace heures × tarif et calcule la remise', () => {
   assert.strictEqual(f.lignes[0].forfait, 600);
   assert.strictEqual(f.total, 642.86);
 });
-test('plusieurs factures par mois : les lignes déjà facturées sont exclues', () => {
+test('several invoices per month: entries already invoiced are excluded', () => {
   const lignes = [
     { id: 'p1', date: '2026-10-01', axe: 'projeta', intervention: 'Reprise complète du catalogue', minutes: 1106, forfait: 600 },
     { id: 'o1', date: '2026-10-05', axe: 'rapports', intervention: 'Campagne T4', minutes: 60 },
@@ -223,8 +226,8 @@ test('plusieurs factures par mois : les lignes déjà facturées sont exclues', 
   assert.deepStrictEqual(c.idsFactures([ancienne], '2026-10', lignes).sort(), ['o1', 'o2', 'p1']);
 });
 
-console.log('Priorités des chantiers');
-test('priorité automatique selon l\'échéance', () => {
+console.log('Task priorities');
+test('automatic priority from the due date', () => {
   const ref = '2026-09-02';
   assert.strictEqual(c.prioriteAutomatique({ echeance: '2026-09-04' }, ref), 'haute');
   assert.strictEqual(c.prioriteAutomatique({ echeance: '2026-09-06' }, ref), 'haute');
@@ -234,7 +237,7 @@ test('priorité automatique selon l\'échéance', () => {
   assert.strictEqual(c.prioriteAutomatique({ echeance: null }, ref), null);
   assert.strictEqual(c.prioriteAutomatique({ echeance: '2026-09-03', statut: 'fait' }, ref), null);
 });
-test('un choix manuel n\'est jamais abaissé, l\'échéance peut le relever', () => {
+test('a manual choice is never lowered, the due date can raise it', () => {
   const ref = '2026-09-02';
   assert.deepStrictEqual(c.prioriteEffective({ priorite: 'haute', echeance: '2026-10-15' }, ref).niveau, 'haute');
   assert.strictEqual(c.prioriteEffective({ priorite: 'haute', echeance: '2026-10-15' }, ref).origine, 'manuelle');
@@ -245,7 +248,7 @@ test('un choix manuel n\'est jamais abaissé, l\'échéance peut le relever', ()
   assert.strictEqual(c.prioriteEffective({ priorite: 'normale' }, ref).niveau, 'basse');
   assert.strictEqual(c.normaliserPriorite('normale'), 'auto');
 });
-test('tri : priorité, puis échéance proche, puis ordre', () => {
+test('sort: priority, then nearest due date, then order', () => {
   const ref = '2026-09-02';
   const liste = [
     { id: 'seed', priorite: 'auto', ordre: 1 },
@@ -259,8 +262,8 @@ test('tri : priorité, puis échéance proche, puis ordre', () => {
   assert.deepStrictEqual(c.trierTaches(liste, ref).map(t => t.id), ['urgent', 'urgent2', 'hauteManuelle', 'moyen', 'lointain', 'seed0', 'seed']);
 });
 
-console.log('Formats des documents');
-test('IBAN, téléphone et adresse mis en forme', () => {
+console.log('Document formats');
+test('IBAN, phone number and address formatting', () => {
   assert.strictEqual(u.formaterIban('FR7630006000011234567890189'), 'FR76 3000 6000 0112 3456 7890 189');
   assert.strictEqual(u.formaterIban(' fr76 3000 6000 0112 3456 7890 189 '), 'FR76 3000 6000 0112 3456 7890 189');
   assert.strictEqual(u.formaterTelephone('06 12 34 5678'), '06 12 34 56 78');
@@ -269,27 +272,31 @@ test('IBAN, téléphone et adresse mis en forme', () => {
   assert.deepStrictEqual(u.adresseLignes('12 rue des Essais, 75000 Paris'), ['12 rue des Essais', '75000 Paris']);
   assert.deepStrictEqual(u.adresseLignes('1 avenue des Tests 75000 Paris'), ['1 avenue des Tests', '75000 Paris']);
   assert.deepStrictEqual(u.adresseLignes(''), []);
-  assert.strictEqual(u.libelleJours(0), 'Aujourd\'hui');
-  assert.strictEqual(u.libelleJours(1), 'Demain');
-  assert.strictEqual(u.libelleJours(12), 'J-12');
-  assert.strictEqual(u.libelleJours(-3), 'J+3');
-  assert.strictEqual(u.fmtTaille(2048), '2,0 Ko');
+  assert.strictEqual(u.libelleJours(0), 'Today');
+  assert.strictEqual(u.libelleJours(1), 'Tomorrow');
+  assert.strictEqual(u.libelleJours(12), 'D-12');
+  assert.strictEqual(u.libelleJours(-3), 'D+3');
+  assert.strictEqual(u.libelleDelai(12), 'in 12 days');
+  assert.strictEqual(u.libelleDelai(-3), '3 days ago');
+  assert.strictEqual(u.fmtTaille(2048), '2.0 KB');
+  assert.strictEqual(u.fmtEuros(42.86), '€42.86');
+  assert.strictEqual(u.fmtPourcent(0.194, 1), '19.4%');
 });
 
-console.log('Rappels');
+console.log('Reminders');
 const donneesRappels = {
   entrees: [{ id: 'x', date: '2026-10-05', axe: 'projeta', intervention: 'Pack', minutes: 120 }],
   taches: [
-    { id: 't1', statut: 'a-faire', titre: 'Tâche du jour', echeance: '2026-11-10' },
-    { id: 't2', statut: 'en-cours', titre: 'Tâche dépassée', echeance: '2026-11-03' },
-    { id: 't3', statut: 'fait', titre: 'Tâche finie', echeance: '2026-11-03' },
-    { id: 't4', statut: 'a-faire', titre: 'Tâche lointaine', echeance: '2026-12-20' },
+    { id: 't1', statut: 'a-faire', titre: 'Task due today', echeance: '2026-11-10' },
+    { id: 't2', statut: 'en-cours', titre: 'Overdue task', echeance: '2026-11-03' },
+    { id: 't3', statut: 'fait', titre: 'Finished task', echeance: '2026-11-03' },
+    { id: 't4', statut: 'a-faire', titre: 'Distant task', echeance: '2026-12-20' },
   ],
   echeances: [
-    { id: 'e1', date: '2026-11-15', titre: 'Dans 5 jours', fait: false },
-    { id: 'e2', date: '2026-11-15', titre: 'Rappel à 3 jours seulement', fait: false, rappelJours: 3 },
-    { id: 'e3', date: '2026-11-01', titre: 'Faite', fait: true },
-    { id: 'e4', date: '2026-11-11', titre: 'Reportée', fait: false },
+    { id: 'e1', date: '2026-11-15', titre: 'In 5 days', fait: false },
+    { id: 'e2', date: '2026-11-15', titre: 'Reminder only 3 days ahead', fait: false, rappelJours: 3 },
+    { id: 'e3', date: '2026-11-01', titre: 'Done', fait: true },
+    { id: 'e4', date: '2026-11-11', titre: 'Snoozed', fait: false },
   ],
   factures: [
     { id: 'f1', numero: '2026-01', statut: 'emise', dateEcheance: '2026-11-02', total: 600 },
@@ -298,14 +305,14 @@ const donneesRappels = {
   chrono: { debut: '2026-11-10T04:00:00.000Z', intervention: 'Longue session', pauseDepuis: null, pauseCumuleeMs: 0 },
 };
 const reglagesRappels = Object.assign({}, reglages, { rappels: { horizonEcheances: 7, horizonTaches: 3, horizonFactures: 5, chronoOublieHeures: 3, journalJours: 7 }, ui: { rappelsReportes: { 'echeance:e4': '2026-11-12' } } });
-test('rappels : échéances, tâches, factures, mois à facturer, chrono, journal', () => {
+test('reminders: deadlines, tasks, invoices, months to invoice, timer, log', () => {
   const ref = '2026-11-10';
   const maintenant = new Date('2026-11-10T09:00:00.000Z').getTime();
   const r = c.calculerRappels(donneesRappels, reglagesRappels, { ref, maintenant });
   const cles = r.map(x => x.cle);
-  assert.ok(cles.indexOf('echeance:e1') >= 0, 'échéance à 5 jours dans l\'horizon de 7');
-  assert.ok(cles.indexOf('echeance:e2') < 0, 'échéance avec rappel à 3 jours : pas encore');
-  assert.ok(cles.indexOf('echeance:e3') < 0, 'échéance faite ignorée');
+  assert.ok(cles.indexOf('echeance:e1') >= 0, 'deadline in 5 days, within the 7-day horizon');
+  assert.ok(cles.indexOf('echeance:e2') < 0, 'deadline with a 3-day reminder: not yet');
+  assert.ok(cles.indexOf('echeance:e3') < 0, 'completed deadline ignored');
   const reportee = r.filter(x => x.cle === 'echeance:e4')[0];
   assert.strictEqual(reportee.reporte, '2026-11-12');
   assert.strictEqual(r.filter(x => x.cle === 'tache:t1')[0].niveau, 'urgent');
@@ -314,44 +321,44 @@ test('rappels : échéances, tâches, factures, mois à facturer, chrono, journa
   const facturer = r.filter(x => x.cle === 'facturer:2026-10')[0];
   assert.ok(facturer && facturer.niveau === 'urgent' && facturer.detail.indexOf('2 h') === 0);
   assert.strictEqual(r.filter(x => x.cle === 'paiement:f1')[0].niveau, 'retard');
-  assert.ok(cles.indexOf('paiement:f2') < 0, 'facture payée ignorée');
+  assert.ok(cles.indexOf('paiement:f2') < 0, 'paid invoice ignored');
   const chrono = r.filter(x => x.cle === 'chrono:long')[0];
   assert.ok(chrono && chrono.titre.indexOf('5 h') >= 0);
-  assert.ok(r.some(x => x.cle === 'journal:silence' && x.titre.indexOf('36 jours') > 0), 'journal délaissé depuis le 5 octobre');
-  assert.ok(facturer.titre === 'Relevé d\'octobre 2026 à facturer', facturer.titre);
-  assert.strictEqual(r[0].niveau, 'retard', 'les retards d\'abord');
+  assert.ok(r.some(x => x.cle === 'journal:silence' && x.titre.indexOf('36 days') > 0), 'log neglected since 5 October');
+  assert.ok(facturer.titre === 'October 2026 statement ready to invoice', facturer.titre);
+  assert.strictEqual(r[0].niveau, 'retard', 'overdue first');
   assert.ok(r.every((x, i) => i === 0 || c.NIVEAUX_RAPPEL[r[i - 1].niveau] >= c.NIVEAUX_RAPPEL[x.niveau]));
 });
-test('rappels : journal délaissé un jour ouvré, silencieux le week-end', () => {
+test('reminders: log neglected on a working day, silent at the weekend', () => {
   const sansChrono = Object.assign({}, donneesRappels, { chrono: null, entrees: [{ id: 'x', date: '2026-10-05', axe: 'projeta', intervention: 'Pack', minutes: 120 }] });
   const lundi = c.calculerRappels(sansChrono, reglagesRappels, { ref: '2026-11-16' });
-  assert.ok(lundi.some(x => x.cle === 'journal:silence' && x.titre.indexOf('42 jours') > 0));
+  assert.ok(lundi.some(x => x.cle === 'journal:silence' && x.titre.indexOf('42 days') > 0));
   const samedi = c.calculerRappels(sansChrono, reglagesRappels, { ref: '2026-11-14' });
   assert.ok(!samedi.some(x => x.cle === 'journal:silence'));
   const horsContrat = c.calculerRappels(sansChrono, reglagesRappels, { ref: '2026-09-14' });
   assert.ok(!horsContrat.some(x => x.cle === 'journal:silence'));
 });
-test('temps passé sur une tâche', () => {
+test('time spent on a task', () => {
   const m = c.minutesTache([{ tache: 'a', minutes: 30 }, { tache: 'a', minutes: 45 }, { tache: 'b', minutes: 10 }], 'a');
   assert.deepStrictEqual(m, { minutes: 75, lignes: 2 });
 });
 
-console.log('Robustesse (audit)');
-test('arrondi commercial au centime sans erreur flottante', () => {
+console.log('Robustness (audit)');
+test('commercial rounding to the cent without floating-point error', () => {
   assert.strictEqual(u.arrondir2(0.75 * 42.86), 32.15);
   assert.strictEqual(u.arrondir2(3.25 * 42.86), 139.3);
   assert.strictEqual(u.arrondir2(12.5 * 0.194), 2.43);
   assert.strictEqual(u.arrondir2(-1.005), -1.01);
   assert.strictEqual(u.arrondir2('abc'), 0);
 });
-test('la facture tombe juste : heures facturées × tarif = somme des lignes', () => {
+test('the invoice adds up: billed hours × rate = sum of the lines', () => {
   const lignes = [15, 45, 75, 105].map((m, i) => ({ id: 'q' + i, date: '2026-10-0' + (i + 1), axe: 'projeta', intervention: 'I' + i, minutes: m }));
   const rel = c.releveDuMois(lignes, '2026-10', reglages, 0);
   assert.strictEqual(rel.totalMinutesFacturables, 240);
   assert.strictEqual(rel.montantHT, u.arrondir2(4 * 42.86));
   assert.strictEqual(rel.montantHT, 171.44);
 });
-test('durées et montants tolérants aux chaînes et aux valeurs absentes', () => {
+test('durations and amounts tolerate strings and missing values', () => {
   assert.strictEqual(c.dureeEntree({ minutes: '30' }), 30);
   assert.strictEqual(c.dureeEntree({ minutes: '1,5' }), 2);
   assert.strictEqual(c.dureeEntree({ minutes: 'abc', debut: '09:00', fin: '09:20' }), 20);
@@ -367,7 +374,7 @@ test('durées et montants tolérants aux chaînes et aux valeurs absentes', () =
   assert.ok(isNaN(u.joursEntre('', '2026-01-01')));
   assert.strictEqual(u.libelleJours(NaN), '');
 });
-test('une ligne facturée reste exclue, même déplacée dans un autre mois', () => {
+test('an invoiced entry stays excluded, even when moved to another month', () => {
   const lignes = [{ id: 'a', date: '2026-10-05', axe: 'projeta', intervention: 'A', minutes: 60 }, { id: 'b', date: '2026-11-02', axe: 'projeta', intervention: 'B', minutes: 60 }];
   const f = { mois: '2026-10', entreesIds: ['a'] };
   assert.deepStrictEqual(c.idsFactures([f], '2026-11', lignes), ['a']);
@@ -376,9 +383,9 @@ test('une ligne facturée reste exclue, même déplacée dans un autre mois', ()
   const relNov = c.releveDuMois([{ id: 'a', date: '2026-11-05', axe: 'projeta', intervention: 'A', minutes: 60 }, lignes[1]], '2026-11', reglages, 0, { exclureIds: c.idsFactures([f], '2026-11', lignes) });
   assert.deepStrictEqual(relNov.ids, ['b']);
 });
-test('l\'arrondi se fait une fois, sur le total, jamais par intervention', () => {
-  /* Le cas qui a fait changer la règle (26/10/2026) : quatre séances de
-     10 min faisaient facturer 4 quarts d'heure (1 h) pour 40 min. */
+test('rounding happens once, on the total, never per work item', () => {
+  /* The case that changed the rule (26/10/2026): four 10-minute sessions
+     were billed as 4 quarter hours (1 h) for 40 min. */
   const lignes = [1, 2, 3, 4].map(i => ({ id: 'x' + i, date: '2026-10-0' + i, axe: 'suivi', intervention: 'Séance ' + i, minutes: 10 }));
   const rel = c.releveDuMois(lignes, '2026-10', reglages, 0);
   assert.ok(rel.lignes.every(l => l.minutesFacturables === 10));
@@ -394,7 +401,7 @@ test('l\'arrondi se fait une fois, sur le total, jamais par intervention', () =>
   assert.strictEqual(t.montant, rel.montantHT);
   assert.strictEqual(c.arrondiDuTotal([], reglages), 0);
 });
-test('intervention facturée en partie : le reste part au temps exact', () => {
+test('work item partly invoiced: the rest goes at exact time', () => {
   const a = { id: 'a', date: '2026-10-05', axe: 'projeta', intervention: 'Partielle', minutes: 20 };
   const f1 = c.construireFacture(c.releveDuMois([a], '2026-10', reglages, 0), reglages, { numero: '2026-01', dateEmission: '2026-10-06' });
   assert.strictEqual(f1.minutesFacturees, 30);
@@ -405,27 +412,27 @@ test('intervention facturée en partie : le reste part au temps exact', () => {
   assert.strictEqual(reste.totalMinutesFacturables, 30);
   assert.strictEqual(reste.montantHT, u.arrondir2(0.5 * 42.86));
 });
-test('délai de paiement figé sur la facture, 30 jours par défaut', () => {
+test('payment term frozen on the invoice, 30 days by default', () => {
   const rel = c.releveDuMois(entrees, '2026-10', reglages, 0);
   assert.strictEqual(c.construireFacture(rel, Object.assign({}, reglages, { delaiPaiement: '' }), { numero: 'x', dateEmission: '2026-10-31' }).dateEcheance, '2026-11-30');
   const f0 = c.construireFacture(rel, Object.assign({}, reglages, { delaiPaiement: 0 }), { numero: 'x', dateEmission: '2026-10-31' });
   assert.strictEqual(f0.delaiPaiement, 0);
   assert.strictEqual(f0.dateEcheance, '2026-10-31');
 });
-test('trimestres : ceux sans encaissement figurent aussi', () => {
+test('quarters: those with no payment are listed too', () => {
   const t = c.recettesParTrimestre([{ statut: 'payee', datePaiement: '2026-11-20', total: 100 }, { statut: 'payee', datePaiement: '2027-04-15', total: 100 }], reglages, '2027-04-20');
   assert.deepStrictEqual(t.map(x => x.cle), ['2026-T4', '2027-T1', '2027-T2', '2027-T3']);
   assert.ok(t[1].aDeclarer && t[1].encaisse === 0);
 });
-test('rappels et regroupement : entrées nulles ignorées', () => {
+test('reminders and grouping: null entries ignored', () => {
   const r = c.calculerRappels({ entrees: [null, { id: 'x', date: '', minutes: 5 }], taches: [null, { id: 't', statut: 'a-faire', echeance: 'abc', titre: 'x' }], echeances: [null, { id: 'e', date: '2026-09-03', titre: 'e' }], factures: [null, { id: 'f', statut: 'emise', dateEcheance: '', total: 10 }], chrono: { debut: 'abc' } }, { contrat: {}, rappels: {} }, { ref: '2026-09-02' });
   assert.deepStrictEqual(r.map(x => x.cle), ['echeance:e']);
   assert.deepStrictEqual(c.interventionsRecentes([null, { intervention: 'A', date: '2026-01-01' }]), ['A']);
 });
 
-console.log('Report sur un autre mois de facturation');
+console.log('Moving to another billing month');
 const sept = { id: 's1', date: '2026-09-15', axe: 'projeta', intervention: 'Préparation', minutes: 120, moisFacturation: '2026-10' };
-test('le relevé suit le mois de facturation, le journal la date', () => {
+test('the statement follows the billing month, the log follows the date', () => {
   assert.strictEqual(c.moisFacturationDe(sept), '2026-10');
   assert.strictEqual(c.estReporte(sept), true);
   assert.strictEqual(c.moisFacturationDe({ date: '2026-09-15' }), '2026-09');
@@ -442,7 +449,7 @@ test('le relevé suit le mois de facturation, le journal la date', () => {
   assert.strictEqual(relOct.lignes[0].moisTravail, '2026-09');
   assert.strictEqual(relOct.montantHT, u.arrondir2(2 * 42.86));
 });
-test('les relevés annoncent ce qui part et ce qui arrive', () => {
+test('statements announce what leaves and what arrives', () => {
   const relSept = c.releveDuMois([sept], '2026-09', reglages, 0);
   const relOct = c.releveDuMois([sept], '2026-10', reglages, 0);
   assert.deepStrictEqual(relSept.reportsEnvoyes.map(g => g.mois), ['2026-10']);
@@ -451,13 +458,13 @@ test('les relevés annoncent ce qui part et ce qui arrive', () => {
   assert.strictEqual(relOct.reportsRecus[0].totaux.minutes, 120);
   assert.strictEqual(relOct.reportsRecus[0].totaux.montant, u.arrondir2(2 * 42.86));
 });
-test('un mois de facturation aberrant laisse la ligne sur son mois', () => {
+test('an invalid billing month leaves the entry on its own month', () => {
   ['2026-13', '2026-1', 'octobre', '', null, '2026-10-05'].forEach((m) => {
     assert.strictEqual(c.moisFacturationDe({ date: '2026-09-15', moisFacturation: m }), '2026-09', String(m));
   });
   assert.strictEqual(c.releveDuMois([{ id: 'x', date: '2026-09-15', axe: 'a', intervention: 'X', minutes: 60, moisFacturation: '2026-13' }], '2026-09', reglages, 0).lignes.length, 1);
 });
-test('deux mois de facturation le même jour font deux interventions', () => {
+test('two billing months on the same day make two work items', () => {
   const a = { id: 'a', date: '2026-09-15', axe: 'projeta', intervention: 'Point', minutes: 20 };
   const b = { id: 'b', date: '2026-09-15', axe: 'projeta', intervention: 'point', minutes: 20, moisFacturation: '2026-10' };
   assert.notStrictEqual(c.cleIntervention(a), c.cleIntervention(b));
@@ -465,13 +472,13 @@ test('deux mois de facturation le même jour font deux interventions', () => {
   assert.strictEqual(c.releveDuMois([a, b], '2026-09', reglages, 0).totalMinutesFacturables, 30);
   assert.strictEqual(c.releveDuMois([a, b], '2026-10', reglages, 0).totalMinutesFacturables, 30);
 });
-test('report : la facture garde le mois de facturation de ses lignes', () => {
+test('move: the invoice keeps the billing month of its lines', () => {
   const a = { id: 'a', date: '2026-09-15', axe: 'projeta', intervention: 'Suivi', minutes: 40, moisFacturation: '2026-10' };
   const f1 = c.construireFacture(c.releveDuMois([a], '2026-10', reglages, 0), reglages, { numero: '2026-01', dateEmission: '2026-10-05' });
   assert.strictEqual(f1.minutesFacturees, 45);
   assert.strictEqual(f1.lignes[0].moisFacturation, '2026-10');
 });
-test('une facture ancienne, sans liste de lignes, verrouille son mois', () => {
+test('an old invoice, without a list of entries, locks its month', () => {
   const a = { id: 'a', date: '2026-06-10', axe: 'projeta', intervention: 'Ancien', minutes: 60, moisFacturation: '2026-10' };
   const vieille = { mois: '2026-06', numero: '2026-02', lignes: [] };
   assert.deepStrictEqual(c.idsFactures([vieille], '2026-10', [a]), ['a']);
@@ -480,27 +487,27 @@ test('une facture ancienne, sans liste de lignes, verrouille son mois', () => {
   assert.strictEqual(c.factureFigeant([vieille], a), vieille);
   assert.strictEqual(c.peutReporter(a, []), true);
 });
-test('une ligne figée sur une facture ne se reporte plus', () => {
+test('an entry frozen on an invoice can no longer be moved', () => {
   const a = { id: 'a', date: '2026-10-05', axe: 'projeta', intervention: 'Fixe', minutes: 60 };
   const f = { mois: '2026-10', numero: '2026-01', entreesIds: ['a'], lignes: [] };
   assert.strictEqual(c.peutReporter(a, [f]), false);
   assert.strictEqual(c.peutReporter({ id: 'b', date: '2026-10-06' }, [f]), true);
 });
-test('le rappel réclame le mois de facturation, pas celui du travail', () => {
+test('the reminder claims the billing month, not the work month', () => {
   const donnees = { entrees: [sept], taches: [], echeances: [], factures: [] };
   const r = c.calculerRappels(donnees, reglages, { ref: '2026-11-03' });
   const facturer = r.filter(x => x.categorie === 'facture');
   assert.deepStrictEqual(facturer.map(x => x.cibleId), ['2026-10']);
-  assert.ok(/octobre 2026/.test(facturer[0].titre));
+  assert.ok(/October 2026/.test(facturer[0].titre));
 });
-test('un travail reporté dans le contrat compte dans l\'avancement', () => {
+test('work moved into the contract counts toward progress', () => {
   const av = c.avancementContrat([sept], reglages, '2026-10-15');
   assert.strictEqual(av.minutesFacturables, 120);
   assert.strictEqual(c.entreesDuContrat([sept], reglages.contrat).length, 1);
   assert.strictEqual(c.entreesDuContrat([{ id: 'z', date: '2026-09-15', minutes: 60 }], reglages.contrat).length, 0);
 });
 
-test('une intervention à cheval sur deux mois : chaque facture arrondit son total', () => {
+test('a work item spanning two months: each invoice rounds its total', () => {
   const a = { id: 'a', date: '2026-10-05', axe: 'suivi', intervention: 'Point Partenaire', minutes: 50, moisFacturation: '2026-11' };
   const fNov = c.construireFacture(c.releveDuMois([a], '2026-11', reglages, 0), reglages, { numero: '2026-05', dateEmission: '2026-11-30' });
   assert.strictEqual(fNov.minutesFacturees, 60);
@@ -510,7 +517,7 @@ test('une intervention à cheval sur deux mois : chaque facture arrondit son tot
   assert.strictEqual(relOct.lignes[0].minutesFacturables, 40);
   assert.strictEqual(relOct.totalMinutesFacturables, 45);
 });
-test('une facture ancienne ne couvre pas une ligne saisie après elle', () => {
+test('an old invoice does not cover an entry added after it', () => {
   const ancienne = { mois: '2026-06', numero: '2026-02', dateEmission: '2026-07-02', lignes: [] };
   const avant = { id: 'a', date: '2026-06-10', axe: 'projeta', intervention: 'Ancien', minutes: 60, creeLe: '2026-06-10T09:00:00Z' };
   const apres = { id: 'b', date: '2026-06-12', axe: 'projeta', intervention: 'Oublié', minutes: 60, creeLe: '2026-10-28T09:00:00Z' };
@@ -518,43 +525,43 @@ test('une facture ancienne ne couvre pas une ligne saisie après elle', () => {
   assert.strictEqual(c.peutReporter(avant, [ancienne]), false);
   assert.strictEqual(c.peutReporter(apres, [ancienne]), true);
 });
-test('un travail du contrat reporté après sa fin reste dans l\'avancement', () => {
+test('contract work moved past its end stays in the progress', () => {
   const tardif = { id: 'z', date: '2027-09-28', axe: 'projeta', intervention: 'Bilan', minutes: 240, moisFacturation: '2027-10' };
   assert.strictEqual(c.entreesDuContrat([tardif], reglages.contrat).length, 1);
   assert.strictEqual(c.avancementContrat([tardif], reglages, '2027-09-30').minutesFacturables, 240);
 });
-test('énumération des mois : virgules puis « et »', () => {
-  assert.strictEqual(u.enumererMois(['2026-07']), 'juillet 2026');
-  assert.strictEqual(u.enumererMois(['2026-07', '2026-09']), 'juillet 2026 et septembre 2026');
-  assert.strictEqual(u.enumererMois(['2026-07', '2026-08', '2026-09']), 'juillet 2026, août 2026 et septembre 2026');
+test('listing months: commas, then "and"', () => {
+  assert.strictEqual(u.enumererMois(['2026-07']), 'July 2026');
+  assert.strictEqual(u.enumererMois(['2026-07', '2026-09']), 'July 2026 and September 2026');
+  assert.strictEqual(u.enumererMois(['2026-07', '2026-08', '2026-09']), 'July 2026, August 2026 and September 2026');
 });
-test('le rappel réclame aussi un mois sans ligne mais avec des frais', () => {
+test('the reminder also claims a month with no entries but with expenses', () => {
   const r = c.calculerRappels({ entrees: [], taches: [], echeances: [], factures: [] },
     Object.assign({}, reglages, { ui: { moisMeta: { '2026-10': { frais: 96 } } } }), { ref: '2026-11-03' });
   const facturer = r.filter(x => x.categorie === 'facture');
   assert.deepStrictEqual(facturer.map(x => x.cibleId), ['2026-10']);
-  assert.ok(/frais/.test(facturer[0].detail));
+  assert.ok(/expenses/.test(facturer[0].detail));
 });
 
-console.log('Annexe de la facture');
-test('les lignes de la facture se regroupent par axe et libellé, sans date', () => {
+console.log('Invoice appendix');
+test('invoice lines are grouped by area and label, without a date', () => {
   const lignes = [
-    { date: '2026-09-09', axe: 'rapports', intervention: 'Envoi du premier rapport client', nature: 'Envoi du premier rapport client : contrôle', details: ['contrôle'], moisFacturation: '2026-10', minutes: 45, minutesFacturables: 45, montant: 0.75 * 42.86, valeurHoraire: 0.75 * 42.86, facturable: true, motifs: [], forfait: null },
+    { date: '2026-09-09', axe: 'rapports', intervention: 'Envoi du premier rapport client', nature: 'Envoi du premier rapport client: contrôle', details: ['contrôle'], moisFacturation: '2026-10', minutes: 45, minutesFacturables: 45, montant: 0.75 * 42.86, valeurHoraire: 0.75 * 42.86, facturable: true, motifs: [], forfait: null },
     { date: '2026-10-02', axe: 'projeta', intervention: 'Fiabilisation', nature: 'Fiabilisation', details: [], moisFacturation: '2026-10', minutes: 120, minutesFacturables: 120, montant: 2 * 42.86, valeurHoraire: 2 * 42.86, facturable: true, motifs: [], forfait: null },
-    { date: '2026-10-05', axe: 'rapports', intervention: 'envoi du premier rapport  client', nature: 'envoi du premier rapport  client : relances', details: ['relances'], moisFacturation: '2026-10', minutes: 70, minutesFacturables: 75, montant: 1.25 * 42.86, valeurHoraire: 1.25 * 42.86, facturable: true, motifs: [], forfait: null },
+    { date: '2026-10-05', axe: 'rapports', intervention: 'envoi du premier rapport  client', nature: 'envoi du premier rapport  client: relances', details: ['relances'], moisFacturation: '2026-10', minutes: 70, minutesFacturables: 75, montant: 1.25 * 42.86, valeurHoraire: 1.25 * 42.86, facturable: true, motifs: [], forfait: null },
     { date: '2026-10-06', axe: 'projeta', intervention: 'Fiabilisation', nature: 'Fiabilisation', details: [], moisFacturation: '2026-10', minutes: 30, minutesFacturables: 0, montant: 0, valeurHoraire: 0, facturable: false, motifs: ['geste commercial'], forfait: null },
     { date: '2026-10-07', axe: 'projetb', intervention: 'Atelier', nature: 'Atelier', details: [], moisFacturation: '2026-10', minutes: 240, minutesFacturables: 240, montant: 150, valeurHoraire: 4 * 42.86, facturable: true, motifs: [], forfait: 150 },
     { date: '2026-10-14', axe: 'projetb', intervention: 'Atelier', nature: 'Atelier', details: [], moisFacturation: '2026-10', minutes: 240, minutesFacturables: 240, montant: 150, valeurHoraire: 4 * 42.86, facturable: true, motifs: [], forfait: 150 },
   ];
   const g = c.regrouperLignesFacture(lignes);
-  /* deux jours du même travail : une ligne ; les forfaits restent séparés ; la non facturable à part */
+  /* two days of the same work: one line; flat fees stay separate; the non-billable one apart */
   assert.strictEqual(g.length, 5);
   assert.strictEqual(g[0].intervention, 'Envoi du premier rapport client');
   assert.strictEqual(g[0].nbLignes, 2);
   assert.strictEqual(g[0].minutes, 115);
   assert.strictEqual(g[0].minutesFacturables, 120);
   assert.strictEqual(u.arrondir2(g[0].montant), u.arrondir2(2 * 42.86));
-  assert.strictEqual(g[0].nature, 'Envoi du premier rapport client : contrôle, relances');
+  assert.strictEqual(g[0].nature, 'Envoi du premier rapport client: contrôle, relances');
   assert.strictEqual(g[1].intervention, 'Fiabilisation');
   assert.strictEqual(g[1].facturable, true);
   assert.strictEqual(g[2].facturable, false);
@@ -563,7 +570,7 @@ test('les lignes de la facture se regroupent par axe et libellé, sans date', ()
   assert.strictEqual(g[3].forfait, 150);
   assert.strictEqual(g[4].forfait, 150);
   assert.ok(g.every(x => x.date === undefined));
-  /* les totaux de l'annexe restent ceux de la facture */
+  /* the appendix totals stay those of the invoice */
   const somme = k => lignes.reduce((s, l) => s + l[k], 0);
   assert.strictEqual(g.reduce((s, x) => s + x.minutes, 0), somme('minutes'));
   assert.strictEqual(u.arrondir2(g.reduce((s, x) => s + x.montant, 0)), u.arrondir2(somme('montant')));
@@ -571,10 +578,10 @@ test('les lignes de la facture se regroupent par axe et libellé, sans date', ()
   assert.deepStrictEqual(c.regrouperLignesFacture(null), []);
 });
 
-console.log('Montants de l\'annexe et trésorerie URSSAF');
-test('la somme des montants affichés dans l\'annexe égale le total HT de la facture', () => {
-  /* Le cas de la facture 2026-01 : 18 interventions, 35,75 h. Arrondies une à
-     une, les lignes à demi-centime donnaient 1 532,33 € pour 1 532,25 €. */
+console.log('Appendix amounts and URSSAF cash flow');
+test('the sum of the amounts shown in the appendix equals the invoice total excl. tax', () => {
+  /* The case of invoice 2026-01: 18 work items, 35.75 h. Rounded one by
+     one, the half-cent lines gave €1,532.33 instead of €1,532.25. */
   const heures = [].concat(Array(13).fill(0.75), Array(3).fill(1.25), [10, 12.25]);
   const entrees = heures.map((h, i) => ({ id: 'a' + i, date: '2026-10-' + u.deuxChiffres(i + 1), axe: 'projeta', intervention: 'Travail ' + i, minutes: h * 60 }));
   const f = c.construireFacture(c.releveDuMois(entrees, '2026-10', reglages, 0), reglages, { numero: '2026-01', dateEmission: '2026-10-25' });
@@ -590,12 +597,12 @@ test('la somme des montants affichés dans l\'annexe égale le total HT de la fa
   assert.deepStrictEqual(c.montantsAuCentime([10.715, 10.715, 0, 150]), [10.72, 10.71, 0, 150]);
   assert.deepStrictEqual(c.montantsAuCentime([]), []);
 });
-test('les détails se joignent sans double ponctuation', () => {
+test('details join without double punctuation', () => {
   assert.strictEqual(c.joindreDetails(['Contrôle fait.', 'Envoi', 'relances']), 'Contrôle fait. Envoi, relances');
   assert.ok(!/\.,/.test(c.joindreDetails(['a.', 'b.', 'c'])));
   assert.strictEqual(c.joindreDetails([]), '');
 });
-test('trésorerie d\'une facture : provision URSSAF, net, abattement BNC', () => {
+test('cash flow of an invoice: URSSAF provision, net, BNC allowance', () => {
   const t = c.tresorerieFacture({ numero: '2026-01', total: 1532.25, statut: 'emise', dateEmission: '2026-10-25', dateEcheance: '2026-11-24' }, reglages);
   assert.strictEqual(t.encaissee, false);
   assert.strictEqual(t.taux, 19.4);
@@ -612,8 +619,8 @@ test('trésorerie d\'une facture : provision URSSAF, net, abattement BNC', () =>
   assert.strictEqual(c.periodeUrssaf('2027-05-02', reglages).premiere, false);
 });
 
-console.log('Facture figée et travail reporté');
-test('la facture fige le prestataire et le client : changer les réglages ne la touche pas', () => {
+console.log('Frozen invoice and moved work');
+test('the invoice freezes the contractor and the client: changing settings does not touch it', () => {
   const r2 = Object.assign({}, reglages, { prestataire: { nom: 'Prestataire Essai', iban: 'FR7600' }, client: { societe: 'Client Essai' } });
   const rel = c.releveDuMois([{ id: 'a', date: '2031-03-05', axe: 'x', intervention: 'Essai', minutes: 60 }], '2031-03', r2, 0);
   const f = c.construireFacture(rel, r2, { numero: '2031-01', dateEmission: '2031-03-10' });
@@ -622,32 +629,32 @@ test('la facture fige le prestataire et le client : changer les réglages ne la 
   assert.strictEqual(f.prestataire.iban, 'FR7600');
   assert.strictEqual(f.client.societe, 'Client Essai');
 });
-test('la facture garde les reports annoncés par son relevé', () => {
+test('the invoice keeps the moves announced by its statement', () => {
   const lignes = [{ id: 'a', date: '2031-03-05', axe: 'x', intervention: 'Reste', minutes: 60 }, { id: 'b', date: '2031-03-06', axe: 'x', intervention: 'Part', minutes: 45, moisFacturation: '2031-04' }];
   const f = c.construireFacture(c.releveDuMois(lignes, '2031-03', reglages, 0), reglages, { numero: '2031-01', dateEmission: '2031-03-31' });
   assert.deepStrictEqual(f.reportsEnvoyes, [{ mois: '2031-04', totaux: { minutes: 45 } }]);
 });
-test('le travail reporté se compte au temps exact, seul le total du mois s\'arrondit', () => {
+test('moved work is counted at exact time, only the month total is rounded', () => {
   const lignes = [{ id: 'a', date: '2031-03-05', axe: 'x', intervention: 'Petit', minutes: 7, moisFacturation: '2031-04' }, { id: 'b', date: '2031-03-06', axe: 'x', intervention: 'Autre', minutes: 7, moisFacturation: '2031-04' }];
   const t = c.totauxEntrees(lignes.slice(0, 1), reglages, true);
   assert.strictEqual(t.minutesFacturables, 7);
   assert.strictEqual(t.montant, u.arrondir2(7 / 60 * 42.86));
-  assert.strictEqual(c.totauxEntrees(lignes.slice(0, 1), reglages).minutesFacturables, 15, 'sans exact : arrondi au quart d\'heure');
+  assert.strictEqual(c.totauxEntrees(lignes.slice(0, 1), reglages).minutesFacturables, 15, 'without exact: rounded to the quarter hour');
   const g = c.reportsDepuis(lignes, '2031-03', reglages)[0];
   assert.strictEqual(g.totaux.minutesFacturables, 14);
-  assert.strictEqual(c.releveDuMois(lignes, '2031-04', reglages, 0).totalMinutesFacturables, 15, 'le relevé du mois garde son arrondi');
+  assert.strictEqual(c.releveDuMois(lignes, '2031-04', reglages, 0).totalMinutesFacturables, 15, 'the month statement keeps its rounding');
 });
 
-console.log('Mois à deux factures');
-test('les factures font foi, plus ce qui reste à facturer', () => {
+console.log('Month with two invoices');
+test('invoices are authoritative, plus what is left to invoice', () => {
   const total = c.totalMoisFacture([{ minutesFacturees: 15, montantHT: 10.72 }, { minutesFacturees: 30, montantHT: 21.43 }], { totalMinutesFacturables: 7, montantHT: 5 });
   assert.deepStrictEqual(total, { minutes: 52, montant: 37.15 });
 });
-test('une suite le jour même d\'une facture se reporte seule', () => {
+test('a follow-up on the day of an invoice can be moved on its own', () => {
   const lignes = [{ id: 'a', date: '2031-03-02' }, { id: 'b', date: '2031-03-02' }];
   const factures = [{ mois: '2031-03', entreesIds: ['a'] }];
   assert.deepStrictEqual(c.partReportable(lignes, factures).map(e => e.id), ['b']);
   assert.deepStrictEqual(c.partReportable([lignes[0]], factures), []);
 });
 
-console.log('\n' + n + ' tests verts.');
+console.log('\n' + n + ' tests passed.');

@@ -1,15 +1,15 @@
 /* ============================================================
-   PAGE JOURNAL ET RELEVÉ : le travail du mois jour par jour, le relevé
-   d'activité du contrat (article 6.3) et l'établissement des factures.
+   LOG AND STATEMENT PAGE: the month's work day by day, the activity
+   statement of the contract (article 6.3) and invoice creation.
 
-   Un mois peut porter plusieurs factures : chacune ne prend que les
-   lignes pas encore facturées (par exemple une facture de démarrage en
-   début de mois, puis celle du travail courant en fin de mois).
+   A month can carry several invoices: each one only takes the entries not
+   yet invoiced (for example a start-up invoice early in the month, then
+   the one for the current work at the end of the month).
    ============================================================ */
 'use strict';
 
 var RELEVE_MOIS = null;
-var RELEVE_JOURS = {};        // journées dépliées (date ISO)
+var RELEVE_JOURS = {};        // expanded days (ISO date)
 var RELEVE_TRAVAUX_TOUS = false;
 var TRAVAUX_VISIBLES = 4;
 
@@ -17,7 +17,7 @@ function initReleve() {
   PAGES.releve = rendreReleve;
   var zone = document.getElementById('releveContenu');
   zone.addEventListener('click', function (ev) {
-    /* Les lignes du journal dépliées gardent leurs propres actions. */
+    /* The expanded log entries keep their own actions. */
     if (ev.target.closest('.jr-ligne')) { clicListeJournal(ev); return; }
     var b = ev.target.closest('[data-action]');
     if (!b) return;
@@ -39,7 +39,7 @@ function initReleve() {
     else if (ev.target.id === 'rlFrais') {
       var txt = ev.target.value.trim();
       var n = txt ? lireMontant(txt) : 0;
-      if (n == null || n < 0) { notifier('Montant des frais non compris (ex. 12,50).', { type: 'erreur' }); rendreReleve(); return; }
+      if (n == null || n < 0) { notifier('Could not read the expenses amount (e.g. 12.50).', { type: 'erreur' }); rendreReleve(); return; }
       meta.frais = arrondir2(n);
       sauver('reglages');
       rendreReleve();
@@ -51,20 +51,20 @@ function initReleve() {
 function facturesDuMois(mois) {
   return trierPar(factures().filter(function (f) { return f.mois === mois; }), function (f) { return f.dateEmission + f.numero; });
 }
-/* La dernière facture du mois (compatibilité). */
+/* The latest invoice of the month (compatibility). */
 function factureDuMois(mois) {
   var l = facturesDuMois(mois);
   return l.length ? l[l.length - 1] : null;
 }
-/* Les tâches terminées que le relevé du mois peut joindre : celles du mois,
-   plus celles des mois dont il facture le travail reporté. */
+/* The completed tasks the month's statement can attach: those of the
+   month, plus those of the months whose moved work it bills. */
 function travauxDuMois(mois) {
   var moisConcernes = [mois];
   reportsVers(entreesJournal(), mois, ETAT.reglages).forEach(function (g) { if (moisConcernes.indexOf(g.mois) < 0) moisConcernes.push(g.mois); });
   return trierPar(taches().filter(function (t) { return t.statut === 'fait' && t.faitLe && moisConcernes.indexOf(moisDe(t.faitLe)) >= 0; }), 'faitLe');
 }
-/* Ce qui reste à facturer dans un mois : lignes hors factures existantes,
-   frais non encore repris. */
+/* What is left to invoice in a month: entries outside existing invoices,
+   expenses not yet included. */
 function releveAFacturer(mois) {
   var r = ETAT.reglages;
   var meta = moisMeta(mois);
@@ -74,10 +74,10 @@ function releveAFacturer(mois) {
   var deja = idsFactures(factures(), mois, entreesJournal());
   return releveDuMois(entreesJournal(), mois, r, fraisRestants, { exclureIds: deja });
 }
-/* État de facturation d'une intervention du relevé : { facture, partiel }.
-   « partiel » quand une partie seulement de ses lignes est facturée.
-   Les factures anciennes, sans liste de lignes, couvrent le mois du travail ;
-   les autres se lisent sur le mois de facturation du relevé affiché. */
+/* Invoicing state of a statement work item: { facture, partiel }.
+   "partiel" when only some of its entries are invoiced.
+   Old invoices, with no list of entries, cover the month of the work;
+   the others are read on the billing month of the displayed statement. */
 function etatFacturationLigne(l) {
   var anciennes = facturesDuMois(moisDe(l.date)).filter(function (f) { return !Array.isArray(f.entreesIds); });
   if (anciennes.length) return { facture: anciennes[0], partiel: false };
@@ -85,8 +85,8 @@ function etatFacturationLigne(l) {
   if (!facturees.length) return { facture: null, partiel: false };
   return { facture: facturees[0], partiel: facturees.length < l.ids.length };
 }
-/* Un mois facturé se relit depuis les lignes figées de ses factures (le
-   tarif ou les lignes ont pu changer depuis, du travail a pu s'ajouter). */
+/* An invoiced month is read back from the frozen lines of its invoices
+   (the rate or the lines may have changed since, work may have been added). */
 function releveFige(mois, lesFactures) {
   var r = ETAT.reglages;
   var heuresJournee = Number(r.heuresJournee) || 7;
@@ -114,21 +114,21 @@ function releveFige(mois, lesFactures) {
     ids: [], tarif: tarif, totalMinutes: totalMinutes, totalMinutesFacturables: totalFact, arrondiMinutes: arrondi, totalMinutesNonFacturables: totalNonFact, heuresFacturables: arrondir2(totalFact / 60), journees: arrondir2(totalFact / 60 / heuresJournee), valeurHoraire: valeur, remise: arrondir2(Math.max(0, valeur - montant)), montantHT: montant, frais: frais, total: arrondir2(montant + frais) };
 }
 
-/* Le bandeau d'un groupe de lignes reportées. Le mot « facturé » n'a de
-   sens que si le groupe porte un montant : sinon il n'est que « porté ». */
+/* The banner of a group of moved entries. The word "billed" only makes
+   sense if the group carries an amount: otherwise it is just "moved". */
 function bandeauReportHtml(g, sens) {
   var t = g.totaux;
   var n = t.nbInterventions;
-  var chiffres = t.montant > 0 ? fmtHeuresDec(t.minutesFacturables) + ', ' + fmtEuros(t.montant) + ' HT' : fmtDuree(t.minutes) + ', sans montant (non facturable)';
-  var sujet = n > 1 ? n + ' interventions' : 'Une intervention';
+  var chiffres = t.montant > 0 ? fmtHeuresDec(t.minutesFacturables) + ', ' + fmtEuros(t.montant) + ' excl. tax' : fmtDuree(t.minutes) + ', no amount (non-billable)';
+  var sujet = n > 1 ? n + ' work items' : 'One work item';
   var texte = sens === 'envoye'
-    ? sujet + ' ' + deLibelleMois(RELEVE_MOIS) + (n > 1 ? ' sont portées' : ' est portée') + ' sur le relevé ' + deLibelleMois(g.mois) + ' : ' + chiffres + '.'
-    : sujet + ' réalisée' + (n > 1 ? 's' : '') + ' en ' + libelleMois(g.mois) + (n > 1 ? ' sont portées' : ' est portée') + ' sur ce relevé : ' + chiffres + '.';
+    ? sujet + ' from ' + libelleMois(RELEVE_MOIS) + (n > 1 ? ' are' : ' is') + ' moved to the ' + libelleMois(g.mois) + ' statement: ' + chiffres + '.'
+    : sujet + ' done in ' + libelleMois(g.mois) + (n > 1 ? ' are' : ' is') + ' moved to this statement: ' + chiffres + '.';
   return '<div class="alert alert-info"><span>' + echapper(texte) + '</span>'
-    + '<button class="btn btn-petit btn-ghost" data-action="releve" data-mois="' + echapper(g.mois) + '">Voir le relevé ' + echapper(deLibelleMois(g.mois)) + '</button></div>';
+    + '<button class="btn btn-petit btn-ghost" data-action="releve" data-mois="' + echapper(g.mois) + '">View the ' + echapper(libelleMois(g.mois)) + ' statement</button></div>';
 }
 
-/* Les mois du contrat, élargis au mois affiché s'il en sort. */
+/* The contract's months, extended to the displayed month if it falls outside. */
 function moisAutour(mois) {
   var liste = moisDuContrat();
   if (!mois || liste.indexOf(mois) >= 0) return liste;
@@ -149,41 +149,42 @@ function rendreReleve() {
     return '<option value="' + echapper(l) + '"></option>';
   }).join('');
 
-  var html = '<div class="page-entete"><div><h2 class="page-titre">Journal et relevé</h2>'
-    + '<p class="page-sous">Le travail du mois, jour par jour : un clic sur une journée montre ses lignes. Le relevé suit le contrat (article 6.3) ; le total du mois est arrondi une seule fois au quart d\'heure supérieur (article 6.1).</p></div>'
-    + '<div class="actions"><button class="btn btn-ghost" data-action="nouvelle-ligne">Ajouter une ligne</button>'
-    + '<div class="mois-nav"><button class="btn-icone" data-action="mois-prec" title="Mois précédent">‹</button>' + selectMoisHtml('rlMois', RELEVE_MOIS, { liste: moisAutour(RELEVE_MOIS) }) + '<button class="btn-icone" data-action="mois-suiv" title="Mois suivant">›</button></div></div></div>';
+  var html = '<div class="page-entete"><div><h2 class="page-titre">Log and statement</h2>'
+    + '<p class="page-sous">The month\'s work, day by day: click a day to see its entries. The statement follows the contract (article 6.3); the month total is rounded up only once to the next quarter hour (article 6.1).</p></div>'
+    + '<div class="actions"><button class="btn btn-ghost" data-action="nouvelle-ligne">Add an entry</button>'
+    + '<div class="mois-nav"><button class="btn-icone" data-action="mois-prec" title="Previous month">‹</button>' + selectMoisHtml('rlMois', RELEVE_MOIS, { liste: moisAutour(RELEVE_MOIS) }) + '<button class="btn-icone" data-action="mois-suiv" title="Next month">›</button></div></div></div>';
 
   lesFactures.forEach(function (f) {
     var nb = Array.isArray(f.entreesIds) ? f.entreesIds.length : null;
-    html += '<div class="alert alert-success"><span>Facture n° <b>' + echapper(f.numero) + '</b> émise le ' + dateFr(f.dateEmission) + ' : ' + fmtEuros(f.total) + (nb != null ? ' (' + nb + (nb > 1 ? ' saisies' : ' saisie') + ', ' + (f.lignes || []).length + ((f.lignes || []).length > 1 ? ' interventions' : ' intervention') + ')' : '') + (f.statut === 'payee' ? ', payée le ' + dateFr(f.datePaiement) : '') + '.</span>'
-      + '<span style="margin-left:auto; display:flex; gap:8px;"><button class="btn btn-petit btn-ghost" data-action="pdf-facture" data-id="' + echapper(f.id) + '" title="Une nouvelle copie de la facture et du relevé, sans toucher aux PDF déjà enregistrés">Refaire les PDF</button><button class="btn btn-petit btn-ghost" data-action="voir-factures">Voir les factures</button></span></div>';
+    var nbInt = (f.lignes || []).length;
+    html += '<div class="alert alert-success"><span>Invoice no. <b>' + echapper(f.numero) + '</b> issued on ' + dateFr(f.dateEmission) + ': ' + fmtEuros(f.total) + (nb != null ? ' (' + nb + (nb > 1 ? ' entries' : ' entry') + ', ' + nbInt + (nbInt > 1 ? ' work items' : ' work item') + ')' : '') + (f.statut === 'payee' ? ', paid on ' + dateFr(f.datePaiement) : '') + '.</span>'
+      + '<span style="margin-left:auto; display:flex; gap:8px;"><button class="btn btn-petit btn-ghost" data-action="pdf-facture" data-id="' + echapper(f.id) + '" title="A new copy of the invoice and the statement, without touching the PDFs already saved">Regenerate the PDFs</button><button class="btn btn-petit btn-ghost" data-action="voir-factures">View the invoices</button></span></div>';
   });
 
-  /* Ce que le mois envoie ailleurs ; ce qu'il reçoit a sa ligne dans le tableau. */
+  /* What the month sends elsewhere; what it receives has its own row in the table. */
   releve.reportsEnvoyes.forEach(function (g) {
     html += bandeauReportHtml(g, 'envoye');
   });
 
   html += '<section class="card">'
     + '<div class="rl-entete">'
-    + '<div><div class="libelle">Prestataire</div><div>' + echapper(r.prestataire.nom) + ' · SIREN ' + echapper(r.prestataire.siren) + '</div></div>'
+    + '<div><div class="libelle">Contractor</div><div>' + echapper(r.prestataire.nom) + ' · SIREN ' + echapper(r.prestataire.siren) + '</div></div>'
     + '<div><div class="libelle">Client</div><div>' + echapper(r.client.societe) + (r.client.contact ? ' · ' + echapper(r.client.contact) : '') + '</div></div>'
-    + '<div><div class="libelle">Mois</div><div>' + echapper(capitaliser(libelleMois(RELEVE_MOIS))) + '</div></div>'
-    + '<div><div class="libelle">Tarif horaire</div><div>' + fmtEuros(r.tarifHoraire) + ' HT · ' + echapper(r.mentionTVA) + '</div></div>'
+    + '<div><div class="libelle">Month</div><div>' + echapper(capitaliser(libelleMois(RELEVE_MOIS))) + '</div></div>'
+    + '<div><div class="libelle">Hourly rate</div><div>' + fmtEuros(r.tarifHoraire) + ' excl. tax · ' + echapper(r.mentionTVA) + '</div></div>'
     + '</div>';
 
-  /* Chaque journée reste dans son mois de travail ; celles facturées sur un
-     autre mois y sont marquées « reporté sur … », chiffres hors total. Le
-     travail reçu d'autres mois tient sur une ligne par mois d'origine, pour
-     que le total reste celui de la facture. */
+  /* Each day stays in its work month; those invoiced on another month are
+     marked "moved to …", figures outside the total. Work received from
+     other months takes one row per month of origin, so that the total
+     stays the invoice's. */
   var partis = entreesDuMois(entreesJournal(), RELEVE_MOIS).filter(function (e) { return moisFacturationDe(e) !== RELEVE_MOIS; });
   if (!releve.lignes.length && !partis.length) {
-    html += '<div class="vide">Aucune intervention en ' + echapper(libelleMois(RELEVE_MOIS)) + '. <button class="lien" data-action="nouvelle-ligne">Ajouter une ligne</button></div>';
+    html += '<div class="vide">No work items in ' + echapper(libelleMois(RELEVE_MOIS)) + '. <button class="lien" data-action="nouvelle-ligne">Add an entry</button></div>';
   } else {
     var arrondi = releve.arrondiMinutes || 0;
     var montants = montantsAuCentime(releve.lignes.map(function (l) { return l.montant; }).concat([arrondi / 60 * releve.tarif]));
-    /* La ligne d'arrondi fait le pont entre les lignes du mois et le total qui fait foi. */
+    /* The rounding row bridges the month's lines and the authoritative total. */
     var minutesArrondi = totalFoi.minutes - releve.lignes.reduce(function (s, l) { return s + (l.facturable ? l.minutesFacturables : 0); }, 0);
     var montantArrondi = arrondir2(totalFoi.montant - montants.slice(0, releve.lignes.length).reduce(function (s, m) { return s + m; }, 0));
     var jours = [], parJour = {}, recus = [], parRecu = {};
@@ -220,66 +221,66 @@ function rendreReleve() {
     var etatHtml = function (g) {
       var enPartie = g.factures.length && (g.partiel || g.aFacturer);
       return g.factures.length
-        ? g.factures.map(function (f) { return '<span class="fa-statut ' + (f.statut === 'payee' && !enPartie ? 'payee' : 'emise') + '" title="' + (enPartie ? 'Une partie des lignes reste à facturer' : 'Facture n° ' + echapper(f.numero)) + '">' + (enPartie ? 'en partie facturé n° ' : 'facturé n° ') + echapper(f.numero) + '</span>'; }).join(' ')
-        : (g.aFacturer ? '<span class="puce">à facturer</span>' : (g.nb ? '<span class="puce neutre">non facturable</span>' : ''));
+        ? g.factures.map(function (f) { return '<span class="fa-statut ' + (f.statut === 'payee' && !enPartie ? 'payee' : 'emise') + '" title="' + (enPartie ? 'Some entries are still to be invoiced' : 'Invoice no. ' + echapper(f.numero)) + '">' + (enPartie ? 'partly invoiced (no. ' : 'invoiced (no. ') + echapper(f.numero) + ')</span>'; }).join(' ')
+        : (g.aFacturer ? '<span class="puce">to invoice</span>' : (g.nb ? '<span class="puce neutre">non-billable</span>' : ''));
     };
-    html += '<div class="tableau-defilant"><table class="tableau rl-jours"><thead><tr><th>Jour</th><th class="num">Interventions</th><th class="num">Temps facturé</th><th class="num">Montant HT</th><th>État</th></tr></thead><tbody>'
+    html += '<div class="tableau-defilant"><table class="tableau rl-jours"><thead><tr><th>Day</th><th class="num">Work items</th><th class="num">Billed time</th><th class="num">Amount excl. tax</th><th>Status</th></tr></thead><tbody>'
       + trierPar(jours, 'date').map(function (j) {
         var ouvert = !!RELEVE_JOURS[j.date];
-        /* Une journée entièrement reportée montre ses chiffres en grisé, hors total. */
+        /* A fully moved day shows its figures greyed out, outside the total. */
         var t = j.nb ? null : totauxEntrees(j.partisJour, r, true);
         var nb = j.nb + (j.partisJour.length ? regrouperInterventions(j.partisJour, r).length : 0);
         var etat = [etatHtml(j)].concat(j.reportes.map(function (m) {
           var fac = j.partisJour.map(function (e) { return factureDeEntree(factures(), e.id); }).filter(Boolean)[0];
-          return '<span class="puce" title="Facturé ' + deLibelleMois(m) + (fac ? ', facture n° ' + echapper(fac.numero) : '') + '">reporté sur ' + echapper(libelleMoisSeul(m)) + '</span>';
+          return '<span class="puce" title="Billed in ' + libelleMois(m) + (fac ? ', invoice no. ' + echapper(fac.numero) : '') + '">moved to ' + echapper(libelleMoisSeul(m)) + '</span>';
         })).filter(Boolean).join(' ');
         var detail = ouvert
           ? '<tr class="rl-detail"><td colspan="5">' + trierPar(j.entrees, function (e) { return (e.debut || '99:99') + (e.creeLe || ''); }).map(ligneJournalHtml).join('') + '</td></tr>'
           : '';
-        return '<tr class="rl-jour' + (ouvert ? ' ouvert' : '') + (t ? ' rl-reporte' : '') + '" data-action="jour" data-jour="' + echapper(j.date) + '" title="' + (ouvert ? 'Replier' : 'Voir le détail') + '">'
+        return '<tr class="rl-jour' + (ouvert ? ' ouvert' : '') + (t ? ' rl-reporte' : '') + '" data-action="jour" data-jour="' + echapper(j.date) + '" title="' + (ouvert ? 'Collapse' : 'Show details') + '">'
           + '<td><span class="rl-chevron">' + icone('chevron', 12) + '</span>' + echapper(capitaliser(libelleDate(j.date, 'long'))) + '</td>'
           + '<td class="num">' + nb + '</td><td class="num">' + fmtHeuresDec(t ? t.minutesFacturables : j.minutes) + '</td><td class="num">' + fmtEuros(t ? t.montant : arrondir2(j.montant)) + '</td><td>' + etat + '</td></tr>'
           + detail;
       }).join('')
       + recus.map(function (g) {
-        return '<tr class="rl-recu" data-action="releve" data-mois="' + echapper(g.mois) + '" title="Voir ' + echapper(libelleMois(g.mois)) + '">'
-          + '<td><span class="rl-chevron">' + icone('chevron', 12) + '</span>Reporté de ' + echapper(libelleMois(g.mois)) + '</td>'
+        return '<tr class="rl-recu" data-action="releve" data-mois="' + echapper(g.mois) + '" title="View ' + echapper(libelleMois(g.mois)) + '">'
+          + '<td><span class="rl-chevron">' + icone('chevron', 12) + '</span>Moved from ' + echapper(libelleMois(g.mois)) + '</td>'
           + '<td class="num">' + g.nb + '</td><td class="num">' + fmtHeuresDec(g.minutes) + '</td><td class="num">' + fmtEuros(arrondir2(g.montant)) + '</td><td>' + etatHtml(g) + '</td></tr>';
       }).join('')
-      + (minutesArrondi || montantArrondi ? '<tr><td>' + (lesFactures.length ? 'Arrondi de chaque facture' : 'Arrondi du total') + ' au quart d\'heure supérieur</td><td class="num"></td><td class="num">' + fmtHeuresDec(minutesArrondi) + '</td><td class="num">' + fmtEuros(montantArrondi) + '</td><td></td></tr>' : '')
-      + '</tbody><tfoot><tr><td>Total facturé sur le mois</td><td class="num">' + releve.lignes.length + '</td><td class="num">' + fmtHeuresDec(totalFoi.minutes) + '</td><td class="num">' + fmtEuros(totalFoi.montant) + '</td><td></td></tr></tfoot></table></div>';
+      + (minutesArrondi || montantArrondi ? '<tr><td>' + (lesFactures.length ? 'Each invoice rounded up to the next quarter hour' : 'Total rounded up to the next quarter hour') + '</td><td class="num"></td><td class="num">' + fmtHeuresDec(minutesArrondi) + '</td><td class="num">' + fmtEuros(montantArrondi) + '</td><td></td></tr>' : '')
+      + '</tbody><tfoot><tr><td>Total billed for the month</td><td class="num">' + releve.lignes.length + '</td><td class="num">' + fmtHeuresDec(totalFoi.minutes) + '</td><td class="num">' + fmtEuros(totalFoi.montant) + '</td><td></td></tr></tfoot></table></div>';
   }
 
   var minutesRecues = releve.reportsRecus.reduce(function (s, g) { return s + g.totaux.minutes; }, 0);
   var minutesParties = releve.reportsEnvoyes.reduce(function (s, g) { return s + g.totaux.minutes; }, 0);
-  var moisRecu = releve.reportsRecus.length === 1 ? ' ' + deLibelleMois(releve.reportsRecus[0].mois) : ' d\'autres mois';
-  var moisParti = releve.reportsEnvoyes.length === 1 ? ' ' + deLibelleMois(releve.reportsEnvoyes[0].mois) : ' d\'autres mois';
+  var moisRecu = releve.reportsRecus.length === 1 ? libelleMois(releve.reportsRecus[0].mois) : 'other months';
+  var moisParti = releve.reportsEnvoyes.length === 1 ? 'the ' + libelleMois(releve.reportsEnvoyes[0].mois) + ' statement' : 'other months';
   html += '<div class="rl-recap">'
-    + '<div class="panneau"><div class="libelle">Temps passé</div><div class="val">' + fmtHeuresDec(releve.totalMinutes) + '</div>'
-      + (releve.totalMinutesNonFacturables ? '<div class="petit">dont ' + fmtHeuresDec(releve.totalMinutesNonFacturables) + ' non facturables</div>' : '')
-      + (minutesRecues ? '<div class="petit">dont ' + fmtHeuresDec(minutesRecues) + ' venues' + echapper(moisRecu) + '</div>' : '')
-      + (minutesParties ? '<div class="petit">hors ' + fmtHeuresDec(minutesParties) + ' portées' + echapper(moisParti === ' d\'autres mois' ? ' sur d\'autres mois' : ' sur le relevé' + moisParti) + '</div>' : '')
+    + '<div class="panneau"><div class="libelle">Time spent</div><div class="val">' + fmtHeuresDec(releve.totalMinutes) + '</div>'
+      + (releve.totalMinutesNonFacturables ? '<div class="petit">of which ' + fmtHeuresDec(releve.totalMinutesNonFacturables) + ' non-billable</div>' : '')
+      + (minutesRecues ? '<div class="petit">of which ' + fmtHeuresDec(minutesRecues) + ' from ' + echapper(moisRecu) + '</div>' : '')
+      + (minutesParties ? '<div class="petit">excluding ' + fmtHeuresDec(minutesParties) + ' moved to ' + echapper(moisParti) + '</div>' : '')
       + '</div>'
-    + '<div class="panneau"><div class="libelle">Temps facturé</div><div class="val">' + fmtHeuresDec(totalFoi.minutes) + '</div><div class="petit">' + fmtNombre(totalFoi.minutes / 60 / hj, 2) + ' journées de ' + fmtNombre(hj, 0) + ' h</div></div>'
+    + '<div class="panneau"><div class="libelle">Billed time</div><div class="val">' + fmtHeuresDec(totalFoi.minutes) + '</div><div class="petit">' + fmtNombre(totalFoi.minutes / 60 / hj, 2) + ' days of ' + fmtNombre(hj, 0) + ' h</div></div>'
     + '</div>';
 
   var travauxVus = RELEVE_TRAVAUX_TOUS ? travaux : travaux.slice(0, TRAVAUX_VISIBLES);
   html += '<div class="grid-2" style="align-items:start;">'
-    + '<div class="panneau"><div class="libelle" style="margin-bottom:8px;">Frais de déplacement autorisés</div>'
-    + '<div class="rl-frais"><input type="text" id="rlFrais" class="champ" value="' + (meta.frais ? fmtNombreSaisie(meta.frais, 2) : '') + '" placeholder="0,00" inputmode="decimal"> <span class="petit">€ sur le mois, sur accord préalable et justificatifs (article 6.6)</span></div></div>'
-    + '<div class="panneau"><label class="field-ligne" style="padding:0 0 6px;"><input type="checkbox" id="rlJoindre"' + (meta.joindreTravaux !== false ? ' checked' : '') + '> <span class="libelle" style="margin:0;">Joindre les travaux réalisés au relevé</span></label>'
+    + '<div class="panneau"><div class="libelle" style="margin-bottom:8px;">Authorised travel expenses</div>'
+    + '<div class="rl-frais"><input type="text" id="rlFrais" class="champ" value="' + (meta.frais ? fmtNombreSaisie(meta.frais, 2) : '') + '" placeholder="0.00" inputmode="decimal"> <span class="petit">€ for the month, with prior agreement and receipts (article 6.6)</span></div></div>'
+    + '<div class="panneau"><label class="field-ligne" style="padding:0 0 6px;"><input type="checkbox" id="rlJoindre"' + (meta.joindreTravaux !== false ? ' checked' : '') + '> <span class="libelle" style="margin:0;">Attach the completed tasks to the statement</span></label>'
     + (travaux.length ? '<ul class="rl-travaux">' + travauxVus.map(function (t) { return '<li>' + echapper(t.titre) + ' <span class="petit">(' + echapper(libelleAxe(t.axe)) + ', ' + libelleDate(t.faitLe, 'moyen') + ')</span></li>'; }).join('') + '</ul>'
-      + (travaux.length > TRAVAUX_VISIBLES ? '<button class="lien" data-action="travaux-tous">' + (RELEVE_TRAVAUX_TOUS ? 'Voir moins' : 'Voir plus (' + (travaux.length - TRAVAUX_VISIBLES) + ')') + '</button>' : '')
-      : '<p class="petit" style="margin:4px 0 0;">Aucune tâche passée en « Fait » ce mois. Les tâches terminées apparaissent ici automatiquement.</p>')
+      + (travaux.length > TRAVAUX_VISIBLES ? '<button class="lien" data-action="travaux-tous">' + (RELEVE_TRAVAUX_TOUS ? 'See less' : 'See more (' + (travaux.length - TRAVAUX_VISIBLES) + ')') + '</button>' : '')
+      : '<p class="petit" style="margin:4px 0 0;">No task marked "Done" this month. Completed tasks appear here automatically.</p>')
     + '</div></div>';
 
-  /* Une fois tout facturé, les boutons sans objet disparaissent. */
+  /* Once everything is invoiced, the buttons with no purpose disappear. */
   var peutFacturer = reste.total > 0 && (reste.lignes.some(function (l) { return l.facturable && l.montant > 0; }) || reste.frais > 0);
   var reportables = interventionsReportables(RELEVE_MOIS);
   if (reportables.length || peutFacturer) {
     html += '<div class="actions" style="margin-top:18px;">'
-      + (reportables.length ? '<button class="btn btn-ghost" data-action="reporter" title="Porter des interventions de ce relevé sur un autre mois de facturation">Reporter sur un autre mois</button>' : '')
-      + (peutFacturer ? '<button class="btn" data-action="facture">Établir la facture (' + fmtHeuresDec(reste.totalMinutesFacturables) + ', ' + fmtEuros(reste.total) + ')</button>' : '')
+      + (reportables.length ? '<button class="btn btn-ghost" data-action="reporter" title="Move some work items from this statement to another billing month">Move to another month</button>' : '')
+      + (peutFacturer ? '<button class="btn" data-action="facture">Create the invoice (' + fmtHeuresDec(reste.totalMinutesFacturables) + ', ' + fmtEuros(reste.total) + ')</button>' : '')
       + '</div>';
   }
   html += '</section>';
@@ -287,9 +288,9 @@ function rendreReleve() {
   document.getElementById('releveContenu').innerHTML = html;
 }
 
-/* Le relevé PDF d'un mois : dès qu'une facture existe, il reste celui qui
-   l'accompagnait, quoi qu'il soit arrivé depuis. Une facture très ancienne,
-   sans lignes figées, ne laisse que le journal. */
+/* A month's PDF statement: as soon as an invoice exists, it stays the one
+   that came with it, whatever happened since. A very old invoice, with no
+   frozen lines, leaves only the log. */
 function htmlReleveDuMois(mois) {
   var meta = moisMeta(mois);
   var releve = releveDuMois(entreesJournal(), mois, ETAT.reglages, meta.frais);
@@ -311,29 +312,30 @@ function etablirFacture() {
   var mois = RELEVE_MOIS;
   var meta = moisMeta(mois);
   var releve = releveAFacturer(mois);
-  if (releve.total <= 0 || !(releve.lignes.some(function (l) { return l.facturable && l.montant > 0; }) || releve.frais > 0)) { notifier('Rien à facturer pour ce mois.'); return; }
+  if (releve.total <= 0 || !(releve.lignes.some(function (l) { return l.facturable && l.montant > 0; }) || releve.frais > 0)) { notifier('Nothing to invoice for this month.'); return; }
   var travaux = meta.joindreTravaux !== false ? travauxDuMois(mois).map(function (t) { return { titre: t.titre, axe: t.axe, faitLe: t.faitLe }; }) : [];
   var annee = Number(aujourdhui().slice(0, 4));
   var numero = numeroFactureSuivant(factures(), annee);
   var nbNonFact = releve.lignes.filter(function (l) { return !l.facturable; }).length;
-  /* Les mois d'origine du travail reporté : la facture doit le dire. */
+  var nbFact = releve.lignes.filter(function (l) { return l.facturable; }).length;
+  /* The months the moved work comes from: the invoice must say so. */
   var venus = {};
   releve.lignes.forEach(function (l) { if (l.reporte) venus[l.moisTravail] = true; });
   var moisVenus = Object.keys(venus).sort();
   var p = ETAT.reglages.prestataire || {};
   var m = ouvrirModale({
-    titre: 'Établir la facture n° ' + numero,
-    sousTitre: capitaliser(libelleMois(mois)) + ' · ' + fmtHeuresDec(releve.totalMinutesFacturables) + ' facturées · ' + fmtEuros(releve.total),
-    corps: '<p class="petit" style="margin:0 0 12px;">La facture fige les ' + releve.lignes.filter(function (l) { return l.facturable; }).length + ' interventions facturables restantes du mois' + (nbNonFact ? ' (les ' + nbNonFact + ' interventions non facturables restent sur le relevé à 0 €)' : '') + (releve.remise > 0 ? ', avec ' + fmtEuros(releve.remise) + ' de remise sur forfait' : '') + '.'
-      + (moisVenus.length ? ' Elle comprend du travail réalisé en ' + echapper(enumererMois(moisVenus)) + ', reporté sur ce mois ; la facture ne mentionne pas les dates de réalisation, le relevé et le journal les gardent.' : '')
-      + ' Une facture émise ne se modifie plus ; seule la dernière peut être supprimée en cas d\'erreur avant envoi.</p>'
-      + '<div class="grid-2">' + champHtml('faDate', 'Date d\'émission', 'date', aujourdhui()) + champHtml('faNumero', 'Numéro', 'text', numero) + '</div>'
-      + '<p class="hint">Échéance de paiement à ' + fmtNombre(Number(ETAT.reglages.delaiPaiement) || 30, 0) + ' jours. ' + (p.iban ? 'Coordonnées bancaires imprimées dans le bloc Règlement (' + echapper(p.banque || 'banque non précisée') + ').' : 'Aucun IBAN renseigné dans les Réglages : la facture n\'en portera pas.')
-      + ' ' + (ETAT.reglages.dossierFactures ? 'La facture et le relevé seront enregistrés dans le dossier des factures, sous-dossier « ' + echapper(mois + ' ' + libelleMoisSeul(mois)) + ' ».' : 'Aucun dossier des factures dans les Réglages : Sablier demandera où enregistrer les deux PDF.') + '</p>',
-    pied: '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">Annuler</button><button class="btn" data-role="ok">Créer la facture et les PDF</button></div>',
+    titre: 'Create invoice no. ' + numero,
+    sousTitre: capitaliser(libelleMois(mois)) + ' · ' + fmtHeuresDec(releve.totalMinutesFacturables) + ' billed · ' + fmtEuros(releve.total),
+    corps: '<p class="petit" style="margin:0 0 12px;">The invoice freezes the ' + nbFact + ' remaining billable work ' + (nbFact === 1 ? 'item' : 'items') + ' of the month' + (nbNonFact ? ' (the ' + nbNonFact + ' non-billable work ' + (nbNonFact === 1 ? 'item stays' : 'items stay') + ' on the statement at €0)' : '') + (releve.remise > 0 ? ', with a flat-fee discount of ' + fmtEuros(releve.remise) : '') + '.'
+      + (moisVenus.length ? ' It includes work done in ' + echapper(enumererMois(moisVenus)) + ', moved to this month; the invoice does not show completion dates, the statement and the log keep them.' : '')
+      + ' An issued invoice can no longer be edited; only the latest one can be deleted if there is a mistake before it is sent.</p>'
+      + '<div class="grid-2">' + champHtml('faDate', 'Issue date', 'date', aujourdhui()) + champHtml('faNumero', 'Number', 'text', numero) + '</div>'
+      + '<p class="hint">Payment due in ' + fmtNombre(Number(ETAT.reglages.delaiPaiement) || 30, 0) + ' days. ' + (p.iban ? 'Bank details printed in the Payment terms block (' + echapper(p.banque || 'bank not specified') + ').' : 'No IBAN entered in Settings: the invoice will not show one.')
+      + ' ' + (ETAT.reglages.dossierFactures ? 'The invoice and the statement will be saved in the invoices folder, in the subfolder "' + echapper(mois + ' ' + libelleMoisSeul(mois)) + '".' : 'No invoices folder set in Settings: Sablier will ask where to save the two PDFs.') + '</p>',
+    pied: '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">Cancel</button><button class="btn" data-role="ok">Create the invoice and PDFs</button></div>',
   });
-  /* Le numéro proposé suit l'année de la date d'émission, tant qu'il n'a
-     pas été modifié à la main. */
+  /* The suggested number follows the year of the issue date, as long as it
+     has not been edited by hand. */
   var numeroPropose = numero;
   m.querySelector('#faDate').addEventListener('change', function () {
     var champN = m.querySelector('#faNumero');
@@ -347,24 +349,24 @@ function etablirFacture() {
     var dateEmission = m.querySelector('#faDate').value || aujourdhui();
     var attendu = numeroFactureSuivant(factures(), Number(dateEmission.slice(0, 4)));
     var num = m.querySelector('#faNumero').value.trim() || attendu;
-    if (num !== attendu) { m.querySelector('#faNumero').classList.add('invalide'); notifier('Les numéros se suivent sans trou : le prochain pour ' + dateEmission.slice(0, 4) + ' est le ' + attendu + '.', { type: 'erreur' }); return; }
+    if (num !== attendu) { m.querySelector('#faNumero').classList.add('invalide'); notifier('Invoice numbers run without gaps: the next one for ' + dateEmission.slice(0, 4) + ' is ' + attendu + '.', { type: 'erreur' }); return; }
     var precedente = trierPar(factures(), function (x) { return x.dateEmission + x.numero; }, true)[0];
-    if (precedente && dateEmission < precedente.dateEmission) { m.querySelector('#faDate').classList.add('invalide'); notifier('La date d\'émission ne peut pas précéder celle de la facture n° ' + precedente.numero + ' (' + dateFr(precedente.dateEmission) + ').', { type: 'erreur' }); return; }
+    if (precedente && dateEmission < precedente.dateEmission) { m.querySelector('#faDate').classList.add('invalide'); notifier('The issue date cannot be earlier than that of invoice no. ' + precedente.numero + ' (' + dateFr(precedente.dateEmission) + ').', { type: 'erreur' }); return; }
     var f = construireFacture(releve, ETAT.reglages, { numero: num, dateEmission: dateEmission, travaux: travaux, factures: factures() });
     factures().push(f);
     sauver('factures');
     fermerModale();
     rafraichir();
-    notifier('Facture n° ' + f.numero + ' créée (' + fmtEuros(f.total) + ').', { type: 'succes' });
+    notifier('Invoice no. ' + f.numero + ' created (' + fmtEuros(f.total) + ').', { type: 'succes' });
     exporterFacturePdf(f.id);
   });
 }
 
-/* ---------- Reporter sur un autre mois de facturation ----------
-   Le travail garde sa date dans le journal ; seule change la facture qui
-   le portera. Le report emporte toute la part qu'une facture n'a pas figée. */
+/* ---------- Move to another billing month ----------
+   The work keeps its date in the log; only the invoice that will carry it
+   changes. The move takes all the part that no invoice has frozen. */
 
-/* Les interventions du relevé affiché qu'une facture n'a pas encore figées. */
+/* The displayed statement's work items that no invoice has frozen yet. */
 function interventionsReportables(mois) {
   var deja = {};
   var liste = [];
@@ -382,32 +384,32 @@ function interventionsReportables(mois) {
 function ouvrirReport() {
   var mois = RELEVE_MOIS;
   var liste = interventionsReportables(mois);
-  if (!liste.length) { notifier('Rien à reporter sur ce relevé : tout est déjà figé sur une facture.'); return; }
-  /* Le mois du travail le plus ancien donne le plancher des choix possibles. */
+  if (!liste.length) { notifier('Nothing to move on this statement: everything is already frozen on an invoice.'); return; }
+  /* The oldest work month sets the floor of the possible choices. */
   var plancher = liste.reduce(function (p, x) { return !p || x.moisTravail < p ? x.moisTravail : p; }, '');
   var m = ouvrirModale({
-    titre: 'Reporter sur un autre mois',
-    sousTitre: 'Relevé ' + deLibelleMois(mois) + ' · ' + liste.length + (liste.length > 1 ? ' interventions déplaçables' : ' intervention déplaçable'),
-    corps: '<p class="petit" style="margin:0 0 12px;">Le travail garde sa date dans le journal. Il quitte le relevé ' + echapper(deLibelleMois(mois)) + ' et rejoint le relevé et la facture du mois choisi. Une intervention se déplace toujours entière.</p>'
-      + '<div class="field"><label for="rpMois">Mois de facturation</label>'
+    titre: 'Move to another month',
+    sousTitre: 'Statement for ' + libelleMois(mois) + ' · ' + liste.length + (liste.length > 1 ? ' movable work items' : ' movable work item'),
+    corps: '<p class="petit" style="margin:0 0 12px;">The work keeps its date in the log. It leaves the ' + echapper(libelleMois(mois)) + ' statement and joins the statement and invoice of the chosen month. A work item always moves as a whole.</p>'
+      + '<div class="field"><label for="rpMois">Billing month</label>'
       + selectMoisHtml('rpMois', mois, { liste: moisFacturationPossibles(plancher, mois), pleineLargeur: true })
       + '<p class="hint" id="rpAide"></p></div>'
-      + '<div class="field"><label>Interventions à reporter</label><div class="rp-liste">'
+      + '<div class="field"><label>Work items to move</label><div class="rp-liste">'
       + liste.map(function (x, i) {
         return '<label class="rp-item" data-travail="' + echapper(x.moisTravail) + '"><input type="checkbox" data-i="' + i + '" checked>'
           + '<span class="rp-nom">' + puceAxeHtml(x.axe) + '<span>' + echapper(x.intervention) + '</span></span>'
           + '<span class="rp-chiffres">' + dateFr(x.date) + ' · ' + fmtHeuresDec(x.totaux.minutesFacturables) + ' · ' + fmtEuros(x.totaux.montant) + '</span></label>';
       }).join('')
       + '</div><p class="hint" id="rpImpossibles"></p></div>',
-    pied: '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">Annuler</button><button class="btn" data-role="ok">Reporter</button></div>',
+    pied: '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">Cancel</button><button class="btn" data-role="ok">Move</button></div>',
   });
   var champ = m.querySelector('#rpMois');
   var ok = m.querySelector('[data-role=ok]');
   var cases = Array.prototype.slice.call(m.querySelectorAll('.rp-item input'));
   var maj = function () {
     var cible = champ.value;
-    /* Une intervention ne se facture jamais avant d'avoir été faite : celles
-       qui sont postérieures au mois choisi sortent de la sélection. */
+    /* A work item is never invoiced before it was done: those dated after
+       the chosen month drop out of the selection. */
     var horsDelai = 0;
     cases.forEach(function (c) {
       var item = c.closest('.rp-item');
@@ -418,12 +420,12 @@ function ouvrirReport() {
     });
     var choisies = cases.filter(function (c) { return c.checked && !c.disabled; }).length;
     m.querySelector('#rpImpossibles').textContent = horsDelai
-      ? (horsDelai > 1 ? horsDelai + ' interventions sont postérieures' : 'Une intervention est postérieure') + ' à ' + libelleMois(cible) + ' : elles ne peuvent pas y être facturées.'
+      ? (horsDelai > 1 ? horsDelai + ' work items are dated after ' + libelleMois(cible) + ': they cannot be invoiced in it.' : 'One work item is dated after ' + libelleMois(cible) + ': it cannot be invoiced in it.')
       : '';
     m.querySelector('#rpAide').textContent = cible === mois
-      ? 'Choisissez le mois qui portera ce travail. Le mois affiché le porte aujourd\'hui.'
+      ? 'Choose the month that will carry this work. The displayed month carries it today.'
       : aideMoisFacturation(plancher, cible);
-    ok.textContent = choisies > 1 ? 'Reporter ' + choisies + ' interventions' : 'Reporter';
+    ok.textContent = choisies > 1 ? 'Move ' + choisies + ' work items' : 'Move';
     ok.disabled = !choisies || cible === mois;
   };
   cases.forEach(function (c) { c.addEventListener('change', maj); });
@@ -439,23 +441,23 @@ function ouvrirReport() {
   });
 }
 
-/* Applique le mois choisi, puis le dit sans ambiguïté. */
+/* Applies the chosen month, then says so unambiguously. */
 function appliquerReportInterventions(choisies, cible, moisDepart) {
   var lignes = [];
   choisies.forEach(function (x) { lignes = lignes.concat(x.lignes); });
   var n = appliquerMoisFacturation(lignes, cible);
-  if (!n) { notifier('Rien n\'a changé : ces interventions sont déjà facturées en ' + libelleMois(cible) + '.'); return; }
+  if (!n) { notifier('Nothing changed: these work items are already invoiced in ' + libelleMois(cible) + '.'); return; }
   rafraichir();
   var t = totauxEntrees(lignes, ETAT.reglages, true);
-  var quoi = choisies.length > 1 ? choisies.length + ' interventions' : '« ' + choisies[0].intervention + ' »';
-  notifier(quoi + ' : ' + fmtHeuresDec(t.minutesFacturables) + ' et ' + fmtEuros(t.montant) + ' HT passent sur le relevé ' + deLibelleMois(cible) + '.', {
+  var quoi = choisies.length > 1 ? choisies.length + ' work items' : '"' + choisies[0].intervention + '"';
+  notifier(quoi + ': ' + fmtHeuresDec(t.minutesFacturables) + ' and ' + fmtEuros(t.montant) + ' excl. tax move to the ' + libelleMois(cible) + ' statement.', {
     type: 'succes', duree: 9000,
     action: {
-      libelle: 'Annuler le report',
+      libelle: 'Undo move',
       fn: function () {
         appliquerMoisFacturation(lignes, moisDepart);
         rafraichir();
-        notifier('Report annulé : le travail revient sur le relevé ' + deLibelleMois(moisDepart) + '.');
+        notifier('Move undone: the work is back on the ' + libelleMois(moisDepart) + ' statement.');
       },
     },
   });
