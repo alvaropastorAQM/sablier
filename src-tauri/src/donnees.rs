@@ -247,7 +247,6 @@ impl Donnees {
 mod tests {
     use super::*;
     use serde_json::json;
-    use std::os::unix::fs::PermissionsExt;
     use std::sync::Arc;
 
     struct Essai {
@@ -257,7 +256,6 @@ mod tests {
 
     impl Drop for Essai {
         fn drop(&mut self) {
-            let _ = fs::set_permissions(&self.d.dossier, fs::Permissions::from_mode(0o755));
             let _ = fs::remove_dir_all(&self.d.dossier);
         }
     }
@@ -274,12 +272,16 @@ mod tests {
         serde_json::from_str(&fs::read_to_string(d.chemin(nom)).unwrap()).unwrap()
     }
 
-    /// Le disque refuse les écritures (dossier en lecture seule) jusqu'à `retablir`.
+    /// Le disque refuse les écritures jusqu'à `retablir` : un dossier occupe la place de chaque `<nom>.json.tmp`, et
+    /// `File::create` échoue sur tous les systèmes (un dossier en lecture seule n'empêche pas d'écrire sous Windows).
+    fn temporaires(d: &Donnees) -> impl Iterator<Item = PathBuf> + '_ {
+        FICHIERS.iter().map(|nom| PathBuf::from(format!("{}.tmp", d.chemin(nom).display())))
+    }
     fn disque_plein(d: &Donnees) {
-        fs::set_permissions(&d.dossier, fs::Permissions::from_mode(0o555)).unwrap();
+        temporaires(d).for_each(|t| fs::create_dir(t).unwrap());
     }
     fn retablir(d: &Donnees) {
-        fs::set_permissions(&d.dossier, fs::Permissions::from_mode(0o755)).unwrap();
+        temporaires(d).for_each(|t| fs::remove_dir(t).unwrap());
     }
 
     fn copies(d: &Donnees) -> Vec<String> {
