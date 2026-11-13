@@ -1,17 +1,17 @@
-//! Sablier : application macOS (Tauri). Fenêtre, menus, données en fichiers, PDF, pièces jointes des tâches,
-//! notifications et pastille du Dock. L'interface (index.html, js/, css/) est celle de la version Electron ;
-//! elle parle au fond par window.sablier (js/pont.js), servi avec les données par sablier://localhost/demarrage.js.
+//! Sablier: a Tauri application for macOS and Windows. Window, menus, data in files, PDF, task attachments,
+//! notifications and the Dock badge. The interface (index.html, js/, css/) is the one from the Electron version;
+//! it talks to the backend through window.sablier (js/pont.js), served with the data by sablier://localhost/demarrage.js.
 //!
-//! Variables d'environnement utiles :
-//!   SABLIER_DONNEES=<dossier>  emplacement des données (tests) ; préférences dans <dossier>.preferences.json,
-//!                              pas d'instance unique : l'auto-test tourne même quand Sablier est ouvert
-//!   SABLIER_SMOKE=1            auto-test (autotest.rs) : fenêtre invisible, captures dans SABLIER_CAPTURES (ou /tmp), quitte ;
-//!                              refusé sans SABLIER_DONNEES jetable
-//!   SABLIER_THEME=light|dark   apparence forcée pendant l'auto-test
+//! Useful environment variables:
+//!   SABLIER_DONNEES=<folder>   data location (tests); preferences in <folder>.preferences.json,
+//!                              no single instance: the self-test runs even while Sablier is open
+//!   SABLIER_SMOKE=1            self-test (autotest.rs): invisible window, screenshots in SABLIER_CAPTURES (or /tmp), then quits;
+//!                              refused without a disposable SABLIER_DONNEES
+//!   SABLIER_THEME=light|dark   appearance forced during the self-test
 //!
-//! Sous Windows, mac.rs est remplacé par windows.rs (mêmes fonctions) ; données dans %APPDATA%\Sablier\Donnees.
+//! On Windows, mac.rs is replaced by windows.rs (same functions); data in %APPDATA%\Sablier\Donnees.
 
-// Version construite sous Windows : pas de console derrière la fenêtre.
+// Windows build: no console behind the window.
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
 mod autotest;
@@ -55,17 +55,17 @@ pub struct Config {
 static CONFIG: OnceLock<Config> = OnceLock::new();
 static DONNEES: OnceLock<Donnees> = OnceLock::new();
 static APP: OnceLock<AppHandle> = OnceLock::new();
-/// Les chemins que l'interface peut demander à ouvrir ou révéler : ceux que l'application a elle-même produits (PDF, exports).
+/// The paths the interface may ask to open or reveal: only those the application produced itself (PDFs, exports).
 static OUVRABLES: Mutex<Vec<PathBuf>> = Mutex::new(Vec::new());
-/// Niveau de zoom de la page, par demi-crans comme Electron (facteur 1,2 par cran).
+/// Page zoom level, in half steps like Electron (factor 1.2 per step).
 static ZOOM: Mutex<f64> = Mutex::new(0.0);
 
 pub fn conf() -> &'static Config {
-    CONFIG.get().expect("configuration lue au démarrage")
+    CONFIG.get().expect("configuration read at startup")
 }
 
 pub fn donnees() -> &'static Donnees {
-    DONNEES.get().expect("données ouvertes au démarrage")
+    DONNEES.get().expect("data opened at startup")
 }
 
 #[cfg(target_os = "macos")]
@@ -78,7 +78,7 @@ fn accueil() -> PathBuf {
     PathBuf::from(std::env::var_os("HOME").unwrap_or_default())
 }
 
-/// Le dossier de Sablier : Donnees/ et preferences.json.
+/// Sablier's folder: Donnees/ and preferences.json.
 #[cfg(target_os = "macos")]
 fn racine_app() -> PathBuf {
     accueil().join("Library/Application Support/Sablier")
@@ -99,7 +99,7 @@ fn documents() -> PathBuf {
     APP.get().and_then(|a| a.path().document_dir().ok()).unwrap_or_default()
 }
 
-/// `open` du Finder : un fichier, un dossier, une URL, ou `-R` pour le montrer dans le Finder.
+/// Finder's `open`: a file, a folder, a URL, or `-R` to show it in the Finder.
 #[cfg(target_os = "macos")]
 fn ouvrir(cible: &Path, reveler: bool) {
     let mut cmd = Command::new("/usr/bin/open");
@@ -112,7 +112,7 @@ fn ouvrir(cible: &Path, reveler: bool) {
     });
 }
 
-/// L'Explorateur : un fichier, un dossier, une URL (navigateur), ou le fichier montré dans son dossier.
+/// File Explorer: a file, a folder, a URL (browser), or the file shown in its folder.
 #[cfg(windows)]
 fn ouvrir(cible: &Path, reveler: bool) {
     let cible = cible.to_path_buf();
@@ -127,7 +127,7 @@ fn ouvrir(cible: &Path, reveler: bool) {
             tauri_plugin_opener::open_path(&cible, None::<&str>)
         };
         if let Err(e) = r {
-            eprintln!("Ouvrir {texte} : {e}");
+            eprintln!("Open {texte}: {e}");
         }
     });
 }
@@ -144,7 +144,7 @@ fn non_vide(s: Option<String>) -> Option<String> {
     s.filter(|s| !s.is_empty())
 }
 
-/* -------------------------------- Préférences (dossier des PDF) -------------------------------- */
+/* -------------------------------- Preferences (PDF folder) -------------------------------- */
 
 fn lire_preferences() -> Value {
     fs::read_to_string(&conf().preferences).ok().and_then(|t| serde_json::from_str::<Value>(&t).ok()).filter(Value::is_object).unwrap_or_else(|| json!({}))
@@ -160,11 +160,11 @@ fn retenir_dossier_pdf(dossier: &Path) {
     let _ = fs::write(&conf().preferences, texte_json(&p));
 }
 
-/* -------------------------------- Fenêtre et menus -------------------------------- */
+/* -------------------------------- Window and menus -------------------------------- */
 
 fn creer_fenetre(app: &AppHandle) {
     let smoke = conf().smoke;
-    // Sous Windows, barre de titre normale et fenêtre opaque : la page garde son fond.
+    // On Windows, a normal title bar and an opaque window: the page keeps its background.
     let url = if smoke || cfg!(windows) { "index.html" } else { "index.html?vibrance=1" };
     let b = WebviewWindowBuilder::new(app, "main", WebviewUrl::App(url.into()))
         .title("Sablier")
@@ -175,14 +175,14 @@ fn creer_fenetre(app: &AppHandle) {
     let mut b = b
         .visible(!smoke)
         .theme(conf().theme)
-        // Le glisser-déposer reste à la page : les fichiers déposés sur une fiche, le texte dans les notes.
+        // Drag and drop stays with the page: files dropped on a card, text in the notes.
         .disable_drag_drop_handler()
-        // Un fichier déposé hors d'une zone prévue, ou un lien, ne doit jamais remplacer l'interface par une navigation.
+        // A file dropped outside an intended zone, or a link, must never replace the interface with a navigation.
         .on_navigation(|url| url.scheme() == "tauri" || url.host_str() == Some("tauri.localhost"));
     if smoke {
         b = b.background_color(Color(0x0B, 0x0C, 0x0E, 255)).initialization_script(autotest::ESPION);
     } else {
-        // Verre du système derrière la barre latérale et autour de la scène.
+        // System glass behind the sidebar and around the stage.
         #[cfg(target_os = "macos")]
         {
             b = b.transparent(true).effects(EffectsBuilder::new().effect(Effect::Sidebar).state(EffectState::FollowsWindowActiveState).build());
@@ -194,7 +194,7 @@ fn creer_fenetre(app: &AppHandle) {
             let _ = w.run_on_main_thread(move || mac::fantome(&w2));
         }
         Ok(_) => {}
-        Err(e) => eprintln!("Fenêtre : {e}"),
+        Err(e) => eprintln!("Window: {e}"),
     }
 }
 
@@ -213,7 +213,7 @@ pub fn commande(app: &AppHandle, nom: &str) {
     let _ = app.emit_to("main", "commande", nom);
 }
 
-/// Les écritures différées de la page (notes) partent avant un rechargement ou la fin de l'app.
+/// The page's deferred writes (notes) are sent before a reload or the end of the app.
 fn vider_page(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
         let _ = mac::executer(&w, "window.dispatchEvent(new PageTransitionEvent('pagehide')); return true");
@@ -231,8 +231,8 @@ fn quitter(app: &AppHandle) {
             montrer_fenetre(&app);
             if let Some(w) = app.get_webview_window("main") {
                 let liste = refuses.iter().map(|n| format!("{n}.json")).collect::<Vec<_>>().join(", ");
-                let detail = format!("{liste} : le disque refuse l'écriture. En quittant maintenant, les dernières modifications seront perdues. Libérez de la place ou exportez une sauvegarde, puis réessayez.");
-                if mac::alerte(&w, "Des données ne sont pas enregistrées", &detail, &["Rester dans Sablier", "Quitter quand même"], 0) != Some(1) {
+                let detail = format!("{liste}: the disk refuses the write. If you quit now, the latest changes will be lost. Free up some space or export a backup, then try again.");
+                if mac::alerte(&w, "Some data is not saved", &detail, &["Stay in Sablier", "Quit anyway"], 0) != Some(1) {
                     return;
                 }
             }
@@ -257,71 +257,71 @@ fn menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     let item = |id: &str, texte: &str, raccourci: Option<&str>| MenuItem::with_id(app, id, texte, true, raccourci);
     let a_propos = AboutMetadata { name: Some("Sablier".into()), version: Some(app.package_info().version.to_string()), ..Default::default() };
     let sablier = Submenu::with_items(app, "Sablier", true, &[
-        &PredefinedMenuItem::about(app, Some("À propos de Sablier"), Some(a_propos))?,
+        &PredefinedMenuItem::about(app, Some("About Sablier"), Some(a_propos))?,
         &PredefinedMenuItem::separator(app)?,
-        &item("page:reglages", "Réglages…", Some("CmdOrCtrl+,"))?,
-        &item("dossier", "Ouvrir le dossier de données", None)?,
-        &item("exporter", "Exporter une sauvegarde…", None)?,
-        &item("importer", "Importer une sauvegarde…", None)?,
+        &item("page:reglages", "Settings…", Some("CmdOrCtrl+,"))?,
+        &item("dossier", "Open the data folder", None)?,
+        &item("exporter", "Export a backup…", None)?,
+        &item("importer", "Import a backup…", None)?,
         &PredefinedMenuItem::separator(app)?,
     ])?;
-    // Masquer et Tout afficher n'ont de sens qu'avec le Dock.
+    // Hide and Show all only make sense with the Dock.
     #[cfg(target_os = "macos")]
     sablier.append_items(&[
-        &PredefinedMenuItem::hide(app, Some("Masquer Sablier"))?,
-        &PredefinedMenuItem::hide_others(app, Some("Masquer les autres"))?,
-        &PredefinedMenuItem::show_all(app, Some("Tout afficher"))?,
+        &PredefinedMenuItem::hide(app, Some("Hide Sablier"))?,
+        &PredefinedMenuItem::hide_others(app, Some("Hide others"))?,
+        &PredefinedMenuItem::show_all(app, Some("Show all"))?,
         &PredefinedMenuItem::separator(app)?,
     ])?;
-    sablier.append(&item("quitter", "Quitter Sablier", Some("CmdOrCtrl+Q"))?)?;
-    let fichier = Submenu::with_items(app, "Fichier", true, &[
-        &item("nouvelle-saisie", "Nouvelle ligne de journal", Some("CmdOrCtrl+N"))?,
-        &item("chrono", "Démarrer ou arrêter le chrono", Some("CmdOrCtrl+Shift+T"))?,
-        &item("pause-chrono", "Mettre en pause ou reprendre le chrono", Some("CmdOrCtrl+Alt+T"))?,
+    sablier.append(&item("quitter", "Quit Sablier", Some("CmdOrCtrl+Q"))?)?;
+    let fichier = Submenu::with_items(app, "File", true, &[
+        &item("nouvelle-saisie", "New log entry", Some("CmdOrCtrl+N"))?,
+        &item("chrono", "Start or stop the timer", Some("CmdOrCtrl+Shift+T"))?,
+        &item("pause-chrono", "Pause or resume the timer", Some("CmdOrCtrl+Alt+T"))?,
         &PredefinedMenuItem::separator(app)?,
-        &item("nouvelle-tache", "Nouvelle tâche", Some("CmdOrCtrl+Shift+N"))?,
-        &item("nouvelle-page", "Nouvelle page de notes", Some("CmdOrCtrl+Shift+P"))?,
-        &item("rappels", "Rappels…", Some("CmdOrCtrl+Shift+R"))?,
+        &item("nouvelle-tache", "New task", Some("CmdOrCtrl+Shift+N"))?,
+        &item("nouvelle-page", "New notes page", Some("CmdOrCtrl+Shift+P"))?,
+        &item("rappels", "Reminders…", Some("CmdOrCtrl+Shift+R"))?,
         &PredefinedMenuItem::separator(app)?,
-        &PredefinedMenuItem::close_window(app, Some("Fermer"))?,
+        &PredefinedMenuItem::close_window(app, Some("Close"))?,
     ])?;
-    let edition = Submenu::with_items(app, "Édition", true, &[
-        // L'éditeur de notes tient son propre historique : la page décide.
-        &item("annuler", "Annuler", Some("CmdOrCtrl+Z"))?,
-        &item("retablir", "Rétablir", Some("CmdOrCtrl+Shift+Z"))?,
+    let edition = Submenu::with_items(app, "Edit", true, &[
+        // The notes editor keeps its own history: the page decides.
+        &item("annuler", "Undo", Some("CmdOrCtrl+Z"))?,
+        &item("retablir", "Redo", Some("CmdOrCtrl+Shift+Z"))?,
         &PredefinedMenuItem::separator(app)?,
-        &PredefinedMenuItem::cut(app, Some("Couper"))?,
-        &PredefinedMenuItem::copy(app, Some("Copier"))?,
-        &PredefinedMenuItem::paste(app, Some("Coller"))?,
-        &PredefinedMenuItem::select_all(app, Some("Tout sélectionner"))?,
+        &PredefinedMenuItem::cut(app, Some("Cut"))?,
+        &PredefinedMenuItem::copy(app, Some("Copy"))?,
+        &PredefinedMenuItem::paste(app, Some("Paste"))?,
+        &PredefinedMenuItem::select_all(app, Some("Select all"))?,
     ])?;
     let pages = [
-        ("Tableau de bord", "tableau"), ("Journal et relevé", "releve"), ("Factures et recettes", "factures"), ("Tâches", "taches"),
-        ("Notes", "notes"), ("Échéances", "echeances"), ("Réglages", "reglages"), ("Mode d'emploi", "guide"),
+        ("Dashboard", "tableau"), ("Log and statement", "releve"), ("Invoices and income", "factures"), ("Tasks", "taches"),
+        ("Notes", "notes"), ("Deadlines", "echeances"), ("Settings", "reglages"), ("User guide", "guide"),
     ];
-    let affichage = Submenu::with_items(app, "Affichage", true, &[])?;
+    let affichage = Submenu::with_items(app, "View", true, &[])?;
     for (i, (texte, page)) in pages.iter().enumerate() {
         affichage.append(&item(&format!("page:{page}"), texte, Some(&format!("CmdOrCtrl+{}", i + 1)))?)?;
     }
     affichage.append_items(&[
         &PredefinedMenuItem::separator(app)?,
-        &item("recharger", "Recharger", Some("CmdOrCtrl+R"))?,
-        &item("zoom-reel", "Taille réelle", Some("CmdOrCtrl+0"))?,
-        &item("zoom-plus", "Agrandir", Some("CmdOrCtrl+="))?,
-        &item("zoom-moins", "Réduire", Some("CmdOrCtrl+-"))?,
+        &item("recharger", "Reload", Some("CmdOrCtrl+R"))?,
+        &item("zoom-reel", "Actual size", Some("CmdOrCtrl+0"))?,
+        &item("zoom-plus", "Zoom in", Some("CmdOrCtrl+="))?,
+        &item("zoom-moins", "Zoom out", Some("CmdOrCtrl+-"))?,
         &PredefinedMenuItem::separator(app)?,
     ])?;
-    // Plein écran et Tout ramener au premier plan n'existent pas sous Windows.
+    // Full screen and Bring all to front do not exist on Windows.
     #[cfg(target_os = "macos")]
-    affichage.append(&PredefinedMenuItem::fullscreen(app, Some("Plein écran"))?)?;
-    affichage.append(&item("devtools", "Outils de développement", Some("CmdOrCtrl+Alt+I"))?)?;
-    let fenetre = Submenu::with_items(app, "Fenêtre", true, &[
-        &PredefinedMenuItem::minimize(app, Some("Réduire"))?,
+    affichage.append(&PredefinedMenuItem::fullscreen(app, Some("Full screen"))?)?;
+    affichage.append(&item("devtools", "Developer tools", Some("CmdOrCtrl+Alt+I"))?)?;
+    let fenetre = Submenu::with_items(app, "Window", true, &[
+        &PredefinedMenuItem::minimize(app, Some("Minimize"))?,
         &PredefinedMenuItem::maximize(app, Some("Zoom"))?,
     ])?;
     #[cfg(target_os = "macos")]
     {
-        fenetre.append_items(&[&PredefinedMenuItem::separator(app)?, &PredefinedMenuItem::bring_all_to_front(app, Some("Tout ramener au premier plan"))?])?;
+        fenetre.append_items(&[&PredefinedMenuItem::separator(app)?, &PredefinedMenuItem::bring_all_to_front(app, Some("Bring all to front"))?])?;
         let _ = fenetre.set_as_windows_menu_for_nsapp();
     }
     Menu::with_items(app, &[&sablier, &fichier, &edition, &affichage, &fenetre])
@@ -354,10 +354,10 @@ fn sur_menu(app: &AppHandle, id: &str) {
     }
 }
 
-/* -------------------------------- Protocoles : démarrage de la page, pièces jointes -------------------------------- */
+/* -------------------------------- Protocols: page startup, attachments -------------------------------- */
 
 fn reponse(statut: u16, type_contenu: &str, corps: Vec<u8>) -> Response<Vec<u8>> {
-    Response::builder().status(statut).header("Content-Type", type_contenu).header("Cache-Control", "no-store").body(corps).expect("réponse")
+    Response::builder().status(statut).header("Content-Type", type_contenu).header("Cache-Control", "no-store").body(corps).expect("response")
 }
 
 fn signaler_problemes(app: &AppHandle, illisibles: Vec<(String, PathBuf)>, absents: Vec<String>) {
@@ -367,18 +367,18 @@ fn signaler_problemes(app: &AppHandle, illisibles: Vec<(String, PathBuf)>, absen
         let Some(w) = app.get_webview_window("main") else { return };
         let liste = illisibles
             .iter()
-            .map(|(nom, copie)| format!("{nom}.json (conservé sous {})", copie.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()))
-            .chain(absents.iter().map(|nom| format!("{nom}.json (absent)")))
+            .map(|(nom, copie)| format!("{nom}.json (kept as {})",copie.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()))
+            .chain(absents.iter().map(|nom| format!("{nom}.json (missing)")))
             .collect::<Vec<_>>()
             .join("\n");
-        let detail = format!("{liste}\n\nUn fichier abîmé est mis de côté et l'application repart avec des valeurs de départ pour cette partie : sans factures.json, la numérotation repartirait à 01. Une copie datée de chaque jour se trouve dans le sous-dossier Sauvegardes : vous pouvez y reprendre la dernière version saine.");
-        if mac::alerte(&w, "Un fichier de données manque ou n'a pas pu être lu", &detail, &["Ouvrir le dossier de données", "Continuer"], 1) == Some(0) {
+        let detail = format!("{liste}\n\nA damaged file is set aside and the application starts with default values for that part: without factures.json, numbering would restart at 01. A dated copy of each day is in the Sauvegardes subfolder: you can recover the latest healthy version from there.");
+        if mac::alerte(&w, "A data file is missing or could not be read", &detail, &["Open the data folder", "Continue"], 1) == Some(0) {
             ouvrir(&conf().dossier, false);
         }
     });
 }
 
-/// Chargé par index.html avant les scripts de la page : les données (relues à chaque chargement) puis window.sablier.
+/// Loaded by index.html before the page scripts: the data (re-read on every load) then window.sablier.
 fn demarrage(app: &AppHandle, requete: Request<Vec<u8>>) -> Response<Vec<u8>> {
     if requete.uri().path() != "/demarrage.js" {
         return reponse(404, "text/plain", Vec::new());
@@ -397,8 +397,8 @@ fn dossier_pieces() -> PathBuf {
     conf().dossier.join("Pieces")
 }
 
-/// sablier-piece://pieces/<tâche>/<fichier> : les images jointes, limitées au dossier Pieces des données.
-/// Sous Windows, http://sablier-piece.localhost/pieces/<tâche>/<fichier> : l'hôte est le schéma.
+/// sablier-piece://pieces/<task>/<file>: the attached images, limited to the Pieces folder of the data.
+/// On Windows, http://sablier-piece.localhost/pieces/<task>/<file>: the host is the scheme.
 fn servir_piece(requete: Request<Vec<u8>>) -> Response<Vec<u8>> {
     let chemin = requete.uri().path();
     #[cfg(windows)]
@@ -416,7 +416,7 @@ fn servir_piece(requete: Request<Vec<u8>>) -> Response<Vec<u8>> {
     }
 }
 
-/* -------------------------------- Commandes (window.sablier) -------------------------------- */
+/* -------------------------------- Commands (window.sablier) -------------------------------- */
 
 #[tauri::command]
 fn donnees_ecrire(nom: String, objet: Value) {
@@ -437,8 +437,8 @@ fn donnees_sauvegarder() -> Value {
 
 #[tauri::command]
 async fn donnees_exporter(window: WebviewWindow, paquet: Value, nom_fichier: Option<String>) -> Value {
-    let defaut = documents().join(non_vide(nom_fichier).unwrap_or_else(|| "Sablier-sauvegarde.json".into()));
-    let Some(chemin) = mac::enregistrer_sous(&window, "Exporter une sauvegarde", &defaut, &["json"]) else {
+    let defaut = documents().join(non_vide(nom_fichier).unwrap_or_else(|| "Sablier-backup.json".into()));
+    let Some(chemin) = mac::enregistrer_sous(&window, "Export a backup", &defaut, &["json"]) else {
         return json!({ "ok": false, "annule": true });
     };
     match fs::write(&chemin, texte_json(&paquet)) {
@@ -453,7 +453,7 @@ async fn donnees_exporter(window: WebviewWindow, paquet: Value, nom_fichier: Opt
 #[tauri::command]
 async fn donnees_importer(window: WebviewWindow) -> Value {
     let choix = Choix { fichiers: true, dossiers: false, plusieurs: false };
-    let Some(chemin) = mac::ouvrir_panneau(&window, "Importer une sauvegarde", None, choix, &["json"]).into_iter().next() else {
+    let Some(chemin) = mac::ouvrir_panneau(&window, "Import a backup", None, choix, &["json"]).into_iter().next() else {
         return json!({ "ok": false, "annule": true });
     };
     match fs::read_to_string(&chemin).map_err(|e| e.to_string()).and_then(|t| serde_json::from_str::<Value>(&t).map_err(|e| e.to_string())) {
@@ -475,7 +475,7 @@ fn resultat_pdf(r: Result<(), String>, chemin: &Path) -> Value {
 #[tauri::command]
 async fn pdf_generer(window: WebviewWindow, html: String, nom_fichier: Option<String>) -> Value {
     let defaut = fichiers::chemin_libre(&dossier_pdf().join(non_vide(nom_fichier).unwrap_or_else(|| "document.pdf".into())));
-    let Some(chemin) = mac::enregistrer_sous(&window, "Enregistrer le PDF", &defaut, &["pdf"]) else {
+    let Some(chemin) = mac::enregistrer_sous(&window, "Save the PDF", &defaut, &["pdf"]) else {
         return json!({ "ok": false, "annule": true });
     };
     let r = mac::imprimer_pdf(window.app_handle(), &html, &chemin);
@@ -487,8 +487,8 @@ async fn pdf_generer(window: WebviewWindow, html: String, nom_fichier: Option<St
     resultat_pdf(r, &chemin)
 }
 
-/// Facture et relevé rangés d'office dans le dossier des factures (Réglages), sous-dossier du mois :
-/// le premier qui commence par « AAAA-MM », sinon créé.
+/// Invoice and statement filed automatically in the invoices folder (Settings), in the month's subfolder:
+/// the first one starting with "YYYY-MM", otherwise created.
 #[tauri::command]
 async fn pdf_classer(
     window: WebviewWindow,
@@ -502,7 +502,7 @@ async fn pdf_classer(
     let mois = mois.unwrap_or_default();
     let mois_valide = mois.len() == 7 && mois.bytes().enumerate().all(|(i, c)| if i == 4 { c == b'-' } else { c.is_ascii_digit() });
     if !base.is_absolute() || !base.exists() || !mois_valide {
-        return json!({ "ok": false, "message": "dossier des factures introuvable, à choisir dans les Réglages" });
+        return json!({ "ok": false, "message": "invoices folder not found, choose one in Settings" });
     }
     let r = (|| -> Result<PathBuf, String> {
         let mut existants: Vec<String> = fs::read_dir(&base)
@@ -528,7 +528,7 @@ async fn pdf_classer(
 async fn dossier_choisir(window: WebviewWindow, depart: Option<String>) -> Option<PathBuf> {
     let depart = depart.map(PathBuf::from).filter(|d| d.exists()).unwrap_or_else(documents);
     let choix = Choix { fichiers: false, dossiers: true, plusieurs: false };
-    mac::ouvrir_panneau(&window, "Dossier des factures", Some(&depart), choix, &[]).into_iter().next()
+    mac::ouvrir_panneau(&window, "Invoices folder", Some(&depart), choix, &[]).into_iter().next()
 }
 
 #[tauri::command]
@@ -556,7 +556,7 @@ fn fichier_ouvrir_url(url: String) {
 #[tauri::command]
 async fn fichier_exporter_texte(window: WebviewWindow, nom_fichier: Option<String>, contenu: String) -> Value {
     let defaut = documents().join(non_vide(nom_fichier).unwrap_or_else(|| "export.txt".into()));
-    let Some(chemin) = mac::enregistrer_sous(&window, "Enregistrer", &defaut, &[]) else {
+    let Some(chemin) = mac::enregistrer_sous(&window, "Save", &defaut, &[]) else {
         return json!({ "ok": false, "annule": true });
     };
     match fs::write(&chemin, contenu) {
@@ -568,13 +568,13 @@ async fn fichier_exporter_texte(window: WebviewWindow, nom_fichier: Option<Strin
     }
 }
 
-/// Pièces jointes : des chemins (auto-test), sinon un sélecteur de fichiers.
+/// Attachments: paths (self-test), otherwise a file picker.
 #[tauri::command]
 async fn pieces_ajouter(window: WebviewWindow, tache_id: String, chemins: Option<Vec<String>>) -> Value {
     let mut liste: Vec<PathBuf> = chemins.unwrap_or_default().into_iter().filter(|c| !c.is_empty()).map(PathBuf::from).collect();
     if liste.is_empty() {
         let choix = Choix { fichiers: true, dossiers: false, plusieurs: true };
-        liste = mac::ouvrir_panneau(&window, "Joindre des fichiers à la tâche", None, choix, &[]);
+        liste = mac::ouvrir_panneau(&window, "Attach files to the task", None, choix, &[]);
         if liste.is_empty() {
             return json!({ "ok": false, "annule": true });
         }
@@ -582,14 +582,14 @@ async fn pieces_ajouter(window: WebviewWindow, tache_id: String, chemins: Option
     fichiers::copier_pieces(&dossier_pieces(), &tache_id, &liste)
 }
 
-/// Un fichier déposé depuis le Finder : son contenu en corps brut, la tâche et le nom en en-têtes (encodés pour l'URL).
+/// A file dropped from the Finder: its content as the raw body, the task and the name in headers (URL-encoded).
 #[tauri::command]
 fn pieces_deposer(requete: tauri::ipc::Request<'_>) -> Value {
     let entete = |n: &str| requete.headers().get(n).and_then(|v| v.to_str().ok()).map(fichiers::decoder_url).unwrap_or_default();
     let (tache, nom) = (entete("x-tache"), entete("x-nom"));
     match requete.body() {
         InvokeBody::Raw(octets) if !tache.is_empty() => fichiers::deposer_piece(&dossier_pieces(), &tache, &nom, octets),
-        _ => json!({ "ok": false, "message": "fichier déposé illisible" }),
+        _ => json!({ "ok": false, "message": "dropped file unreadable" }),
     }
 }
 
@@ -636,13 +636,13 @@ fn rappels_badge(app: AppHandle, n: Value) {
     mac::pastille(&app, n.as_f64().filter(|n| *n > 0.0).map_or(0, |n| n as u64));
 }
 
-/* -------------------------------- Démarrage -------------------------------- */
+/* -------------------------------- Startup -------------------------------- */
 
 fn demarrer(app: &AppHandle) {
     let _ = APP.set(app.clone());
     donnees().sauvegarde_quotidienne(false);
-    // Les écritures différées partent à leur échéance ; l'app reste ouverte des semaines,
-    // la copie du jour ne dépend donc pas d'un lancement (vérifiée chaque heure).
+    // Deferred writes go out when they fall due; the app stays open for weeks,
+    // so the day's copy does not depend on a launch (checked every hour).
     thread::spawn(|| {
         for n in 1u64.. {
             thread::sleep(Duration::from_millis(100));
@@ -666,9 +666,9 @@ fn main() {
     let test = std::env::var_os("SABLIER_DONNEES").map(|d| std::path::absolute(PathBuf::from(&d)).unwrap_or_else(|_| PathBuf::from(d)));
     let smoke = std::env::var("SABLIER_SMOKE").is_ok_and(|v| v == "1");
     let racine = racine_app();
-    // L'auto-test écrit des données d'essai : jamais dans les vraies.
+    // The self-test writes test data: never into the real data.
     if smoke && test.as_ref().is_none_or(|d| d == &racine.join("Donnees")) {
-        eprintln!("Auto-test refusé : SABLIER_SMOKE exige SABLIER_DONNEES=<dossier jetable>.");
+        eprintln!("Self-test refused: SABLIER_SMOKE requires SABLIER_DONNEES=<disposable folder>.");
         std::process::exit(1);
     }
     let theme = match std::env::var("SABLIER_THEME").as_deref() {
@@ -683,7 +683,7 @@ fn main() {
     let _ = CONFIG.set(Config { dossier: dossier.clone(), preferences, smoke, theme });
     let _ = DONNEES.set(Donnees::new(dossier, |nom, message| {
         if let Some(app) = APP.get() {
-            commande(app, &format!("erreur-ecriture:{nom} : {message}"));
+            commande(app, &format!("erreur-ecriture:{nom}: {message}"));
         }
     }));
 
@@ -722,8 +722,8 @@ fn main() {
         .menu(menu)
         .on_menu_event(|app, e| sur_menu(app, e.id().as_ref()))
         .on_window_event(|w, e| {
-            // Fermer la fenêtre la cache : la page et ses écritures en cours restent, le Dock la ramène.
-            // Sans Dock (Windows), une fenêtre cachée laisserait un processus invisible : fermer quitte.
+            // Closing the window hides it: the page and its pending writes stay, the Dock brings it back.
+            // Without a Dock (Windows), a hidden window would leave an invisible process: closing quits.
             if let (WindowEvent::CloseRequested { api, .. }, "main") = (e, w.label()) {
                 if !conf().smoke {
                     api.prevent_close();
@@ -739,13 +739,13 @@ fn main() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("construction de l'app");
+        .expect("building the app");
 
     app.run(|_app, evenement| match evenement {
         #[cfg(target_os = "macos")]
         RunEvent::Reopen { .. } if !conf().smoke => montrer_fenetre(_app),
         RunEvent::ExitRequested { code: None, api, .. } if !conf().smoke => api.prevent_exit(),
-        // Les écritures en attente passent sur le disque avant la fin, quelle que soit la façon de quitter.
+        // Pending writes reach the disk before the end, however the app is quit.
         RunEvent::Exit => donnees().purger(),
         _ => {}
     });

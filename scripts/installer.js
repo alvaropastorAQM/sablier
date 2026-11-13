@@ -1,6 +1,6 @@
-/* Construit Sablier.app (Tauri), le vérifie par les tests et l'auto-test, puis le met dans /Applications (npm run app:build).
-   Une version qui ne passe pas ses vérifications n'est jamais installée ; Sablier ouvert est quitté normalement
-   (ses écritures en attente passent sur le disque), jamais tué. */
+/* Builds Sablier.app (Tauri), checks it with the tests and the self-test, then puts it in /Applications (npm run app:build).
+   A build that fails its checks is never installed; an open Sablier is quit normally
+   (its pending writes reach the disk), never killed. */
 'use strict';
 const { execFileSync, spawnSync } = require('child_process');
 const fs = require('fs');
@@ -18,8 +18,8 @@ lancer('node', ['tests/test-calculs.js']);
 lancer('cargo', ['test', '--release', '--quiet'], { cwd: tauri });
 lancer('cargo', ['build', '--release'], { cwd: tauri });
 
-/* Le bundle, à la main : l'exécutable, l'icône et l'Info.plist (même identifiant que la version Electron :
-   macOS garde l'autorisation des notifications et la place dans le Dock). */
+/* The bundle, by hand: the executable, the icon and the Info.plist (same identifier as the Electron version:
+   macOS keeps the notification permission and the place in the Dock). */
 const construite = path.join(racine, 'release', 'Sablier.app');
 const contenu = path.join(construite, 'Contents');
 fs.rmSync(construite, { recursive: true, force: true });
@@ -32,7 +32,7 @@ fs.writeFileSync(path.join(contenu, 'Info.plist'), `<?xml version="1.0" encoding
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleDevelopmentRegion</key><string>fr</string>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
   <key>CFBundleDisplayName</key><string>Sablier</string>
   <key>CFBundleExecutable</key><string>Sablier</string>
   <key>CFBundleIconFile</key><string>icon</string>
@@ -51,25 +51,25 @@ fs.writeFileSync(path.join(contenu, 'Info.plist'), `<?xml version="1.0" encoding
 lancer('codesign', ['--force', '--sign', '-', construite]);
 lancer('codesign', ['--verify', '--strict', construite]);
 
-/* L'auto-test complet sur le bundle, avec le jeu de démonstration dans un dossier jetable. */
+/* The full self-test on the bundle, with the demo data set in a disposable folder. */
 const essai = fs.mkdtempSync(path.join(os.tmpdir(), 'sablier-essai-'));
 lancer('node', ['outils/jeu-demo.js', path.join(essai, 'donnees')], { stdio: 'ignore' });
 const env = { ...process.env, SABLIER_SMOKE: '1', SABLIER_SMOKE_SCENARIO: '1', SABLIER_SMOKE_AUDIT: '1', SABLIER_SMOKE_PDF: '1', SABLIER_DONNEES: path.join(essai, 'donnees'), SABLIER_CAPTURES: essai };
 const test = spawnSync(path.join(contenu, 'MacOS/Sablier'), [], { env, timeout: 240000, encoding: 'utf8' });
-const verdict = (test.stdout || '').split('\n').filter(l => /^SABLIER_SMOKE_(OK|ECHEC|ERREUR)/.test(l)).pop() || 'aucun verdict';
+const verdict = (test.stdout || '').split('\n').filter(l => /^SABLIER_SMOKE_(OK|ECHEC|ERREUR)/.test(l)).pop() || 'no verdict';
 console.log(verdict.slice(0, 600));
-if (test.status !== 0) { console.error('Auto-test en échec : Sablier n\'est pas installé. Détail dans ' + essai); process.exit(1); }
+if (test.status !== 0) { console.error('Self-test failed: Sablier is not installed. Details in ' + essai); process.exit(1); }
 fs.rmSync(essai, { recursive: true, force: true });
 
-/* Sablier ouvert : on lui demande de quitter, comme ⌘Q. */
+/* Sablier open: ask it to quit, like Cmd+Q. */
 const ouvert = () => spawnSync('pgrep', ['-x', 'Sablier']).status === 0;
 if (ouvert()) {
   spawnSync('osascript', ['-e', 'tell application id "com.example.sablier" to quit']);
   for (let i = 0; i < 30 && ouvert(); i++) attendre(500);
-  if (ouvert()) { console.error('Sablier est encore ouvert (une question attend peut-être une réponse) : quittez-le puis relancez.'); process.exit(1); }
+  if (ouvert()) { console.error('Sablier is still open (a question may be waiting for an answer): quit it, then run this again.'); process.exit(1); }
 }
 
-/* La copie est prête à côté avant de toucher à l'app : l'échange tient en deux renommages. */
+/* The new copy is ready alongside before touching the app: the swap is two renames. */
 const nouvelle = cible + '.nouvelle', ancienne = cible + '.ancienne';
 fs.rmSync(nouvelle, { recursive: true, force: true });
 fs.rmSync(ancienne, { recursive: true, force: true });
@@ -78,10 +78,10 @@ lancer('codesign', ['--verify', '--strict', nouvelle]);
 if (fs.existsSync(cible)) fs.renameSync(cible, ancienne);
 fs.renameSync(nouvelle, cible);
 fs.rmSync(ancienne, { recursive: true, force: true });
-/* Le Dock et le Finder affichent « Sablier » et non « Sablier.app ». */
-try { execFileSync('/usr/bin/SetFile', ['-a', 'E', cible]); } catch (e) { console.log('SetFile indisponible : extension .app laissée visible.'); }
-console.log('Installé : ' + cible);
-/* Juste après l'échange, macOS peut ne pas avoir fini d'enregistrer la nouvelle app : on réessaie un peu plus tard. */
+/* The Dock and the Finder show "Sablier" and not "Sablier.app". */
+try { execFileSync('/usr/bin/SetFile', ['-a', 'E', cible]); } catch (e) { console.log('SetFile unavailable: .app extension left visible.'); }
+console.log('Installed: ' + cible);
+/* Right after the swap, macOS may not have finished registering the new app: try again a little later. */
 for (let i = 1; ; i++) {
   try { lancer('open', [cible]); break; } catch (e) {
     if (i === 5) throw e;

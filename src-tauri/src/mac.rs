@@ -1,7 +1,7 @@
-//! AppKit, WebKit et UserNotifications par objc2 : ce que Tauri ne fait pas (PDF, panneaux d'enregistrement et
-//! d'ouverture, alertes, notifications, pastille du Dock, corbeille), et les outils de l'auto-test.
-//! Ce qui touche une fenêtre ou une WKWebView tourne sur le thread principal ; les fonctions qui attendent une réponse
-//! (panneaux, alertes, PDF, exécution de JavaScript) sont à appeler hors du thread principal.
+//! AppKit, WebKit and UserNotifications through objc2: what Tauri does not do (PDF, save and open panels,
+//! alerts, notifications, Dock badge, trash), and the self-test tools.
+//! Anything touching a window or a WKWebView runs on the main thread; the functions that wait for an answer
+//! (panels, alerts, PDF, JavaScript execution) must be called off the main thread.
 
 use std::cell::RefCell;
 use std::ffi::c_void;
@@ -30,15 +30,15 @@ use objc2_web_kit::{WKContentWorld, WKWebView};
 use serde_json::Value;
 use tauri::{AppHandle, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
-/// Le NSWindow (TaoWindow) derrière une fenêtre Tauri. Thread principal uniquement.
+/// The NSWindow (TaoWindow) behind a Tauri window. Main thread only.
 fn ns_window(w: &WebviewWindow) -> Option<Retained<NSWindow>> {
     let ptr = w.ns_window().ok()?.cast::<NSWindow>();
-    // SAFETY: tao garde ce NSWindow vivant tant que la fenêtre existe ; on prend notre propre référence.
+    // SAFETY: tao keeps this NSWindow alive as long as the window exists; we take our own reference.
     unsafe { Retained::retain(ptr) }
 }
 
 fn webview(ptr: *mut c_void) -> &'static WKWebView {
-    // SAFETY: Tauri passe la WKWebView vivante de la fenêtre, sur le thread principal, le temps du rappel.
+    // SAFETY: Tauri passes the window's live WKWebView, on the main thread, for the duration of the callback.
     unsafe { &*ptr.cast::<WKWebView>() }
 }
 
@@ -46,9 +46,9 @@ fn chaines(l: &[String]) -> Retained<NSArray<NSString>> {
     NSArray::from_retained_slice(&l.iter().map(|s| NSString::from_str(s)).collect::<Vec<_>>())
 }
 
-/* -------------------------------- Feuilles : panneaux et alertes -------------------------------- */
+/* -------------------------------- Sheets: panels and alerts -------------------------------- */
 
-/// Ouvre une feuille sur la fenêtre et attend la réponse que `ouvrir` enverra. Hors du thread principal.
+/// Opens a sheet on the window and waits for the answer that `ouvrir` will send. Off the main thread.
 fn feuille<T: Send + 'static>(w: &WebviewWindow, ouvrir: impl FnOnce(MainThreadMarker, &NSWindow, mpsc::Sender<T>) + Send + 'static) -> Option<T> {
     let (tx, rx) = mpsc::channel();
     let w2 = w.clone();
@@ -60,7 +60,7 @@ fn feuille<T: Send + 'static>(w: &WebviewWindow, ouvrir: impl FnOnce(MainThreadM
     rx.recv().ok()
 }
 
-/// Panneau « Enregistrer » ; `defaut` donne le dossier et le nom proposés.
+/// "Save" panel; `defaut` gives the suggested folder and name.
 pub fn enregistrer_sous(w: &WebviewWindow, titre: &str, defaut: &Path, extensions: &[&str]) -> Option<PathBuf> {
     let titre = titre.to_string();
     let dossier = defaut.parent().map(Path::to_path_buf);
@@ -94,7 +94,7 @@ pub struct Choix {
     pub plusieurs: bool,
 }
 
-/// Panneau « Ouvrir » ; rend les chemins choisis (aucun si annulé).
+/// "Open" panel; returns the chosen paths (none if cancelled).
 pub fn ouvrir_panneau(w: &WebviewWindow, titre: &str, depart: Option<&Path>, choix: Choix, extensions: &[&str]) -> Vec<PathBuf> {
     let titre = titre.to_string();
     let depart = depart.map(Path::to_path_buf);
@@ -123,7 +123,7 @@ pub fn ouvrir_panneau(w: &WebviewWindow, titre: &str, depart: Option<&Path>, cho
     .unwrap_or_default()
 }
 
-/// Alerte rattachée à la fenêtre ; rend l'indice du bouton choisi. `defaut` répond à Entrée.
+/// Alert attached to the window; returns the index of the chosen button. `defaut` answers Enter.
 pub fn alerte(w: &WebviewWindow, message: &str, detail: &str, boutons: &[&str], defaut: usize) -> Option<usize> {
     let (message, detail) = (message.to_string(), detail.to_string());
     let boutons: Vec<String> = boutons.iter().map(|b| b.to_string()).collect();
@@ -147,7 +147,7 @@ pub fn alerte(w: &WebviewWindow, message: &str, detail: &str, boutons: &[&str], 
 /* -------------------------------- PDF -------------------------------- */
 
 define_class!(
-    // SAFETY: NSObject n'impose rien à ses sous-classes ; FinImpression n'implémente pas Drop.
+    // SAFETY: NSObject imposes nothing on its subclasses; FinImpression does not implement Drop.
     #[unsafe(super(NSObject))]
     #[thread_kind = MainThreadOnly]
     #[name = "SablierFinImpression"]
@@ -155,7 +155,7 @@ define_class!(
     struct FinImpression;
 
     impl FinImpression {
-        /// didRunSelector de NSPrintOperation : (opération, réussite, contexte).
+        /// didRunSelector of NSPrintOperation: (operation, success, context).
         #[unsafe(method(operation:fini:contexte:))]
         fn fini(&self, _operation: *mut AnyObject, succes: Bool, _contexte: *mut c_void) {
             if let Some(tx) = self.ivars().lock().unwrap_or_else(|e| e.into_inner()).take() {
@@ -173,11 +173,11 @@ impl FinImpression {
 }
 
 thread_local! {
-    /// NSPrintOperation ne retient pas son délégué : on le garde jusqu'à la fin de l'impression.
+    /// NSPrintOperation does not retain its delegate: we keep it until printing ends.
     static IMPRESSIONS: RefCell<Vec<Retained<FinImpression>>> = const { RefCell::new(Vec::new()) };
 }
 
-/// Imprime la page de la fenêtre en PDF A4 dans `chemin`, sans panneau. WebKit pagine selon le CSS (@page, sauts de page).
+/// Prints the window's page to an A4 PDF at `chemin`, without a panel. WebKit paginates according to the CSS (@page, page breaks).
 fn imprimer(w: &WebviewWindow, chemin: &Path) -> Result<(), String> {
     let (tx, rx) = mpsc::channel();
     let (w2, chemin) = (w.clone(), chemin.to_path_buf());
@@ -191,7 +191,7 @@ fn imprimer(w: &WebviewWindow, chemin: &Path) -> Result<(), String> {
             d.insert(NSPrintJobSavingURL, &*url);
             d.insert(NSPrintHeaderAndFooter, &*NSNumber::new_bool(false));
         }
-        // A4 en points ; les marges sont celles du @page des gabarits.
+        // A4 in points; the margins are those of the templates' @page.
         info.setPaperSize(NSSize::new(595.2756, 841.8898));
         info.setTopMargin(0.0);
         info.setBottomMargin(0.0);
@@ -202,7 +202,7 @@ fn imprimer(w: &WebviewWindow, chemin: &Path) -> Result<(), String> {
         let op: Retained<NSPrintOperation> = unsafe { wk.printOperationWithPrintInfo(&info) };
         op.setShowsPrintPanel(false);
         op.setShowsProgressPanel(false);
-        // Sans cadre, la vue d'impression de WebKit rend des pages blanches.
+        // Without a frame, WebKit's print view renders blank pages.
         if let Some(v) = op.view() {
             v.setFrame(wk.frame());
         }
@@ -217,20 +217,20 @@ fn imprimer(w: &WebviewWindow, chemin: &Path) -> Result<(), String> {
     .map_err(|e| e.to_string())?;
     match rx.recv_timeout(Duration::from_secs(60)) {
         Ok(true) => Ok(()),
-        Ok(false) => Err("l'impression a échoué".into()),
-        Err(_) => Err("l'impression ne répond pas".into()),
+        Ok(false) => Err("printing failed".into()),
+        Err(_) => Err("printing is not responding".into()),
     }
 }
 
-/// Les sauts de page de Chromium (lignes de tableau entières, en-tête répété), posés avant l'impression.
+/// Chromium-style page breaks (whole table rows, repeated header), applied before printing.
 const PAGINER: &str = include_str!("paginer.js");
 
-/// Rend le HTML (relevé, facture) dans une fenêtre cachée puis l'imprime en PDF : mêmes polices que l'interface
-/// (Charter, Avenir Next), aucune bibliothèque.
+/// Renders the HTML (statement, invoice) in a hidden window then prints it to PDF: same fonts as the interface
+/// (Charter, Avenir Next), no library.
 pub fn imprimer_pdf(app: &AppHandle, html: &str, chemin: &Path) -> Result<(), String> {
     static N: AtomicU64 = AtomicU64::new(0);
     let etiquette = format!("pdf-{}", N.fetch_add(1, Ordering::SeqCst));
-    let vierge = WebviewUrl::External("about:blank".parse().map_err(|_| "URL vierge")?);
+    let vierge = WebviewUrl::External("about:blank".parse().map_err(|_| "blank URL")?);
     let w = WebviewWindowBuilder::new(app, &etiquette, vierge).visible(false).inner_size(794.0, 1123.0).build().map_err(|e| e.to_string())?;
     let r = (|| {
         let html = html.to_string();
@@ -247,10 +247,10 @@ pub fn imprimer_pdf(app: &AppHandle, html: &str, chemin: &Path) -> Result<(), St
             thread::sleep(Duration::from_millis(25));
         }
         if !pret {
-            return Err("le document ne se charge pas".to_string());
+            return Err("the document does not load".to_string());
         }
-        // WebKit imprime 1 px CSS pour 0,8 pt, Chromium (version Electron) pour 0,75 pt. Le zoom rend la même mise en page
-        // que les PDF d'avant ; les marges du @page, hors du document, n'en dépendent pas.
+        // WebKit prints 1 CSS px as 0.8 pt, Chromium (Electron version) as 0.75 pt. The zoom gives the same layout
+        // as the earlier PDFs; the @page margins, outside the document, do not depend on it.
         executer(&w, "document.documentElement.style.zoom = String(0.75 / 0.8); if (document.fonts && document.fonts.ready) await document.fonts.ready; return true")?;
         executer(&w, PAGINER)?;
         imprimer(&w, chemin)
@@ -259,10 +259,10 @@ pub fn imprimer_pdf(app: &AppHandle, html: &str, chemin: &Path) -> Result<(), St
     r
 }
 
-/* -------------------------------- Notifications, Dock, corbeille -------------------------------- */
+/* -------------------------------- Notifications, Dock, trash -------------------------------- */
 
 define_class!(
-    // SAFETY: NSObject n'impose rien à ses sous-classes ; le délégué n'implémente pas Drop.
+    // SAFETY: NSObject imposes nothing on its subclasses; the delegate does not implement Drop.
     #[unsafe(super(NSObject))]
     #[name = "SablierNotifications"]
     #[ivars = AppHandle]
@@ -271,13 +271,13 @@ define_class!(
     unsafe impl NSObjectProtocol for DelegueNotifications {}
 
     unsafe impl UNUserNotificationCenterDelegate for DelegueNotifications {
-        /// Comme sous Electron, la notification s'affiche même quand Sablier est au premier plan.
+        /// As with Electron, the notification is shown even when Sablier is in the foreground.
         #[unsafe(method(userNotificationCenter:willPresentNotification:withCompletionHandler:))]
         fn presenter(&self, _centre: &UNUserNotificationCenter, _n: &UNNotification, fin: &DynBlock<dyn Fn(UNNotificationPresentationOptions)>) {
             fin.call((UNNotificationPresentationOptions::Banner | UNNotificationPresentationOptions::List | UNNotificationPresentationOptions::Sound,));
         }
 
-        /// Un clic sur la notification ouvre le centre des rappels.
+        /// Clicking the notification opens the reminders center.
         #[unsafe(method(userNotificationCenter:didReceiveNotificationResponse:withCompletionHandler:))]
         fn reponse(&self, _centre: &UNUserNotificationCenter, _r: &UNNotificationResponse, fin: &DynBlock<dyn Fn()>) {
             let app = self.ivars().clone();
@@ -291,7 +291,7 @@ define_class!(
     }
 );
 
-/// Hors d'un bundle .app (cargo run), UNUserNotificationCenter arrête le programme : pas de notifications.
+/// Outside a .app bundle (cargo run), UNUserNotificationCenter aborts the program: no notifications.
 pub fn preparer_notifications(app: &AppHandle) {
     if !crate::dans_bundle() {
         return;
@@ -300,7 +300,7 @@ pub fn preparer_notifications(app: &AppHandle) {
     let d = DelegueNotifications::alloc().set_ivars(app.clone());
     let d: Retained<DelegueNotifications> = unsafe { msg_send![super(d), init] };
     centre.setDelegate(Some(ProtocolObject::from_ref(&*d)));
-    // Le centre ne retient pas son délégué ; celui-ci sert toute la vie de l'app.
+    // The center does not retain its delegate; this one serves for the whole life of the app.
     std::mem::forget(d);
     let options = UNAuthorizationOptions::Alert | UNAuthorizationOptions::Sound | UNAuthorizationOptions::Badge;
     centre.requestAuthorizationWithOptions_completionHandler(options, &RcBlock::new(|_: Bool, _: *mut NSError| {}));
@@ -320,7 +320,7 @@ pub fn notifier(titre: &str, corps: &str) -> bool {
     true
 }
 
-/// Pastille du Dock : un nombre, ou rien.
+/// Dock badge: a number, or nothing.
 pub fn pastille(app: &AppHandle, n: u64) {
     let _ = app.run_on_main_thread(move || {
         let Some(mtm) = MainThreadMarker::new() else { return };
@@ -330,13 +330,13 @@ pub fn pastille(app: &AppHandle, n: u64) {
 }
 
 pub fn corbeille(chemin: &Path) -> Result<(), String> {
-    let url = NSURL::from_file_path(chemin).ok_or("chemin invalide")?;
+    let url = NSURL::from_file_path(chemin).ok_or("invalid path")?;
     NSFileManager::defaultManager().trashItemAtURL_resultingItemURL_error(&url, None).map_err(|e| e.localizedDescription().to_string())
 }
 
-/* -------------------------------- Auto-test -------------------------------- */
+/* -------------------------------- Self-test -------------------------------- */
 
-/// Exécute un corps de fonction async dans la page (`return` rend la valeur, passée par JSON). Hors du thread principal.
+/// Runs an async function body in the page (`return` gives the value, passed through JSON). Off the main thread.
 pub fn executer(w: &WebviewWindow, corps: &str) -> Result<Value, String> {
     let script = format!("var __r = await (async function () {{\n{corps}\n}})();\nreturn JSON.stringify(__r === undefined ? null : __r);");
     let (tx, rx) = mpsc::channel();
@@ -368,31 +368,31 @@ pub fn executer(w: &WebviewWindow, corps: &str) -> Result<Value, String> {
         };
     })
     .map_err(|e| e.to_string())?;
-    rx.recv_timeout(Duration::from_secs(120)).map_err(|_| "exécution sans réponse".to_string())?
+    rx.recv_timeout(Duration::from_secs(120)).map_err(|_| "execution not responding".to_string())?
 }
 
-/// PNG de la webview (WKWebView takeSnapshot). Hors du thread principal.
+/// PNG of the webview (WKWebView takeSnapshot). Off the main thread.
 pub fn capturer(w: &WebviewWindow, chemin: PathBuf) -> Result<(), String> {
     let (tx, rx) = mpsc::channel();
     w.with_webview(move |pw| {
         let bloc = RcBlock::new(move |image: *mut NSImage, _erreur: *mut NSError| {
             let r = (|| {
-                let image = unsafe { image.as_ref() }.ok_or("capture vide")?;
-                let tiff = image.TIFFRepresentation().ok_or("capture illisible")?;
-                let rep = NSBitmapImageRep::imageRepWithData(&tiff).ok_or("capture illisible")?;
-                let png = unsafe { rep.representationUsingType_properties(NSBitmapImageFileType::PNG, &NSDictionary::new()) }.ok_or("PNG impossible")?;
-                fs::write(&chemin, png.to_vec()).map_err(|_| "écriture de la capture impossible")
+                let image = unsafe { image.as_ref() }.ok_or("empty capture")?;
+                let tiff = image.TIFFRepresentation().ok_or("unreadable capture")?;
+                let rep = NSBitmapImageRep::imageRepWithData(&tiff).ok_or("unreadable capture")?;
+                let png = unsafe { rep.representationUsingType_properties(NSBitmapImageFileType::PNG, &NSDictionary::new()) }.ok_or("PNG failed")?;
+                fs::write(&chemin, png.to_vec()).map_err(|_| "could not write the capture")
             })();
             let _ = tx.send(r.map_err(String::from));
         });
         unsafe { webview(pw.inner()).takeSnapshotWithConfiguration_completionHandler(None, &bloc) };
     })
     .map_err(|e| e.to_string())?;
-    rx.recv_timeout(Duration::from_secs(10)).map_err(|_| "capture sans réponse".to_string())?
+    rx.recv_timeout(Duration::from_secs(10)).map_err(|_| "capture not responding".to_string())?
 }
 
-/// Auto-test : la fenêtre est montrée, sinon WebKit la croit cachée et gèle minuteries et requestAnimationFrame,
-/// mais transparente et traversée par la souris, pour ne rien gêner à l'écran.
+/// Self-test: the window is shown, otherwise WebKit thinks it is hidden and freezes timers and requestAnimationFrame,
+/// but it is transparent and click-through, so it gets in the way of nothing on screen.
 pub fn fantome(w: &WebviewWindow) {
     if let Some(f) = ns_window(w) {
         f.setAlphaValue(0.0);

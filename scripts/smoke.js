@@ -1,5 +1,5 @@
-/* Auto-test sur un dossier jetable, jamais sur les vraies données (npm run smoke) : la même commande sur Mac et
-   sous Windows, où PowerShell ne connaît pas la syntaxe VAR=valeur. */
+/* Self-test on a disposable folder, never on the real data (npm run smoke): the same command on Mac and
+   on Windows, where PowerShell does not know the VAR=value syntax. */
 'use strict';
 const { spawnSync } = require('child_process');
 const os = require('os');

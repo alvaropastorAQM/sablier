@@ -1,13 +1,13 @@
-/* Pagination des PDF (relevé, facture), jouée dans la fenêtre cachée juste avant l'impression (mac.rs).
+/* PDF pagination (statement, invoice), played in the hidden window just before printing (mac.rs).
 
-   Chromium (version Electron) ne coupait jamais une ligne de tableau entre deux pages et répétait l'en-tête du
-   tableau en haut de chaque page ; WebKit ne fait ni l'un ni l'autre. On mesure donc le document d'un seul tenant,
-   à la largeur imprimée, et on pose soi-même les sauts de page : une ligne de tableau, un élément de liste ou un
-   bloc qui ne tient plus passe à la page suivante, et un tableau coupé y reprend son en-tête. Ce qui ne doit pas
-   finir une page (break-after: avoid : titres de section, en-têtes de groupe) passe avec lui. Un saut déjà demandé
-   par le gabarit (break-before: page) ouvre une nouvelle page.
+   Chromium (Electron version) never split a table row between two pages and repeated the table header at the
+   top of every page; WebKit does neither. So the document is measured in one piece, at the printed width, and
+   the page breaks are placed by hand: a table row, a list item or a block that no longer fits moves to the next
+   page, and a split table resumes there with its header. What must not end a page (break-after: avoid: section
+   titles, group headers) moves along with it. A break already requested by the template (break-before: page)
+   opens a new page.
 
-   Corps d'une fonction : rend le nombre de sauts posés. */
+   Function body: returns the number of breaks placed. */
 var corps = document.body;
 var marges = { haut: '0mm', bas: '0mm', gauche: '0mm', droite: '0mm' };
 Array.prototype.forEach.call(document.styleSheets, function (feuille) {
@@ -16,13 +16,13 @@ Array.prototype.forEach.call(document.styleSheets, function (feuille) {
     marges = { haut: r.style.marginTop || '0mm', bas: r.style.marginBottom || '0mm', gauche: r.style.marginLeft || '0mm', droite: r.style.marginRight || '0mm' };
   });
 });
-/* La hauteur utile d'une page A4, dans les unités du document (zoom compris). */
+/* The usable height of an A4 page, in document units (zoom included). */
 var sonde = document.createElement('div');
 sonde.style.cssText = 'position:absolute;visibility:hidden;width:1px;top:0;left:0;height:calc(297mm - ' + marges.haut + ' - ' + marges.bas + ')';
 corps.appendChild(sonde);
 var H = sonde.getBoundingClientRect().height - 1;
 sonde.remove();
-/* Les lignes coupent comme à l'impression : même largeur que la page. */
+/* Lines wrap as in print: same width as the page. */
 var largeur = corps.style.width;
 corps.style.width = 'calc(210mm - ' + marges.gauche + ' - ' + marges.droite + ')';
 
@@ -32,7 +32,7 @@ function hautMarge(el) { return el.getBoundingClientRect().top - (parseFloat(sty
 function eviteApres(el) { var s = style(el); return s.breakAfter === 'avoid' || s.breakAfter === 'avoid-page' || s.pageBreakAfter === 'avoid'; }
 function sautAvant(el) { var v = style(el).breakBefore; return ['page', 'always', 'left', 'right', 'recto', 'verso'].indexOf(v) >= 0; }
 
-/* Le saut demandé par le gabarit sur l'élément ou sur le conteneur qu'il ouvre. */
+/* The break requested by the template on the element or on the container it opens. */
 function sautDemande(el) {
   var e = el;
   while (e && e !== corps) {
@@ -40,7 +40,7 @@ function sautDemande(el) {
     if (e.previousElementSibling) return null;
     if (e.tagName === 'TR') {
       var table = e.closest('table');
-      // Seule la première ligne du tableau en ouvre le début.
+      // Only the first row of the table opens its start.
       if (e.parentElement !== table.querySelector(':scope > tbody, :scope > tfoot')) return null;
       e = table;
     } else {
@@ -50,7 +50,7 @@ function sautDemande(el) {
   return null;
 }
 
-/* Les éléments qu'on ne coupe pas, dans l'ordre du document. */
+/* The elements that are never split, in document order. */
 var atomes = [];
 (function parcourir(parent) {
   Array.prototype.forEach.call(parent.children, function (el) {
@@ -63,7 +63,7 @@ var atomes = [];
   });
 })(corps);
 
-/* Saut avant l'élément ; une ligne de tableau ouvre un nouveau tableau, avec l'en-tête. Rend le haut de la nouvelle page. */
+/* Break before the element; a table row opens a new table, with the header. Returns the top of the new page. */
 function couperAvant(el) {
   if (el.tagName === 'TR') {
     var table = el.closest('table'), groupe = el.parentElement;

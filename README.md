@@ -1,6 +1,6 @@
 # Sablier
 
-macOS app for tracking a freelance engagement: the time spent for a client,
+macOS and Windows app for tracking a freelance engagement: the time spent for a client,
 the monthly activity statement and the invoice that goes with it, tasks,
 notes, the administrative calendar of the micro-business and the reminders
 that come with it.
@@ -30,8 +30,7 @@ npm run app:build    # tests, build of release/Sablier.app, full self-test, then
 ```
 
 You need Node.js, Rust and the Xcode tools; there are no npm dependencies.
-For now the app only runs on macOS; to port it to Windows, see
-[docs/MIGRATION-WINDOWS.md](docs/MIGRATION-WINDOWS.md).
+For Windows, see the next section.
 The app is launched from `/Applications/Sablier.app` (Dock, Spotlight).
 Every build is copied there automatically, only if it passes the
 self-test, after asking a running Sablier to quit: an old copy in
@@ -48,6 +47,41 @@ if everything holds (`SABLIER_SMOKE_OK`), 1 otherwise (`SABLIER_SMOKE_ECHEC`
 and the list). The scenarios are in `tests/scenario-smoke.js` and
 `tests/scenario-audit.js`. With the screen locked or asleep, WebKit does not
 render screenshots: they are reported, not counted as failures.
+
+## Windows
+
+The app also runs on Windows 10 and 11, ARM64 and x64, with WebView2
+(Chromium) instead of WebKit. Same interface, same data format, same PDFs.
+The Windows backend is `src-tauri/src/windows.rs`; how the port was done is
+in [docs/MIGRATION-WINDOWS.md](docs/MIGRATION-WINDOWS.md).
+
+Requirements:
+
+- Rust with the MSVC toolchain (`aarch64-pc-windows-msvc` or
+  `x86_64-pc-windows-msvc`)
+- Visual Studio Build Tools with the "Desktop development with C++" workload
+- the WebView2 runtime (already part of Windows 11)
+- Node.js
+
+```powershell
+npm test                      # calculation engine (node) and Rust backend (cargo test)
+npm run smoke                 # self-test on a disposable folder in %TEMP%\sablier-smoke
+npm run app:build:windows     # tests, release build, full self-test, then install
+```
+
+`npm run app:build:windows` (`scripts/installer-windows.js`) runs the tests,
+builds `src-tauri\target\release\sablier.exe`, runs the full self-test
+(scenario, audit and PDFs, on the demo data set in a disposable folder) on
+that executable, then installs it as
+`%LOCALAPPDATA%\Programs\Sablier\Sablier.exe` with a "Sablier" shortcut in
+the Start menu. A build that fails the self-test is never installed. A
+running Sablier is asked to close normally (its pending writes reach the
+disk) before the executable is replaced. `--verifier` stops after the
+self-test, without installing.
+
+The data lives in `%APPDATA%\Sablier\Donnees` (same files as on Mac;
+preferences in `%APPDATA%\Sablier\preferences.json`). Closing the window
+quits the app, since Windows has no Dock to bring it back from.
 
 File format, checked on a copy of the real data (read back then rewritten,
 they come out byte for byte identical):
@@ -215,10 +249,13 @@ js/pont.js            window.sablier, served by the backend with the data (sabli
 src-tauri/src/main.rs         window, menus, bridge commands, protocols (data, attachments)
 src-tauri/src/donnees.rs      JSON files, deferred and retried writes, daily backups
 src-tauri/src/fichiers.rs     safe names, attachments, free PDF names
-src-tauri/src/mac.rs          AppKit and WebKit: PDF, panels, alerts, notifications, Dock, trash
-src-tauri/src/paginer.js      PDF page breaks, run before printing
+src-tauri/src/mac.rs          macOS: AppKit and WebKit, PDF, panels, alerts, notifications, Dock, trash
+src-tauri/src/windows.rs      Windows: same functions through Tauri plugins and WebView2
+src-tauri/src/paginer.js      PDF page breaks on macOS, run before printing
 src-tauri/src/autotest.rs     self-test (SABLIER_SMOKE=1)
-scripts/installer.js  build, check and install of Sablier.app
+scripts/installer.js          build, check and install of Sablier.app
+scripts/installer-windows.js  build, check and install of Sablier.exe
+scripts/smoke.js              npm run smoke (self-test on a disposable folder)
 outils/               icon, demo data set, git import
 tests/                node tests of the engine, self-test scenarios
 ```

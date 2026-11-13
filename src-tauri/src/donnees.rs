@@ -1,17 +1,17 @@
-//! Les données en fichiers lisibles (reprise de app/donnees.js de la version Electron, même comportement).
+//! The data as readable files (ported from app/donnees.js of the Electron version, same behavior).
 //!
-//! Dossier : ~/Library/Application Support/Sablier/Donnees/
-//!   reglages.json    tarif, identités, axes, cotisations, préférences
-//!   journal.json     les lignes de temps
-//!   chantiers.json   les tâches (nom historique)
-//!   notes.json       pages et blocs
-//!   factures.json    factures émises et encaissements
-//!   echeances.json   calendrier administratif et rappels
-//!   chrono.json      le chrono en cours (survit à la fermeture)
-//!   Sauvegardes/     une copie datée par jour, les 30 dernières
+//! Folder: ~/Library/Application Support/Sablier/Donnees/ (on Windows: %APPDATA%\Sablier\Donnees)
+//!   reglages.json    rate, identities, areas, social contributions, preferences
+//!   journal.json     the time entries
+//!   chantiers.json   the tasks (historical name)
+//!   notes.json       pages and blocks
+//!   factures.json    issued invoices and payments
+//!   echeances.json   administrative calendar and reminders
+//!   chrono.json      the running timer (survives closing)
+//!   Sauvegardes/     one dated copy per day, the latest 30
 //!
-//! Écritures atomiques (fichier temporaire forcé sur le disque, puis renommage), différées de 300 ms pour grouper les
-//! rafales ; purgées à la fermeture. Une écriture refusée est retentée toutes les 30 secondes.
+//! Atomic writes (temporary file forced to disk, then rename), deferred by 300 ms to group bursts;
+//! flushed on close. A refused write is retried every 30 seconds.
 
 use std::collections::HashMap;
 use std::fs::{self, File};
@@ -26,7 +26,7 @@ pub const FICHIERS: [&str; 7] = ["reglages", "journal", "chantiers", "notes", "f
 const SAUVEGARDES_CONSERVEES: usize = 30;
 const DIFFERE: Duration = Duration::from_millis(300);
 const RAPPEL_ALERTE: Duration = Duration::from_secs(5 * 60);
-/// Créés dès le premier lancement : leur absence ensuite n'est jamais normale.
+/// Created at the first launch: their absence afterwards is never normal.
 const ESSENTIELS: [&str; 2] = ["journal", "factures"];
 
 pub struct Illisible {
@@ -36,11 +36,11 @@ pub struct Illisible {
 
 struct Etat {
     cache: HashMap<String, Value>,
-    /// Écritures en attente et leur échéance (les minuteries de la version Electron).
+    /// Pending writes and their due time (the timers of the Electron version).
     attente: HashMap<String, Instant>,
-    /// Fichiers mis de côté au dernier chargement.
+    /// Files set aside at the last load.
     illisibles: Vec<Illisible>,
-    /// Fichiers essentiels manquants au dernier chargement.
+    /// Essential files missing at the last load.
     absents: Vec<String>,
     derniere_alerte: Option<Instant>,
 }
@@ -49,7 +49,7 @@ pub struct Donnees {
     pub dossier: PathBuf,
     pub retente: Duration,
     etat: Mutex<Etat>,
-    /// Appelé (nom, message) quand une écriture échoue, au plus une fois toutes les 5 minutes.
+    /// Called with (name, message) when a write fails, at most once every 5 minutes.
     sur_erreur: Box<dyn Fn(&str, &str) + Send + Sync>,
 }
 
@@ -57,12 +57,12 @@ pub fn maintenant_ms() -> u128 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0)
 }
 
-/// JSON indenté sur deux espaces et saut de ligne final, comme `JSON.stringify(objet, null, 2) + '\n'`.
+/// JSON indented by two spaces with a final newline, like `JSON.stringify(objet, null, 2) + '\n'`.
 pub fn texte_json(v: &Value) -> String {
     serde_json::to_string_pretty(v).unwrap_or_default() + "\n"
 }
 
-/// fsync avant le renommage : une coupure de courant ne peut pas remplacer le bon fichier par un fichier vide ou tronqué.
+/// fsync before the rename: a power cut cannot replace the good file with an empty or truncated one.
 fn ecrire_atomique(cible: &Path, contenu: &[u8]) -> std::io::Result<()> {
     let tmp = PathBuf::from(format!("{}.tmp", cible.display()));
     let mut f = File::create(&tmp)?;
@@ -72,7 +72,7 @@ fn ecrire_atomique(cible: &Path, contenu: &[u8]) -> std::io::Result<()> {
     fs::rename(&tmp, cible)
 }
 
-/// Les dossiers de Sauvegardes commencent par une date AAAA-MM-JJ.
+/// The folders in Sauvegardes start with a YYYY-MM-DD date.
 fn date_en_tete(nom: &str) -> bool {
     let b = nom.as_bytes();
     b.len() >= 10 && b[..10].iter().enumerate().all(|(i, c)| if i == 4 || i == 7 { *c == b'-' } else { c.is_ascii_digit() })
@@ -97,15 +97,15 @@ impl Donnees {
         self.dossier.join(format!("{nom}.json"))
     }
 
-    /// Lit les sept fichiers. Les écritures en attente passent d'abord sur le disque, sinon une relecture
-    /// (rechargement de la fenêtre) rendrait l'ancien contenu puis l'écrirait par-dessus le nouveau.
+    /// Reads the seven files. Pending writes reach the disk first, otherwise a re-read
+    /// (window reload) would return the old content and then write it over the new one.
     pub fn lire_tout(&self) -> Map<String, Value> {
         self.purger();
         let mut e = self.etat();
         let mut out = Map::new();
         e.illisibles.clear();
         for nom in FICHIERS {
-            // Écriture encore refusée : la mémoire est plus récente que le disque.
+            // Write still refused: memory is more recent than the disk.
             if e.attente.contains_key(nom) {
                 if let Some(v) = e.cache.get(nom) {
                     out.insert(nom.into(), v.clone());
@@ -122,10 +122,10 @@ impl Donnees {
                 }
                 Err((ErrorKind::NotFound, _)) => {}
                 Err((_, message)) => {
-                    // Fichier abîmé : on le met de côté plutôt que de l'écraser.
+                    // Damaged file: set it aside rather than overwrite it.
                     let copie = PathBuf::from(format!("{}.illisible-{}", self.chemin(nom).display(), maintenant_ms()));
                     let _ = fs::rename(self.chemin(nom), &copie);
-                    eprintln!("[donnees] {nom}.json illisible : {message}");
+                    eprintln!("[donnees] {nom}.json unreadable: {message}");
                     e.illisibles.push(Illisible { nom: nom.into(), copie });
                 }
             }
@@ -139,7 +139,7 @@ impl Donnees {
         out
     }
 
-    /// Fichiers mis de côté et fichiers essentiels absents au dernier chargement.
+    /// Files set aside and essential files missing at the last load.
     pub fn problemes(&self) -> (Vec<(String, PathBuf)>, Vec<String>) {
         let e = self.etat();
         (e.illisibles.iter().map(|x| (x.nom.clone(), x.copie.clone())).collect(), e.absents.clone())
@@ -164,14 +164,14 @@ impl Donnees {
         let Some(v) = e.cache.get(nom) else { return };
         let contenu = texte_json(v);
         let cible = self.chemin(nom);
-        // Dossier disparu ou déplacé : on le recrée et on réessaie une fois.
+        // Folder gone or moved: recreate it and try once more.
         let essai = ecrire_atomique(&cible, contenu.as_bytes()).or_else(|_| {
             fs::create_dir_all(&self.dossier)?;
             ecrire_atomique(&cible, contenu.as_bytes())
         });
         if let Err(err) = essai {
-            eprintln!("[donnees] écriture {nom} : {err}");
-            // Les données restent en mémoire : on retente tant que le disque refuse.
+            eprintln!("[donnees] write {nom}: {err}");
+            // The data stays in memory: retry as long as the disk refuses.
             e.attente.insert(nom.into(), Instant::now() + self.retente);
             if e.derniere_alerte.is_none_or(|t| t.elapsed() >= RAPPEL_ALERTE) {
                 e.derniere_alerte = Some(Instant::now());
@@ -180,7 +180,7 @@ impl Donnees {
         }
     }
 
-    /// Écrit ce qui est arrivé à échéance ; appelé toutes les 100 ms par le fil d'écriture.
+    /// Writes what has fallen due; called every 100 ms by the writer thread.
     pub fn ecrire_echues(&self) {
         let mut e = self.etat();
         let maintenant = Instant::now();
@@ -198,14 +198,14 @@ impl Donnees {
         }
     }
 
-    /// Ce qui attend encore d'être écrit (après une purge : ce que le disque refuse).
+    /// What is still waiting to be written (after a flush: what the disk refuses).
     pub fn en_attente(&self) -> Vec<String> {
         let mut noms: Vec<String> = self.etat().attente.keys().cloned().collect();
         noms.sort();
         noms
     }
 
-    /// Une copie datée des fichiers, une fois par jour (ou forcée).
+    /// A dated copy of the files, once a day (or forced).
     pub fn sauvegarde_quotidienne(&self, forcer: bool) {
         self.sauvegarde_du_jour(&chrono::Local::now().format("%Y-%m-%d").to_string(), forcer);
     }
@@ -238,7 +238,7 @@ impl Donnees {
             Ok(())
         })();
         if let Err(e) = r {
-            eprintln!("[donnees] sauvegarde : {e}");
+            eprintln!("[donnees] backup: {e}");
         }
     }
 }
@@ -264,7 +264,7 @@ mod tests {
         let dossier = std::env::temp_dir().join(format!("sablier-test-donnees-{nom}-{}-{}", std::process::id(), maintenant_ms()));
         let alertes = Arc::new(Mutex::new(Vec::new()));
         let a = alertes.clone();
-        let d = Donnees::new(dossier, move |nom, message| a.lock().unwrap().push(format!("{nom} : {message}")));
+        let d = Donnees::new(dossier, move |nom, message| a.lock().unwrap().push(format!("{nom}: {message}")));
         Essai { d, alertes }
     }
 
@@ -272,8 +272,8 @@ mod tests {
         serde_json::from_str(&fs::read_to_string(d.chemin(nom)).unwrap()).unwrap()
     }
 
-    /// Le disque refuse les écritures jusqu'à `retablir` : un dossier occupe la place de chaque `<nom>.json.tmp`, et
-    /// `File::create` échoue sur tous les systèmes (un dossier en lecture seule n'empêche pas d'écrire sous Windows).
+    /// The disk refuses writes until `retablir`: a folder takes the place of each `<name>.json.tmp`, and
+    /// `File::create` fails on every system (a read-only folder does not prevent writing on Windows).
     fn temporaires(d: &Donnees) -> impl Iterator<Item = PathBuf> + '_ {
         FICHIERS.iter().map(|nom| PathBuf::from(format!("{}.tmp", d.chemin(nom).display())))
     }
@@ -293,29 +293,29 @@ mod tests {
     #[test]
     fn format_identique_a_json_stringify() {
         let v: Value = serde_json::from_str(r#"{"b":1,"a":[1.5,0.1,{"x":"é\"\n\u0001/"}],"c":{},"d":[],"e":null,"f":true,"g":-3,"h":1e-7,"i":85.71428571428571,"j":1234567.125}"#).unwrap();
-        // Sortie de JSON.stringify(v, null, 2) + '\n' sous Node.
+        // Output of JSON.stringify(v, null, 2) + '\n' under Node.
         let attendu = "{\n  \"b\": 1,\n  \"a\": [\n    1.5,\n    0.1,\n    {\n      \"x\": \"é\\\"\\n\\u0001/\"\n    }\n  ],\n  \"c\": {},\n  \"d\": [],\n  \"e\": null,\n  \"f\": true,\n  \"g\": -3,\n  \"h\": 1e-7,\n  \"i\": 85.71428571428571,\n  \"j\": 1234567.125\n}\n";
         assert_eq!(texte_json(&v), attendu);
     }
 
-    /// Relus puis réécrits, de vrais fichiers ressortent à l'octet près (ordre des clés, nombres, échappements) :
-    /// SABLIER_VERIF=<copie du dossier Donnees> cargo test -- --ignored
+    /// Read then rewritten, real files come out byte for byte (key order, numbers, escapes):
+    /// SABLIER_VERIF=<copy of the Donnees folder> cargo test -- --ignored
     #[test]
     #[ignore]
     fn aller_retour_octet_pres() {
-        let dossier = PathBuf::from(std::env::var("SABLIER_VERIF").expect("SABLIER_VERIF=<dossier>"));
+        let dossier = PathBuf::from(std::env::var("SABLIER_VERIF").expect("SABLIER_VERIF=<folder>"));
         let mut n = 0;
         for nom in FICHIERS {
             let Ok(texte) = fs::read_to_string(dossier.join(format!("{nom}.json"))) else { continue };
-            // Un fichier retouché hors de Sablier peut avoir perdu le saut de ligne final que Sablier écrit toujours.
+            // A file edited outside Sablier may have lost the final newline that Sablier always writes.
             let texte = texte.trim_end().to_string() + "\n";
             let v: Value = serde_json::from_str(&texte).unwrap();
             let refait = texte_json(&v);
             let ecart = texte.lines().zip(refait.lines()).find(|(a, b)| a != b);
-            assert!(refait == texte, "{nom}.json ne ressort pas identique : {ecart:?}");
+            assert!(refait == texte, "{nom}.json does not come out identical: {ecart:?}");
             n += 1;
         }
-        assert!(n > 0, "aucun fichier lu");
+        assert!(n > 0, "no file read");
     }
 
     #[test]
@@ -345,9 +345,9 @@ mod tests {
         t.d.ecrire("factures", json!({ "factures": ["2031-01", "2031-02"] }));
         t.d.ecrire_maintenant("factures");
         assert_eq!(relire(&t.d, "factures")["factures"], json!(["2031-01"]));
-        assert_eq!(t.d.en_attente(), ["factures"], "une nouvelle tentative est prévue");
+        assert_eq!(t.d.en_attente(), ["factures"], "a retry is scheduled");
         t.d.ecrire_echues();
-        assert_eq!(relire(&t.d, "factures")["factures"], json!(["2031-01"]), "pas avant 30 secondes, et toujours refusée");
+        assert_eq!(relire(&t.d, "factures")["factures"], json!(["2031-01"]), "not before 30 seconds, and still refused");
         t.d.ecrire("factures", json!({ "factures": ["2031-01", "2031-02", "2031-03"] }));
         retablir(&t.d);
         t.d.purger();
@@ -369,7 +369,7 @@ mod tests {
         t.d.ecrire("notes", json!({ "a": 1 }));
         t.d.ecrire_maintenant("notes");
         assert_eq!(t.alertes.lock().unwrap().len(), 1);
-        assert!(t.alertes.lock().unwrap()[0].starts_with("journal : "));
+        assert!(t.alertes.lock().unwrap()[0].starts_with("journal: "));
         {
             let mut e = t.d.etat();
             e.derniere_alerte = Instant::now().checked_sub(RAPPEL_ALERTE);
@@ -404,7 +404,7 @@ mod tests {
         disque_plein(&t.d);
         t.d.ecrire("chrono", json!({ "enCours": null }));
         t.d.purger();
-        assert_eq!(t.d.en_attente(), ["chrono"], "après la purge, seul ce qui est refusé reste en attente");
+        assert_eq!(t.d.en_attente(), ["chrono"], "after the flush, only what is refused stays pending");
         retablir(&t.d);
         t.d.purger();
         assert_eq!(relire(&t.d, "chrono"), json!({ "enCours": null }));
@@ -415,7 +415,7 @@ mod tests {
     fn copie_du_jour_une_par_jour_une_de_plus_si_forcee_30_gardees() {
         let t = nouvelles("copies");
         t.d.sauvegarde_quotidienne(false);
-        assert!(copies(&t.d).is_empty(), "rien à copier tant qu'aucun fichier n'existe");
+        assert!(copies(&t.d).is_empty(), "nothing to copy while no file exists");
         t.d.ecrire("journal", json!({ "n": 1 }));
         t.d.ecrire_maintenant("journal");
         t.d.sauvegarde_quotidienne(false);
@@ -423,7 +423,7 @@ mod tests {
         t.d.ecrire("journal", json!({ "n": 2 }));
         t.d.ecrire_maintenant("journal");
         t.d.sauvegarde_quotidienne(false);
-        assert_eq!(copies(&t.d).len(), 1, "l'appel de chaque heure ne refait pas la copie du jour");
+        assert_eq!(copies(&t.d).len(), 1, "the hourly call does not redo the day's copy");
         let copie = t.d.dossier.join("Sauvegardes").join(&copies(&t.d)[0]).join("journal.json");
         assert_eq!(serde_json::from_str::<Value>(&fs::read_to_string(copie).unwrap()).unwrap(), json!({ "n": 1 }));
         t.d.sauvegarde_quotidienne(true);
@@ -450,7 +450,7 @@ mod tests {
     fn factures_absent_signale_mais_pas_au_premier_lancement() {
         let t = nouvelles("absent");
         t.d.lire_tout();
-        assert!(t.d.problemes().1.is_empty(), "premier lancement : aucun fichier, aucune alerte");
+        assert!(t.d.problemes().1.is_empty(), "first launch: no file, no alert");
         for nom in FICHIERS {
             t.d.ecrire(nom, json!({ "schemaVersion": 1 }));
         }
@@ -468,11 +468,11 @@ mod tests {
         let t = nouvelles("abime");
         t.d.ecrire("journal", json!({ "n": 1 }));
         t.d.ecrire_maintenant("journal");
-        fs::write(t.d.chemin("factures"), "{ abîmé").unwrap();
+        fs::write(t.d.chemin("factures"), "{ damaged").unwrap();
         t.d.lire_tout();
         let (illisibles, absents) = t.d.problemes();
         assert_eq!(illisibles[0].0, "factures");
-        assert!(illisibles[0].1.exists(), "le fichier abîmé est gardé à côté");
+        assert!(illisibles[0].1.exists(), "the damaged file is kept alongside");
         assert!(absents.is_empty());
     }
 }

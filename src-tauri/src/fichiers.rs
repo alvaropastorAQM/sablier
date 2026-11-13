@@ -1,12 +1,12 @@
-//! Noms de fichiers sûrs, pièces jointes des tâches (Donnees/Pieces/<tâche>/<fichier>) et noms libres pour les PDF.
-//! Mêmes règles que la version Electron (app/main.js et app/pdf.js).
+//! Safe file names, task attachments (Donnees/Pieces/<task>/<file>) and free names for PDFs.
+//! Same rules as the Electron version (app/main.js and app/pdf.js).
 
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
 use serde_json::{json, Value};
 
-/// `path.extname` de Node : depuis le dernier point, sauf en tête du nom.
+/// Node's `path.extname`: from the last dot, except at the start of the name.
 fn extension(nom: &str) -> &str {
     match nom.rfind('.') {
         Some(i) if i > 0 => &nom[i..],
@@ -14,31 +14,31 @@ fn extension(nom: &str) -> &str {
     }
 }
 
-/// `path.basename(nom, ext)` de Node : retire l'extension si le nom se termine par elle.
+/// Node's `path.basename(nom, ext)`: removes the extension if the name ends with it.
 fn sans_extension<'a>(nom: &'a str, ext: &str) -> &'a str {
     if !ext.is_empty() && nom.len() > ext.len() && nom.ends_with(ext) { &nom[..nom.len() - ext.len()] } else { nom }
 }
 
-/// Points de tête remplacés par un seul « _ », comme `.replace(/^\.+/, '_')`.
+/// Leading dots replaced by a single "_", like `.replace(/^\.+/, '_')`.
 fn sans_points_de_tete(s: String) -> String {
     let reste = s.trim_start_matches('.');
     if reste.len() == s.len() { s } else { format!("_{reste}") }
 }
 
-/// Un segment de chemin (identifiant de tâche) : lettres ASCII, chiffres, « _ . - », au plus 80 caractères.
+/// A path segment (task id): ASCII letters, digits, "_ . -", at most 80 characters.
 pub fn nettoyer_segment(s: &str) -> String {
     let s: String = s.chars().map(|c| if c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '-') { c } else { '_' }).collect();
     let s: String = sans_points_de_tete(s).chars().take(80).collect();
     if s.is_empty() { "piece".into() } else { s }
 }
 
-/// Noms que Windows réserve à des périphériques, avec ou sans extension.
+/// Names that Windows reserves for devices, with or without an extension.
 const RESERVES_WINDOWS: [&str; 22] = [
     "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5",
     "LPT6", "LPT7", "LPT8", "LPT9",
 ];
 
-/// Ce que Windows refuse en plus : `< > " | ? *`, un point ou une espace en fin de nom, les noms réservés (préfixés de « _ »).
+/// What Windows additionally refuses: `< > " | ? *`, a dot or space at the end of the name, reserved names (prefixed with "_").
 fn pour_windows(nom: String) -> String {
     let nom: String = nom.chars().map(|c| if matches!(c, '<' | '>' | '"' | '|' | '?' | '*') { '_' } else { c }).collect();
     let nom = nom.trim_end_matches(['.', ' ']).to_string();
@@ -46,26 +46,26 @@ fn pour_windows(nom: String) -> String {
     if RESERVES_WINDOWS.iter().any(|r| r.eq_ignore_ascii_case(racine)) { format!("_{nom}") } else { nom }
 }
 
-/// Nom de fichier sûr : pas de séparateur, l'extension conservée, au plus 200 octets (limite du système de fichiers à 255).
-/// Sous Windows, aussi sans les caractères et les noms qu'il refuse.
+/// Safe file name: no separator, extension kept, at most 200 bytes (the file system limit is 255).
+/// On Windows, also without the characters and names it refuses.
 pub fn nettoyer_nom_fichier(s: &str) -> String {
-    let s = if s.is_empty() { "fichier" } else { s };
+    let s = if s.is_empty() { "file" } else { s };
     let nom: String = s.chars().map(|c| if matches!(c, '/' | '\\' | ':') || (c as u32) < 0x20 { '_' } else { c }).collect();
     let nom = if cfg!(windows) { pour_windows(nom) } else { nom };
     let nom = sans_points_de_tete(nom);
     let ext: String = extension(&nom).chars().take(16).collect();
     let mut base = sans_extension(&nom, &ext).to_string();
     if base.is_empty() {
-        base = "fichier".into();
+        base = "file".into();
     }
     while base.len() + ext.len() > 200 && base.chars().count() > 1 {
         base.pop();
     }
     let r = base + &ext;
-    if r.is_empty() { "fichier".into() } else { r }
+    if r.is_empty() { "file".into() } else { r }
 }
 
-/// Un PDF déjà enregistré peut être signé ou envoyé : le suivant prend le premier nom libre (« Facture-2026-01 (2).pdf »).
+/// A PDF already saved may have been signed or sent: the next one takes the first free name ("Invoice-2026-01 (2).pdf").
 pub fn chemin_libre(cible: &Path) -> PathBuf {
     let texte = cible.to_string_lossy();
     let nom = cible.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
@@ -80,7 +80,7 @@ pub fn chemin_libre(cible: &Path) -> PathBuf {
     chemin
 }
 
-/// `path.resolve(racine, relatif)`, refusé s'il sort de racine.
+/// `path.resolve(racine, relatif)`, refused if it leaves racine.
 pub fn chemin_dans(racine: &Path, relatif: &str) -> Option<PathBuf> {
     let mut c = racine.to_path_buf();
     for morceau in Path::new(relatif).components() {
@@ -96,7 +96,7 @@ pub fn chemin_dans(racine: &Path, relatif: &str) -> Option<PathBuf> {
     (c == racine || c.starts_with(racine)).then_some(c)
 }
 
-/// Formats que WebKit sait afficher en vignette.
+/// Formats the webview can show as a thumbnail.
 pub fn est_image(nom: &str) -> bool {
     let e = extension(nom).to_ascii_lowercase();
     matches!(e.as_str(), ".png" | ".jpg" | ".jpeg" | ".gif" | ".webp" | ".bmp" | ".svg" | ".avif")
@@ -117,7 +117,7 @@ pub fn type_mime(nom: &str) -> &'static str {
     }
 }
 
-/// `decodeURIComponent` d'un chemin d'URL (%XX en octets UTF-8).
+/// `decodeURIComponent` of a URL path (%XX as UTF-8 bytes).
 pub fn decoder_url(s: &str) -> String {
     let b = s.as_bytes();
     let mut out = Vec::with_capacity(b.len());
@@ -137,7 +137,7 @@ pub fn decoder_url(s: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
-/// Un nom libre dans le dossier de la tâche : « photo.png », puis « photo-2.png »…
+/// A free name in the task's folder: "photo.png", then "photo-2.png"...
 fn cible_libre(dossier: &Path, nom: &str) -> PathBuf {
     let ext = extension(nom);
     let base = sans_extension(nom, ext);
@@ -159,7 +159,7 @@ fn nom_de(p: &Path) -> String {
     p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| p.display().to_string())
 }
 
-/// Copie des fichiers (chemins) dans Pieces/<tâche>/ ; rend { ok, pieces, erreurs } comme la version Electron.
+/// Copies files (paths) into Pieces/<task>/; returns { ok, pieces, erreurs } like the Electron version.
 pub fn copier_pieces(racine: &Path, tache: &str, chemins: &[PathBuf]) -> Value {
     let segment = nettoyer_segment(tache);
     let dossier = racine.join(&segment);
@@ -171,7 +171,7 @@ pub fn copier_pieces(racine: &Path, tache: &str, chemins: &[PathBuf]) -> Value {
         let r = (|| -> Result<Value, String> {
             let st = fs::metadata(src).map_err(|e| e.to_string())?;
             if !st.is_file() {
-                return Err("pas un fichier".into());
+                return Err("not a file".into());
             }
             let cible = cible_libre(&dossier, &nettoyer_nom_fichier(&nom_de(src)));
             fs::copy(src, &cible).map_err(|e| e.to_string())?;
@@ -179,13 +179,13 @@ pub fn copier_pieces(racine: &Path, tache: &str, chemins: &[PathBuf]) -> Value {
         })();
         match r {
             Ok(p) => pieces.push(p),
-            Err(e) => erreurs.push(format!("{} : {e}", nom_de(src))),
+            Err(e) => erreurs.push(format!("{}: {e}", nom_de(src))),
         }
     }
     json!({ "ok": true, "pieces": pieces, "erreurs": erreurs })
 }
 
-/// Un fichier déposé depuis le Finder : WebKit en donne le contenu, pas le chemin.
+/// A file dropped from the Finder: the webview gives its content, not its path.
 pub fn deposer_piece(racine: &Path, tache: &str, nom: &str, octets: &[u8]) -> Value {
     let segment = nettoyer_segment(tache);
     let dossier = racine.join(&segment);
@@ -197,7 +197,7 @@ pub fn deposer_piece(racine: &Path, tache: &str, nom: &str, octets: &[u8]) -> Va
     })();
     match r {
         Ok(p) => json!({ "ok": true, "pieces": [p], "erreurs": [] }),
-        Err(e) => json!({ "ok": true, "pieces": [], "erreurs": [format!("{nom} : {e}")] }),
+        Err(e) => json!({ "ok": true, "pieces": [], "erreurs": [format!("{nom}: {e}")] }),
     }
 }
 
@@ -214,13 +214,13 @@ mod tests {
     #[test]
     fn un_pdf_existant_n_est_jamais_ecrase() {
         let d = dossier("pdf");
-        let cible = d.join("Facture-2031-01.pdf");
+        let cible = d.join("Invoice-2031-01.pdf");
         assert_eq!(chemin_libre(&cible), cible);
-        fs::write(&cible, "signée").unwrap();
-        assert_eq!(chemin_libre(&cible), d.join("Facture-2031-01 (2).pdf"));
-        fs::write(d.join("Facture-2031-01 (2).pdf"), "copie").unwrap();
-        assert_eq!(chemin_libre(&cible), d.join("Facture-2031-01 (3).pdf"));
-        assert_eq!(fs::read_to_string(&cible).unwrap(), "signée");
+        fs::write(&cible, "signed").unwrap();
+        assert_eq!(chemin_libre(&cible), d.join("Invoice-2031-01 (2).pdf"));
+        fs::write(d.join("Invoice-2031-01 (2).pdf"), "copy").unwrap();
+        assert_eq!(chemin_libre(&cible), d.join("Invoice-2031-01 (3).pdf"));
+        assert_eq!(fs::read_to_string(&cible).unwrap(), "signed");
         fs::remove_dir_all(d).unwrap();
     }
 
@@ -232,8 +232,8 @@ mod tests {
         assert_eq!(nettoyer_segment(&"a".repeat(100)).len(), 80);
         assert_eq!(nettoyer_nom_fichier("rapport/final:v2.pdf"), "rapport_final_v2.pdf");
         assert_eq!(nettoyer_nom_fichier("..cache"), "_cache");
-        assert_eq!(nettoyer_nom_fichier(""), "fichier");
-        assert_eq!(nettoyer_nom_fichier("2026-10 octobre"), "2026-10 octobre");
+        assert_eq!(nettoyer_nom_fichier(""), "file");
+        assert_eq!(nettoyer_nom_fichier("2026-10 October"), "2026-10 October");
         let long = nettoyer_nom_fichier(&format!("{}.pdf", "é".repeat(150)));
         assert!(long.len() <= 200 && long.ends_with(".pdf"));
     }
@@ -248,7 +248,7 @@ mod tests {
         assert_eq!(pour_windows("LPT1 .txt".into()), "_LPT1 .txt");
         assert_eq!(pour_windows("CONSOLE.txt".into()), "CONSOLE.txt");
         assert_eq!(pour_windows("COM10".into()), "COM10");
-        assert_eq!(pour_windows("2026-10 octobre".into()), "2026-10 octobre");
+        assert_eq!(pour_windows("2026-10 October".into()), "2026-10 October");
     }
 
     #[cfg(windows)]
@@ -256,7 +256,7 @@ mod tests {
     fn noms_nettoyes_pour_windows() {
         assert_eq!(nettoyer_nom_fichier("Facture?.pdf"), "Facture_.pdf");
         assert_eq!(nettoyer_nom_fichier("aux.pdf"), "_aux.pdf");
-        assert_eq!(nettoyer_nom_fichier("..."), "fichier");
+        assert_eq!(nettoyer_nom_fichier("..."), "file");
         assert_eq!(nettoyer_nom_fichier("note ."), "note");
     }
 
@@ -280,7 +280,7 @@ mod tests {
     fn pieces_copiees_sans_ecraser() {
         let d = dossier("pieces");
         let src = d.join("note.txt");
-        fs::write(&src, "pièce").unwrap();
+        fs::write(&src, "attach").unwrap();
         let racine = d.join("Pieces");
         let r1 = copier_pieces(&racine, "tache 1", &[src.clone(), d.join("absent.txt"), d.clone()]);
         assert_eq!(r1["pieces"][0], json!({ "nom": "note.txt", "fichier": "tache_1/note.txt", "taille": 6, "image": false }));

@@ -6,16 +6,20 @@ with no framework (`index.html`, `js/`, `css/`), backend in Rust with Tauri 2
 (`src-tauri/`). The README describes each page, the calculation rules and
 the code layout.
 
-**On Windows: read `docs/MIGRATION-WINDOWS.md` before anything else.** The
-app is currently macOS only (`src-tauri/src/mac.rs` calls AppKit and
-WebKit); that guide says what to port, in which order, and how to check it.
+The app runs on macOS and on Windows (ARM64 and x64, with WebView2). The
+platform code is `src-tauri/src/mac.rs` (AppKit and WebKit) or
+`src-tauri/src/windows.rs` (Tauri plugins and WebView2); `main.rs` picks one
+at compile time and both expose the same functions. `docs/MIGRATION-WINDOWS.md`
+tells how the Windows port was done and how it is checked.
 
 ## Commands
 
 ```bash
-npm test         # calculation engine (node) then Rust backend (cargo test)
-npm start        # runs the app (on the user's real data)
-npm run smoke    # self-test on a disposable folder (POSIX syntax)
+npm test                  # calculation engine (node) then Rust backend (cargo test)
+npm start                 # runs the app (on the user's real data)
+npm run smoke             # self-test on a disposable folder, same command on Mac and Windows
+npm run app:build         # macOS: tests, build, full self-test, install into /Applications
+npm run app:build:windows # Windows: same steps, install into %LOCALAPPDATA%\Programs\Sablier
 ```
 
 The full self-test and its variables (`SABLIER_SMOKE_*`) are described in
