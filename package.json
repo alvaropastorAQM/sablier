@@ -7,7 +7,8 @@
   "scripts": {
     "start": "cargo run --manifest-path src-tauri/Cargo.toml",
     "test": "node tests/test-calculs.js && cargo test --manifest-path src-tauri/Cargo.toml",
-    "smoke": "SABLIER_SMOKE=1 SABLIER_DONNEES=/tmp/sablier-smoke SABLIER_CAPTURES=/tmp/sablier-smoke cargo run --manifest-path src-tauri/Cargo.toml",
-    "app:build": "node scripts/installer.js"
+    "smoke": "node scripts/smoke.js",
+    "app:build": "node scripts/installer.js",
+    "app:build:windows": "node scripts/installer-windows.js"
   }
 }
