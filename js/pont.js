@@ -32,9 +32,12 @@
     }, Promise.resolve()).then(function () { return res; });
   }
 
+  /* Sous Windows, WebView2 sert les schémas internes en http://<schéma>.localhost. */
+  var windows = demarrage.plateforme === 'win32';
+
   window.sablier = {
     version: demarrage.version || '',
-    plateforme: 'darwin',
+    plateforme: demarrage.plateforme || 'darwin',
     smoke: !!demarrage.smoke,
 
     donnees: {
@@ -75,7 +78,7 @@
       ouvrir: function (relatif) { return invoke('pieces_ouvrir', { relatif: String(relatif || '') }); },
       reveler: function (relatif) { return invoke('pieces_reveler', { relatif: String(relatif || '') }); },
       supprimer: function (relatif) { return invoke('pieces_supprimer', { relatif: String(relatif || '') }); },
-      url: function (relatif) { return 'sablier-piece://pieces/' + String(relatif || '').split('/').map(encodeURIComponent).join('/'); },
+      url: function (relatif) { return (windows ? 'http://sablier-piece.localhost/pieces/' : 'sablier-piece://pieces/') + String(relatif || '').split('/').map(encodeURIComponent).join('/'); },
     },
 
     /* Rappels : notification du Mac et pastille du Dock. */

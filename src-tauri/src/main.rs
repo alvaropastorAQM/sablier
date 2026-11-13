@@ -8,14 +8,22 @@
 //!   SABLIER_SMOKE=1            auto-test (autotest.rs) : fenêtre invisible, captures dans SABLIER_CAPTURES (ou /tmp), quitte ;
 //!                              refusé sans SABLIER_DONNEES jetable
 //!   SABLIER_THEME=light|dark   apparence forcée pendant l'auto-test
+//!
+//! Sous Windows, mac.rs est remplacé par windows.rs (mêmes fonctions) ; données dans %APPDATA%\Sablier\Donnees.
+
+// Version construite sous Windows : pas de console derrière la fenêtre.
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
 mod autotest;
 mod donnees;
 mod fichiers;
+#[cfg_attr(target_os = "macos", path = "mac.rs")]
+#[cfg_attr(windows, path = "windows.rs")]
 mod mac;
 
 use std::fs;
 use std::path::{Path, PathBuf};
+#[cfg(target_os = "macos")]
 use std::process::Command;
 use std::sync::{Mutex, OnceLock};
 use std::thread;
@@ -25,8 +33,12 @@ use serde_json::{json, Value};
 use tauri::http::{Request, Response};
 use tauri::ipc::InvokeBody;
 use tauri::menu::{AboutMetadata, Menu, MenuItem, PredefinedMenuItem, Submenu};
-use tauri::window::{Color, Effect, EffectState, EffectsBuilder};
-use tauri::{AppHandle, Emitter, LogicalPosition, Manager, RunEvent, TitleBarStyle, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent, Wry};
+use tauri::window::Color;
+#[cfg(target_os = "macos")]
+use tauri::window::{Effect, EffectState, EffectsBuilder};
+#[cfg(target_os = "macos")]
+use tauri::{LogicalPosition, TitleBarStyle};
+use tauri::{AppHandle, Emitter, Manager, RunEvent, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent, Wry};
 
 use donnees::{texte_json, Donnees};
 use mac::Choix;
@@ -56,19 +68,39 @@ pub fn donnees() -> &'static Donnees {
     DONNEES.get().expect("données ouvertes au démarrage")
 }
 
+#[cfg(target_os = "macos")]
 pub fn dans_bundle() -> bool {
     std::env::current_exe().is_ok_and(|e| e.to_string_lossy().contains(".app/Contents/MacOS/"))
 }
 
+#[cfg(target_os = "macos")]
 fn accueil() -> PathBuf {
     PathBuf::from(std::env::var_os("HOME").unwrap_or_default())
 }
 
+/// Le dossier de Sablier : Donnees/ et preferences.json.
+#[cfg(target_os = "macos")]
+fn racine_app() -> PathBuf {
+    accueil().join("Library/Application Support/Sablier")
+}
+
+#[cfg(windows)]
+fn racine_app() -> PathBuf {
+    PathBuf::from(std::env::var_os("APPDATA").unwrap_or_default()).join("Sablier")
+}
+
+#[cfg(target_os = "macos")]
 fn documents() -> PathBuf {
     accueil().join("Documents")
 }
 
+#[cfg(windows)]
+fn documents() -> PathBuf {
+    APP.get().and_then(|a| a.path().document_dir().ok()).unwrap_or_default()
+}
+
 /// `open` du Finder : un fichier, un dossier, une URL, ou `-R` pour le montrer dans le Finder.
+#[cfg(target_os = "macos")]
 fn ouvrir(cible: &Path, reveler: bool) {
     let mut cmd = Command::new("/usr/bin/open");
     if reveler {
@@ -77,6 +109,26 @@ fn ouvrir(cible: &Path, reveler: bool) {
     cmd.arg(cible);
     thread::spawn(move || {
         let _ = cmd.status();
+    });
+}
+
+/// L'Explorateur : un fichier, un dossier, une URL (navigateur), ou le fichier montré dans son dossier.
+#[cfg(windows)]
+fn ouvrir(cible: &Path, reveler: bool) {
+    let cible = cible.to_path_buf();
+    thread::spawn(move || {
+        let texte = cible.to_string_lossy();
+        let url = texte.to_ascii_lowercase().starts_with("http://") || texte.to_ascii_lowercase().starts_with("https://");
+        let r = if reveler {
+            tauri_plugin_opener::reveal_item_in_dir(&cible)
+        } else if url {
+            tauri_plugin_opener::open_url(&*texte, None::<&str>)
+        } else {
+            tauri_plugin_opener::open_path(&cible, None::<&str>)
+        };
+        if let Err(e) = r {
+            eprintln!("Ouvrir {texte} : {e}");
+        }
     });
 }
 
@@ -112,26 +164,30 @@ fn retenir_dossier_pdf(dossier: &Path) {
 
 fn creer_fenetre(app: &AppHandle) {
     let smoke = conf().smoke;
-    let url = if smoke { "index.html" } else { "index.html?vibrance=1" };
-    let mut b = WebviewWindowBuilder::new(app, "main", WebviewUrl::App(url.into()))
+    // Sous Windows, barre de titre normale et fenêtre opaque : la page garde son fond.
+    let url = if smoke || cfg!(windows) { "index.html" } else { "index.html?vibrance=1" };
+    let b = WebviewWindowBuilder::new(app, "main", WebviewUrl::App(url.into()))
         .title("Sablier")
         .inner_size(1440.0, 940.0)
-        .min_inner_size(1024.0, 700.0)
-        .title_bar_style(TitleBarStyle::Overlay)
-        .hidden_title(true)
-        .traffic_light_position(LogicalPosition::new(18.0, 18.0))
+        .min_inner_size(1024.0, 700.0);
+    #[cfg(target_os = "macos")]
+    let b = b.title_bar_style(TitleBarStyle::Overlay).hidden_title(true).traffic_light_position(LogicalPosition::new(18.0, 18.0));
+    let mut b = b
         .visible(!smoke)
         .theme(conf().theme)
         // Le glisser-déposer reste à la page : les fichiers déposés sur une fiche, le texte dans les notes.
         .disable_drag_drop_handler()
         // Un fichier déposé hors d'une zone prévue, ou un lien, ne doit jamais remplacer l'interface par une navigation.
         .on_navigation(|url| url.scheme() == "tauri" || url.host_str() == Some("tauri.localhost"));
-    b = if smoke {
-        b.background_color(Color(0x0B, 0x0C, 0x0E, 255)).initialization_script(autotest::ESPION)
+    if smoke {
+        b = b.background_color(Color(0x0B, 0x0C, 0x0E, 255)).initialization_script(autotest::ESPION);
     } else {
         // Verre du système derrière la barre latérale et autour de la scène.
-        b.transparent(true).effects(EffectsBuilder::new().effect(Effect::Sidebar).state(EffectState::FollowsWindowActiveState).build())
-    };
+        #[cfg(target_os = "macos")]
+        {
+            b = b.transparent(true).effects(EffectsBuilder::new().effect(Effect::Sidebar).state(EffectState::FollowsWindowActiveState).build());
+        }
+    }
     match b.build() {
         Ok(w) if smoke => {
             let w2 = w.clone();
@@ -208,12 +264,16 @@ fn menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         &item("exporter", "Exporter une sauvegarde…", None)?,
         &item("importer", "Importer une sauvegarde…", None)?,
         &PredefinedMenuItem::separator(app)?,
+    ])?;
+    // Masquer et Tout afficher n'ont de sens qu'avec le Dock.
+    #[cfg(target_os = "macos")]
+    sablier.append_items(&[
         &PredefinedMenuItem::hide(app, Some("Masquer Sablier"))?,
         &PredefinedMenuItem::hide_others(app, Some("Masquer les autres"))?,
         &PredefinedMenuItem::show_all(app, Some("Tout afficher"))?,
         &PredefinedMenuItem::separator(app)?,
-        &item("quitter", "Quitter Sablier", Some("CmdOrCtrl+Q"))?,
     ])?;
+    sablier.append(&item("quitter", "Quitter Sablier", Some("CmdOrCtrl+Q"))?)?;
     let fichier = Submenu::with_items(app, "Fichier", true, &[
         &item("nouvelle-saisie", "Nouvelle ligne de journal", Some("CmdOrCtrl+N"))?,
         &item("chrono", "Démarrer ou arrêter le chrono", Some("CmdOrCtrl+Shift+T"))?,
@@ -250,16 +310,20 @@ fn menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         &item("zoom-plus", "Agrandir", Some("CmdOrCtrl+="))?,
         &item("zoom-moins", "Réduire", Some("CmdOrCtrl+-"))?,
         &PredefinedMenuItem::separator(app)?,
-        &PredefinedMenuItem::fullscreen(app, Some("Plein écran"))?,
-        &item("devtools", "Outils de développement", Some("CmdOrCtrl+Alt+I"))?,
     ])?;
+    // Plein écran et Tout ramener au premier plan n'existent pas sous Windows.
+    #[cfg(target_os = "macos")]
+    affichage.append(&PredefinedMenuItem::fullscreen(app, Some("Plein écran"))?)?;
+    affichage.append(&item("devtools", "Outils de développement", Some("CmdOrCtrl+Alt+I"))?)?;
     let fenetre = Submenu::with_items(app, "Fenêtre", true, &[
         &PredefinedMenuItem::minimize(app, Some("Réduire"))?,
         &PredefinedMenuItem::maximize(app, Some("Zoom"))?,
-        &PredefinedMenuItem::separator(app)?,
-        &PredefinedMenuItem::bring_all_to_front(app, Some("Tout ramener au premier plan"))?,
     ])?;
-    let _ = fenetre.set_as_windows_menu_for_nsapp();
+    #[cfg(target_os = "macos")]
+    {
+        fenetre.append_items(&[&PredefinedMenuItem::separator(app)?, &PredefinedMenuItem::bring_all_to_front(app, Some("Tout ramener au premier plan"))?])?;
+        let _ = fenetre.set_as_windows_menu_for_nsapp();
+    }
     Menu::with_items(app, &[&sablier, &fichier, &edition, &affichage, &fenetre])
 }
 
@@ -324,7 +388,8 @@ fn demarrage(app: &AppHandle, requete: Request<Vec<u8>>) -> Response<Vec<u8>> {
     if (!illisibles.is_empty() || !absents.is_empty()) && !conf().smoke {
         signaler_problemes(app, illisibles, absents);
     }
-    let d = json!({ "version": app.package_info().version.to_string(), "smoke": conf().smoke, "dossier": conf().dossier, "donnees": lu });
+    let plateforme = if cfg!(windows) { "win32" } else { "darwin" };
+    let d = json!({ "version": app.package_info().version.to_string(), "plateforme": plateforme, "smoke": conf().smoke, "dossier": conf().dossier, "donnees": lu });
     reponse(200, "text/javascript; charset=utf-8", format!("window.__SABLIER_DEMARRAGE = {d};\n{PONT}").into_bytes())
 }
 
@@ -333,8 +398,14 @@ fn dossier_pieces() -> PathBuf {
 }
 
 /// sablier-piece://pieces/<tâche>/<fichier> : les images jointes, limitées au dossier Pieces des données.
+/// Sous Windows, http://sablier-piece.localhost/pieces/<tâche>/<fichier> : l'hôte est le schéma.
 fn servir_piece(requete: Request<Vec<u8>>) -> Response<Vec<u8>> {
-    let relatif = fichiers::decoder_url(requete.uri().path());
+    let chemin = requete.uri().path();
+    #[cfg(windows)]
+    let Some(chemin) = chemin.strip_prefix("/pieces/") else {
+        return reponse(404, "text/plain", Vec::new());
+    };
+    let relatif = fichiers::decoder_url(chemin);
     let racine = dossier_pieces();
     match fichiers::chemin_dans(&racine, relatif.trim_start_matches('/')) {
         Some(c) if c != racine && c.is_file() => match fs::read(&c) {
@@ -594,7 +665,7 @@ fn demarrer(app: &AppHandle) {
 fn main() {
     let test = std::env::var_os("SABLIER_DONNEES").map(|d| std::path::absolute(PathBuf::from(&d)).unwrap_or_else(|_| PathBuf::from(d)));
     let smoke = std::env::var("SABLIER_SMOKE").is_ok_and(|v| v == "1");
-    let racine = accueil().join("Library/Application Support/Sablier");
+    let racine = racine_app();
     // L'auto-test écrit des données d'essai : jamais dans les vraies.
     if smoke && test.as_ref().is_none_or(|d| d == &racine.join("Donnees")) {
         eprintln!("Auto-test refusé : SABLIER_SMOKE exige SABLIER_DONNEES=<dossier jetable>.");
@@ -619,6 +690,10 @@ fn main() {
     let mut constructeur = tauri::Builder::default();
     if test.is_none() {
         constructeur = constructeur.plugin(tauri_plugin_single_instance::init(|app, _, _| montrer_fenetre(app)));
+    }
+    #[cfg(windows)]
+    {
+        constructeur = constructeur.plugin(tauri_plugin_dialog::init()).plugin(tauri_plugin_notification::init());
     }
     let app = constructeur
         .invoke_handler(tauri::generate_handler![
@@ -648,10 +723,14 @@ fn main() {
         .on_menu_event(|app, e| sur_menu(app, e.id().as_ref()))
         .on_window_event(|w, e| {
             // Fermer la fenêtre la cache : la page et ses écritures en cours restent, le Dock la ramène.
+            // Sans Dock (Windows), une fenêtre cachée laisserait un processus invisible : fermer quitte.
             if let (WindowEvent::CloseRequested { api, .. }, "main") = (e, w.label()) {
                 if !conf().smoke {
                     api.prevent_close();
+                    #[cfg(target_os = "macos")]
                     let _ = w.hide();
+                    #[cfg(windows)]
+                    quitter(w.app_handle());
                 }
             }
         })
@@ -662,8 +741,9 @@ fn main() {
         .build(tauri::generate_context!())
         .expect("construction de l'app");
 
-    app.run(|app, evenement| match evenement {
-        RunEvent::Reopen { .. } if !conf().smoke => montrer_fenetre(app),
+    app.run(|_app, evenement| match evenement {
+        #[cfg(target_os = "macos")]
+        RunEvent::Reopen { .. } if !conf().smoke => montrer_fenetre(_app),
         RunEvent::ExitRequested { code: None, api, .. } if !conf().smoke => api.prevent_exit(),
         // Les écritures en attente passent sur le disque avant la fin, quelle que soit la façon de quitter.
         RunEvent::Exit => donnees().purger(),

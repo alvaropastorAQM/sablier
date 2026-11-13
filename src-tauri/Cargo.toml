@@ -14,12 +14,24 @@ tauri-plugin-single-instance = "2.5.5"
 # preserve_order et float_roundtrip : les fichiers JSON gardent l'ordre de leurs clés et leurs nombres exacts, comme sous Electron.
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6.5"
 block2 = "0.6.2"
 objc2-foundation = "0.3.2"
 objc2-app-kit = "0.3.2"
 objc2-web-kit = "0.3.2"
 objc2-user-notifications = "0.3.2"
+
+[target.'cfg(windows)'.dependencies]
+# Mêmes versions que celles de wry : les types COM de WebView2 doivent être les mêmes.
+webview2-com = "=0.39.1"
+windows = "=0.62.2"
+base64 = "0.21"
+tauri-plugin-dialog = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-opener = "2"
+trash = "5"
 
 [profile.release]
 strip = true

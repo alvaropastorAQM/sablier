@@ -133,7 +133,7 @@ try {
   res.pieceFichier = okFichier === true && !!pf && pf.nom === 'sablier-piece-test.txt' && pf.taille > 0 && !!pi && pi.nom === 'sablier-pixel.png';
   res.pieceFichierChemin = pf ? pf.fichier : '';
   var img = document.querySelector('.fiche-section[data-section="pieces"] .piece-image img');
-  res.imageUrl = !!img && img.getAttribute('src').indexOf('sablier-piece://pieces/') === 0;
+  res.imageUrl = !!img && /^(sablier-piece:\/\/|http:\/\/sablier-piece\.localhost\/)pieces\//.test(img.getAttribute('src'));
   await new Promise(function (r) { if (!img || img.complete) return r(); img.addEventListener('load', r); img.addEventListener('error', r); setTimeout(r, 2500); });
   res.imageChargee = !!img && img.complete && img.naturalWidth === 1;
   lierTacheANote(nouvelle.id, 'page_projeta');
