@@ -2,7 +2,7 @@
   "name": "sablier",
   "productName": "Sablier",
   "version": "0.2.0",
-  "description": "Sablier : suivi de mission, relevés d'activité et organisation du travail (application macOS)",
+  "description": "Sablier: engagement tracking, activity statements and work organisation (macOS application)",
   "private": true,
   "scripts": {
     "start": "cargo run --manifest-path src-tauri/Cargo.toml",

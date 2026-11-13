@@ -1,33 +1,34 @@
 # Sablier
 
-Suivi de mission pour indépendant : journal du temps, relevé mensuel et
-facture en PDF, tâches, notes, échéances, rappels. Interface en HTML/CSS/JS
-sans framework (`index.html`, `js/`, `css/`), fond en Rust avec Tauri 2
-(`src-tauri/`). Le README décrit chaque page, les règles de calcul et
-l'organisation du code.
+Engagement tracking for freelancers: time log, monthly statement and PDF
+invoice, tasks, notes, deadlines, reminders. Interface in plain HTML/CSS/JS
+with no framework (`index.html`, `js/`, `css/`), backend in Rust with Tauri 2
+(`src-tauri/`). The README describes each page, the calculation rules and
+the code layout.
 
-**Sous Windows : lire `docs/MIGRATION-WINDOWS.md` avant toute chose.** L'app
-est aujourd'hui macOS seulement (`src-tauri/src/mac.rs` appelle AppKit et
-WebKit) ; ce guide dit quoi porter, dans quel ordre, et comment vérifier.
+**On Windows: read `docs/MIGRATION-WINDOWS.md` before anything else.** The
+app is currently macOS only (`src-tauri/src/mac.rs` calls AppKit and
+WebKit); that guide says what to port, in which order, and how to check it.
 
-## Commandes
+## Commands
 
 ```bash
-npm test         # moteur de calcul (node) puis fond Rust (cargo test)
-npm start        # lance l'app (sur les vraies données de l'utilisateur)
-npm run smoke    # auto-test sur un dossier jetable (syntaxe POSIX)
+npm test         # calculation engine (node) then Rust backend (cargo test)
+npm start        # runs the app (on the user's real data)
+npm run smoke    # self-test on a disposable folder (POSIX syntax)
 ```
 
-L'auto-test complet et ses variables (`SABLIER_SMOKE_*`) sont décrits dans
-le README et en tête de `src-tauri/src/autotest.rs`. Il ne tourne jamais sur
-les vraies données (refusé sans `SABLIER_DONNEES`).
+The full self-test and its variables (`SABLIER_SMOKE_*`) are described in
+the README and at the top of `src-tauri/src/autotest.rs`. It never runs on
+the real data (refused without `SABLIER_DONNEES`).
 
-## Règles
+## Rules
 
-- Identifiants, commentaires et textes en français.
-- Aucun tiret cadratin dans les textes de l'interface ; toute couleur passe
-  par les tokens de `css/styles.css`.
-- Le format des fichiers de données ne change pas : `donnees.rs` écrit comme
+- Identifiers stay in French; comments and all user-visible text are in
+  English.
+- No em dash in interface texts; every colour goes through the tokens of
+  `css/styles.css`.
+- The format of the data files does not change: `donnees.rs` writes like
   `JSON.stringify(objet, null, 2) + '\n'`.
-- Un changement se vérifie par `npm test` et par l'auto-test ; on ne retire
-  pas un test pour le faire passer.
+- A change is checked with `npm test` and the self-test; a test is never
+  removed to make it pass.

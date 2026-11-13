@@ -1,10 +1,10 @@
 /* ============================================================
-   PAGE TABLEAU DE BORD : la photographie de la mission, et en tête ce
-   qu'il ne faut pas rater (centre des rappels).
+   DASHBOARD PAGE: a snapshot of the assignment, with what must not be
+   missed (the reminders centre) at the top.
    ============================================================ */
 'use strict';
 
-var TABLEAU_PERIODE = null;   // 'AAAA-MM', 'contrat' ou 'tout'
+var TABLEAU_PERIODE = null;   // 'YYYY-MM', 'contrat' or 'tout'
 
 function initTableauDeBord() {
   PAGES.tableau = rendreTableauDeBord;
@@ -33,28 +33,28 @@ function entreesPeriodeTableau() {
   var r = ETAT.reglages;
   var toutes = entreesJournal();
   if (TABLEAU_PERIODE === 'tout') return toutes;
-  /* Le contrat, report compris : un travail de septembre facturé en octobre
-     relève du contrat, comme la tuile d'avancement le compte. */
+  /* The contract, carry-over included: work done in September and billed in
+     October belongs to the contract, as the progress tile counts it. */
   if (TABLEAU_PERIODE === 'contrat') return entreesDuContrat(toutes, r.contrat);
   return entreesDuMois(toutes, TABLEAU_PERIODE);
 }
 
 function libellePeriodeTableau() {
-  if (TABLEAU_PERIODE === 'tout') return 'toute la période';
-  if (TABLEAU_PERIODE === 'contrat') return 'depuis le début du contrat';
-  return 'en ' + libelleMois(TABLEAU_PERIODE);
+  if (TABLEAU_PERIODE === 'tout') return 'the whole period';
+  if (TABLEAU_PERIODE === 'contrat') return 'since the contract start';
+  return 'in ' + libelleMois(TABLEAU_PERIODE);
 }
 
-/* Une échéance du tableau de bord : tuile de calendrier, titre lisible
-   sur deux lignes, compte à rebours court. */
+/* A dashboard deadline: calendar tile, title readable over two lines,
+   short countdown. */
 function ligneEcheanceTableauHtml(e, ref) {
   var j = joursEntre(ref, e.date);
   var d = isoVersDate(e.date);
-  var jour = d.getDate() === 1 ? '1er' : String(d.getDate());
+  var jour = String(d.getDate());
   var annee = d.getFullYear() !== isoVersDate(ref).getFullYear() ? ' ' + d.getFullYear() : '';
   return '<li class="dash-ech"><div class="dash-cal"><b>' + jour + '</b><span>' + MOIS_COURTS[d.getMonth()] + '</span></div>'
     + '<div class="dash-corps"><div class="titre" title="' + echapper(e.detail || '') + '">' + echapper(e.titre) + '</div>'
-    + '<div class="sous">' + JOURS_LONGS[d.getDay()] + ' ' + jour + ' ' + MOIS_LONGS[d.getMonth()] + annee + ' · ' + echapper(TYPES_ECHEANCE[e.type] || 'Rappel') + '</div></div>'
+    + '<div class="sous">' + JOURS_LONGS[d.getDay()] + ' ' + jour + ' ' + MOIS_LONGS[d.getMonth()] + annee + ' · ' + echapper(TYPES_ECHEANCE[e.type] || 'Reminder') + '</div></div>'
     + '<span class="dash-jours' + (j < 0 ? ' neg' : (j <= 7 ? ' warn' : '')) + '" title="' + echapper(libelleDelai(j)) + '">' + echapper(libelleJours(j)) + '</span></li>';
 }
 
@@ -63,9 +63,9 @@ function ligneTacheTableauHtml(x, ref) {
   var j = x.echeance ? joursEntre(ref, x.echeance) : null;
   var etapes = x.etapes || [];
   var faites = etapes.filter(function (e) { return e.fait; }).length;
-  return '<li class="dash-tache" data-action="tache" data-id="' + echapper(x.id) + '" title="Ouvrir la fiche"><span class="kb-priorite ' + pe.niveau + '" title="Priorité ' + LIBELLES_PRIORITE[pe.niveau].toLowerCase() + '"></span>'
+  return '<li class="dash-tache" data-action="tache" data-id="' + echapper(x.id) + '" title="Open the task"><span class="kb-priorite ' + pe.niveau + '" title="' + LIBELLES_PRIORITE[pe.niveau] + ' priority"></span>'
     + '<div class="dash-corps"><div class="titre">' + echapper(x.titre) + '</div>'
-    + '<div class="sous">' + (x.statut === 'en-cours' ? 'En cours' : 'À faire') + ' · ' + echapper(libelleAxe(x.axe)) + (etapes.length ? ' · ' + faites + '/' + etapes.length + ' étapes' : '') + (x.echeance ? ' · ' + libelleDate(x.echeance, 'jour') : '') + '</div></div>'
+    + '<div class="sous">' + (x.statut === 'en-cours' ? 'In progress' : 'To do') + ' · ' + echapper(libelleAxe(x.axe)) + (etapes.length ? ' · ' + faites + '/' + etapes.length + ' steps' : '') + (x.echeance ? ' · ' + libelleDate(x.echeance, 'jour') : '') + '</div></div>'
     + (j != null ? '<span class="dash-jours' + (j < 0 ? ' neg' : (j <= 7 ? ' warn' : '')) + '">' + echapper(libelleJours(j)) + '</span>' : '') + '</li>';
 }
 
@@ -79,49 +79,49 @@ function rendreTableauDeBord() {
   var hj = Number(r.heuresJournee) || 7;
   var c = chronoEnCours();
 
-  var html = '<div class="page-entete"><div><h2 class="page-titre">Tableau de bord</h2>'
-    + '<p class="page-sous">Contrat du ' + echapper(libelleDate(r.contrat.debut, 'moyen')) + ' au ' + echapper(libelleDate(r.contrat.fin, 'moyen')) + ' · aujourd\'hui ' + echapper(libelleDate(ref, 'long')) + '</p></div>'
+  var html = '<div class="page-entete"><div><h2 class="page-titre">Dashboard</h2>'
+    + '<p class="page-sous">Contract from ' + echapper(libelleDate(r.contrat.debut, 'moyen')) + ' to ' + echapper(libelleDate(r.contrat.fin, 'moyen')) + ' · today ' + echapper(libelleDate(ref, 'long')) + '</p></div>'
     + '<div class="mois-nav">' + selectMoisHtml('tbPeriode', TABLEAU_PERIODE, { liste: moisDuContrat().slice().reverse(), tout: null })
     + '</div></div>';
-  // options supplémentaires du sélecteur (contrat, tout)
+  // extra options of the selector (contrat, tout)
   html = html.replace('<select id="tbPeriode" class="champ" style="width:auto;">',
-    '<select id="tbPeriode" class="champ" style="width:auto;"><option value="contrat"' + (TABLEAU_PERIODE === 'contrat' ? ' selected' : '') + '>Depuis le début du contrat</option><option value="tout"' + (TABLEAU_PERIODE === 'tout' ? ' selected' : '') + '>Toute la période</option>');
+    '<select id="tbPeriode" class="champ" style="width:auto;"><option value="contrat"' + (TABLEAU_PERIODE === 'contrat' ? ' selected' : '') + '>Since the contract start</option><option value="tout"' + (TABLEAU_PERIODE === 'tout' ? ' selected' : '') + '>Whole period</option>');
 
-  /* --- Rappels : ce qu'il ne faut pas rater --- */
+  /* --- Reminders: what must not be missed --- */
   var rappels = rappelsActifs();
   if (rappels.length) {
-    html += '<section class="card card-rappels" id="tbRappels"><div class="card-entete"><h2>' + icone('cloche', 16) + ' À ne pas rater <span class="nb">' + rappels.length + '</span></h2><button class="lien" data-action="rappels">Tout voir, reporter, marquer fait</button></div>'
+    html += '<section class="card card-rappels" id="tbRappels"><div class="card-entete"><h2>' + icone('cloche', 16) + ' Don\'t miss <span class="nb">' + rappels.length + '</span></h2><button class="lien" data-action="rappels">See all, snooze, mark done</button></div>'
       + listeRappelsHtml(rappels.slice(0, 5), { sansActions: true, cliquable: true })
-      + (rappels.length > 5 ? '<div style="margin-top:8px;"><button class="lien" data-action="rappels">' + (rappels.length - 5) + (rappels.length - 5 > 1 ? ' autres rappels' : ' autre rappel') + '</button></div>' : '')
+      + (rappels.length > 5 ? '<div style="margin-top:8px;"><button class="lien" data-action="rappels">' + (rappels.length - 5) + (rappels.length - 5 > 1 ? ' more reminders' : ' more reminder') + '</button></div>' : '')
       + '</section>';
   }
 
-  /* --- Tuiles --- */
-  /* Ce qui a été gagné (toutes les factures émises) et ce qu'il faut mettre
-     de côté pour le prochain prélèvement de l'URSSAF. */
+  /* --- Tiles --- */
+  /* What has been earned (all issued invoices) and what must be set aside
+     for the next URSSAF direct debit. */
   var lesFactures = factures();
   var emis = arrondir2(lesFactures.reduce(function (s, f) { return s + (Number(f.total) || 0); }, 0));
   var encaisse = arrondir2(lesFactures.filter(function (f) { return f.statut === 'payee'; }).reduce(function (s, f) { return s + (Number(f.total) || 0); }, 0));
   var urssaf = cotisationsAVenir(ref);
   var u0 = urssaf[0];
   html += '<div class="dash-tuiles">'
-    + '<div class="dash-tuile"><div class="dash-lib">Heures facturables</div><div class="dash-val">' + fmtHeuresDec(t.minutesFacturables, true) + ' <small>h</small></div><div class="dash-sous">' + echapper(libellePeriodeTableau()) + ' · soit ' + fmtNombre(t.minutesFacturables / 60 / hj, 2) + ' journées de ' + fmtNombre(hj, 0) + ' h</div></div>'
-    + '<div class="dash-tuile"><div class="dash-lib">Montant facturable</div><div class="dash-val">' + fmtEuros(t.montant) + '</div><div class="dash-sous">hors taxes, au tarif de ' + fmtEuros(r.tarifHoraire) + ' de l\'heure</div></div>'
-    + '<div class="dash-tuile"><div class="dash-lib">Gagné depuis le début</div><div class="dash-val">' + fmtEuros(emis) + '</div><div class="dash-sous">' + (lesFactures.length ? lesFactures.length + (lesFactures.length > 1 ? ' factures émises' : ' facture émise') + ' · ' + fmtEuros(encaisse) + ' déjà encaissés' : 'aucune facture émise pour l\'instant') + '</div></div>'
-    + '<div class="dash-tuile"><div class="dash-lib">À garder pour l\'URSSAF</div><div class="dash-val">' + fmtEuros(u0 ? u0.montant : 0) + '</div><div class="dash-sous">'
-      + (u0 ? 'prélevés le ' + dateFr(u0.date) + (u0.enAttente ? (u0.enAttente === u0.montant ? ', dès que la facture est payée' : ', dont ' + fmtEuros(u0.enAttente) + ' de factures en attente') : '')
-        + (urssaf.length > 1 ? ' · puis ' + urssaf.slice(1).map(function (d) { return fmtEuros(d.montant) + ' le ' + dateFr(d.date); }).join(', ') : '')
-      : 'rien à mettre de côté pour l\'instant')
-      + ' · hors impôt sur le revenu</div></div>'
+    + '<div class="dash-tuile"><div class="dash-lib">Billable hours</div><div class="dash-val">' + fmtHeuresDec(t.minutesFacturables, true) + ' <small>h</small></div><div class="dash-sous">' + echapper(libellePeriodeTableau()) + ' · that is ' + fmtNombre(t.minutesFacturables / 60 / hj, 2) + ' days of ' + fmtNombre(hj, 0) + ' h</div></div>'
+    + '<div class="dash-tuile"><div class="dash-lib">Billable amount</div><div class="dash-val">' + fmtEuros(t.montant) + '</div><div class="dash-sous">excl. tax, at ' + fmtEuros(r.tarifHoraire) + ' per hour</div></div>'
+    + '<div class="dash-tuile"><div class="dash-lib">Earned since the start</div><div class="dash-val">' + fmtEuros(emis) + '</div><div class="dash-sous">' + (lesFactures.length ? lesFactures.length + (lesFactures.length > 1 ? ' invoices issued' : ' invoice issued') + ' · ' + fmtEuros(encaisse) + ' already paid' : 'no invoice issued yet') + '</div></div>'
+    + '<div class="dash-tuile"><div class="dash-lib">To set aside for URSSAF</div><div class="dash-val">' + fmtEuros(u0 ? u0.montant : 0) + '</div><div class="dash-sous">'
+      + (u0 ? 'debited on ' + dateFr(u0.date) + (u0.enAttente ? (u0.enAttente === u0.montant ? ', as soon as the invoice is paid' : ', including ' + fmtEuros(u0.enAttente) + ' from pending invoices') : '')
+        + (urssaf.length > 1 ? ' · then ' + urssaf.slice(1).map(function (d) { return fmtEuros(d.montant) + ' on ' + dateFr(d.date); }).join(', ') : '')
+      : 'nothing to set aside for now')
+      + ' · excluding income tax</div></div>'
     + '</div>';
 
-  /* --- Graphiques --- */
+  /* --- Charts --- */
   html += '<div class="dash-graph">'
-    + '<section class="card"><h2>Heures facturables par mois</h2><div class="gr-conteneur" id="tbGraphique"></div></section>'
-    + '<section class="card"><h2>Répartition par axe</h2><p class="desc">' + echapper(capitaliser(libellePeriodeTableau())) + ', temps passé.</p><div id="tbRepartition"></div></section>'
+    + '<section class="card"><h2>Billable hours per month</h2><div class="gr-conteneur" id="tbGraphique"></div></section>'
+    + '<section class="card"><h2>Breakdown by area</h2><p class="desc">' + echapper(capitaliser(libellePeriodeTableau())) + ', time spent.</p><div id="tbRepartition"></div></section>'
     + '</div>';
 
-  /* --- Listes --- */
+  /* --- Lists --- */
   var enCours = taches().filter(function (x) { return x.statut === 'en-cours' || x.statut === 'a-faire'; }).sort(function (a, b) {
     if (a.statut !== b.statut) return a.statut === 'en-cours' ? -1 : 1;
     return comparerTaches(a, b, ref);
@@ -130,22 +130,22 @@ function rendreTableauDeBord() {
   var dernieres = trierPar(entreesJournal(), function (e) { return e.date + (e.debut || '') + (e.creeLe || ''); }, true).slice(0, 5);
 
   html += '<div class="dash-colonnes">'
-    + '<section class="card" id="tbTaches"><div class="card-entete"><h2>Tâches en cours</h2><button class="lien" data-action="page" data-page="taches">Voir le tableau</button></div>'
-    + (enCours.length ? '<ul class="dash-liste">' + enCours.map(function (x) { return ligneTacheTableauHtml(x, ref); }).join('') + '</ul>' : '<div class="vide">Aucune tâche ouverte.</div>')
+    + '<section class="card" id="tbTaches"><div class="card-entete"><h2>Tasks in progress</h2><button class="lien" data-action="page" data-page="taches">Open the board</button></div>'
+    + (enCours.length ? '<ul class="dash-liste">' + enCours.map(function (x) { return ligneTacheTableauHtml(x, ref); }).join('') + '</ul>' : '<div class="vide">No open tasks.</div>')
     + '</section>'
-    + '<section class="card" id="tbEcheances"><div class="card-entete"><h2>Prochaines échéances</h2><button class="lien" data-action="page" data-page="echeances">Tout voir</button></div>'
-    + (prochaines.length ? '<ul class="dash-liste">' + prochaines.map(function (e) { return ligneEcheanceTableauHtml(e, ref); }).join('') + '</ul>' : '<div class="vide">Aucune échéance à venir.</div>')
+    + '<section class="card" id="tbEcheances"><div class="card-entete"><h2>Upcoming deadlines</h2><button class="lien" data-action="page" data-page="echeances">See all</button></div>'
+    + (prochaines.length ? '<ul class="dash-liste">' + prochaines.map(function (e) { return ligneEcheanceTableauHtml(e, ref); }).join('') + '</ul>' : '<div class="vide">No upcoming deadlines.</div>')
     + '</section>'
-    + '<section class="card"><div class="card-entete"><h2>Dernières saisies</h2><button class="lien" data-action="page" data-page="journal">Ouvrir le journal</button></div>'
+    + '<section class="card"><div class="card-entete"><h2>Latest entries</h2><button class="lien" data-action="page" data-page="journal">Open the log</button></div>'
     + (dernieres.length ? '<ul class="dash-liste">' + dernieres.map(function (e) {
       return '<li><span class="date" style="min-width:86px;">' + libelleDate(e.date, 'jour') + '</span><span class="titre">' + echapper(e.intervention) + '</span><span class="num" style="color:var(--text-primary); font-weight:500;">' + fmtDuree(dureeEntree(e)) + '</span></li>';
-    }).join('') + '</ul>' : '<div class="vide">Aucune saisie pour l\'instant. Le journal vous attend.</div>')
+    }).join('') + '</ul>' : '<div class="vide">No entries yet. The log is waiting for you.</div>')
     + '</section>'
     + '</div>';
 
   document.getElementById('tableauContenu').innerHTML = html;
 
-  /* Graphique des mois du contrat (12 mois glissants autour du mois choisi) */
+  /* Chart of the contract months (12 rolling months around the chosen month) */
   var moisListe = moisDuContrat();
   if (moisListe.length > 13) {
     var centre = moisValide(TABLEAU_PERIODE) ? TABLEAU_PERIODE : moisCourant();
@@ -160,13 +160,13 @@ function rendreTableauDeBord() {
       libelle: MOIS_COURTS[Number(m.mois.slice(5, 7)) - 1], sous: (i === 0 || m.mois.slice(5, 7) === '01') ? m.mois.slice(0, 4) : '',
       valeur: arrondir2(m.minutesFacturables / 60),
       actif: m.mois === (moisValide(TABLEAU_PERIODE) ? TABLEAU_PERIODE : courant), futur: m.mois > courant,
-      titre: capitaliser(libelleMois(m.mois)) + ' : ' + fmtHeuresDec(m.minutesFacturables) + ' facturables, ' + fmtEuros(m.montant),
+      titre: capitaliser(libelleMois(m.mois)) + ' : ' + fmtHeuresDec(m.minutesFacturables) + ' billable, ' + fmtEuros(m.montant),
     };
   }), { repere: av.repereMensuelMinutes ? arrondir2(av.repereMensuelMinutes / 60) : 0, hauteur: 230 });
 
   dessinerRepartition(document.getElementById('tbRepartition'), repartitionParAxe(sel, r).map(function (a) {
     var ax = axeParId(a.axe);
-    return { nom: ax ? ax.nom : (a.axe || 'Sans axe'), couleur: couleurAxe(a.axe), valeur: a.minutes, part: a.part };
+    return { nom: ax ? ax.nom : (a.axe || 'No area'), couleur: couleurAxe(a.axe), valeur: a.minutes, part: a.part };
   }));
 
   if (c) lancerTicChrono();

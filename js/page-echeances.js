@@ -1,13 +1,13 @@
 /* ============================================================
-   PAGE ÉCHÉANCES : le calendrier administratif et les rappels datés.
-   Chaque échéance peut avoir son propre délai de rappel (sinon celui
-   des Réglages) ; les rappels remontent dans le centre des rappels, le
-   tableau de bord et les notifications du Mac.
+   DEADLINES PAGE: the admin calendar and dated reminders. Each deadline
+   can have its own reminder lead time (otherwise the one from Settings);
+   reminders surface in the reminders centre, the dashboard and the
+   desktop notifications.
    ============================================================ */
 'use strict';
 
-var TYPES_ECHEANCE = { admin: 'Administratif', contrat: 'Contrat', perso: 'Rappel' };
-var DELAIS_RAPPEL = [['', 'Réglage général'], ['0', 'Le jour même'], ['1', 'La veille'], ['3', '3 jours avant'], ['7', '7 jours avant'], ['14', '14 jours avant'], ['30', '30 jours avant'], ['60', '60 jours avant']];
+var TYPES_ECHEANCE = { admin: 'Admin', contrat: 'Contract', perso: 'Reminder' };
+var DELAIS_RAPPEL = [['', 'General setting'], ['0', 'On the day'], ['1', 'The day before'], ['3', '3 days before'], ['7', '7 days before'], ['14', '14 days before'], ['30', '30 days before'], ['60', '60 days before']];
 
 function initEcheances() {
   PAGES.echeances = rendreEcheances;
@@ -35,7 +35,7 @@ function marquerEcheanceFaite(id, fait) {
   e.faitLe = fait ? aujourdhui() : null;
   sauver('echeances');
   rafraichir();
-  if (fait) notifier('« ' + e.titre + ' » : fait.', { type: 'succes' });
+  if (fait) notifier('"' + e.titre + '": done.', { type: 'succes' });
 }
 
 function rendreEcheances() {
@@ -46,14 +46,14 @@ function rendreEcheances() {
   var faites = trierPar(liste.filter(function (e) { return e.fait; }), function (e) { return e.faitLe || e.date; }, true);
   var pr = ETAT.reglages.rappels || {};
 
-  var html = '<div class="page-entete"><div><h2 class="page-titre">Échéances</h2>'
-    + '<p class="page-sous">Le calendrier de la micro-entreprise et du contrat, complété de vos rappels. Cochez ce qui est fait. Chaque échéance est rappelée ' + (pr.horizonEcheances != null ? pr.horizonEcheances : 7) + ' jours avant (ou selon son propre délai) : sur le tableau de bord, dans le centre des rappels et par notification.</p></div>'
-    + '<div class="actions"><button class="btn btn-ghost" data-action="rappels">' + icone('cloche', 14) + ' Rappels</button><button class="btn" data-action="nouvelle">Nouvelle échéance</button></div></div>';
+  var html = '<div class="page-entete"><div><h2 class="page-titre">Deadlines</h2>'
+    + '<p class="page-sous">The calendar of the micro-business and the contract, plus your own reminders. Tick what is done. Each deadline is flagged ' + (pr.horizonEcheances != null ? pr.horizonEcheances : 7) + ' days before (or on its own lead time): on the dashboard, in the reminders centre and by notification.</p></div>'
+    + '<div class="actions"><button class="btn btn-ghost" data-action="rappels">' + icone('cloche', 14) + ' Reminders</button><button class="btn" data-action="nouvelle">New deadline</button></div></div>';
 
   html += '<section class="card">';
-  if (retard.length) html += '<div class="ec-groupe"><h3 class="ec-groupe-titre libelle neg" style="color:var(--neg);">Dépassées</h3>' + retard.map(function (e) { return ligneEcheanceHtml(e, ref); }).join('') + '</div>';
-  html += '<div class="ec-groupe"><h3 class="ec-groupe-titre libelle">À venir</h3>' + (aVenir.length ? aVenir.map(function (e) { return ligneEcheanceHtml(e, ref); }).join('') : '<div class="vide">Aucune échéance à venir.</div>') + '</div>';
-  if (faites.length) html += '<details class="guide-fold"><summary>' + faites.length + (faites.length > 1 ? ' échéances faites' : ' échéance faite') + '</summary><div class="details-body" style="padding-top:10px;">' + faites.map(function (e) { return ligneEcheanceHtml(e, ref); }).join('') + '</div></details>';
+  if (retard.length) html += '<div class="ec-groupe"><h3 class="ec-groupe-titre libelle neg" style="color:var(--neg);">Overdue</h3>' + retard.map(function (e) { return ligneEcheanceHtml(e, ref); }).join('') + '</div>';
+  html += '<div class="ec-groupe"><h3 class="ec-groupe-titre libelle">Upcoming</h3>' + (aVenir.length ? aVenir.map(function (e) { return ligneEcheanceHtml(e, ref); }).join('') : '<div class="vide">No upcoming deadlines.</div>') + '</div>';
+  if (faites.length) html += '<details class="guide-fold"><summary>' + faites.length + (faites.length > 1 ? ' deadlines done' : ' deadline done') + '</summary><div class="details-body" style="padding-top:10px;">' + faites.map(function (e) { return ligneEcheanceHtml(e, ref); }).join('') + '</div></details>';
   html += '</section>';
   document.getElementById('echeancesContenu').innerHTML = html;
 }
@@ -61,12 +61,12 @@ function rendreEcheances() {
 function ligneEcheanceHtml(e, ref) {
   var j = joursEntre(ref, e.date);
   var classe = e.fait ? ' fait' : (j < 0 ? ' retard' : (j <= 14 ? ' proche' : ''));
-  var quand = e.fait ? 'fait le ' + dateFr(e.faitLe || e.date) : libelleDelai(j);
-  var rappel = e.rappelJours != null && e.rappelJours !== '' ? '<span class="puce neutre" title="Délai de rappel propre à cette échéance">' + icone('cloche', 11) + ' ' + (Number(e.rappelJours) === 0 ? 'le jour même' : 'J-' + e.rappelJours) + '</span>' : '';
-  return '<div class="ec-ligne' + classe + '"><input type="checkbox" data-id="' + echapper(e.id) + '"' + (e.fait ? ' checked' : '') + ' title="Marquer fait">'
+  var quand = e.fait ? 'done on ' + dateFr(e.faitLe || e.date) : libelleDelai(j);
+  var rappel = e.rappelJours != null && e.rappelJours !== '' ? '<span class="puce neutre" title="Reminder lead time specific to this deadline">' + icone('cloche', 11) + ' ' + (Number(e.rappelJours) === 0 ? 'on the day' : 'D-' + e.rappelJours) + '</span>' : '';
+  return '<div class="ec-ligne' + classe + '"><input type="checkbox" data-id="' + echapper(e.id) + '"' + (e.fait ? ' checked' : '') + ' title="Mark done">'
     + '<div class="ec-date">' + libelleDate(e.date, 'moyen') + '<div class="petit" style="font-size:11.5px;">' + echapper(quand) + '</div></div>'
-    + '<div><div class="ec-titre">' + echapper(e.titre) + ' <span class="puce neutre" style="margin-left:4px;">' + echapper(TYPES_ECHEANCE[e.type] || 'Rappel') + '</span>' + rappel + '</div>' + (e.detail ? '<div class="ec-detail">' + echapper(e.detail) + '</div>' : '') + '</div>'
-    + '<div class="ec-actions">' + boutonIcone('modifier', 'crayon', 'Modifier', '', e.id) + boutonIcone('supprimer', 'corbeille', 'Supprimer', 'danger', e.id) + '</div></div>';
+    + '<div><div class="ec-titre">' + echapper(e.titre) + ' <span class="puce neutre" style="margin-left:4px;">' + echapper(TYPES_ECHEANCE[e.type] || 'Reminder') + '</span>' + rappel + '</div>' + (e.detail ? '<div class="ec-detail">' + echapper(e.detail) + '</div>' : '') + '</div>'
+    + '<div class="ec-actions">' + boutonIcone('modifier', 'crayon', 'Edit', '', e.id) + boutonIcone('supprimer', 'corbeille', 'Delete', 'danger', e.id) + '</div></div>';
 }
 
 function ouvrirEditionEcheance(id) {
@@ -75,14 +75,14 @@ function ouvrirEditionEcheance(id) {
   var rappelActuel = v.rappelJours == null || v.rappelJours === '' ? '' : String(v.rappelJours);
   var pr = ETAT.reglages.rappels || {};
   var m = ouvrirModale({
-    titre: e ? 'Modifier une échéance' : 'Nouvelle échéance',
+    titre: e ? 'Edit deadline' : 'New deadline',
     corps: '<div class="grid-2">' + champHtml('ecDate', 'Date', 'date', v.date)
       + '<div class="field"><label for="ecType">Type</label><select id="ecType">' + Object.keys(TYPES_ECHEANCE).map(function (k) { return '<option value="' + k + '"' + (k === v.type ? ' selected' : '') + '>' + echapper(TYPES_ECHEANCE[k]) + '</option>'; }).join('') + '</select></div>'
       + champHtml('ecTitre', 'Titre', 'text', v.titre, { classe: 'span-2' })
-      + champHtml('ecDetail', 'Détail', 'textarea', v.detail, { classe: 'span-2', attrs: 'rows="3"' })
-      + '<div class="field span-2"><label for="ecRappel">Me le rappeler</label><select id="ecRappel">' + DELAIS_RAPPEL.map(function (d) { return '<option value="' + d[0] + '"' + (d[0] === rappelActuel ? ' selected' : '') + '>' + echapper(d[1] + (d[0] === '' ? ' (' + (pr.horizonEcheances != null ? pr.horizonEcheances : 7) + ' jours avant)' : '')) + '</option>'; }).join('') + '</select></div>'
-      + '</div><p class="hint">Le rappel apparaît sur le tableau de bord et dans le centre des rappels, avec une notification du Mac ; puis chaque jour à partir de la date.</p>',
-    pied: '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">Annuler</button><button class="btn" data-role="ok">Enregistrer</button></div>',
+      + champHtml('ecDetail', 'Details', 'textarea', v.detail, { classe: 'span-2', attrs: 'rows="3"' })
+      + '<div class="field span-2"><label for="ecRappel">Remind me</label><select id="ecRappel">' + DELAIS_RAPPEL.map(function (d) { return '<option value="' + d[0] + '"' + (d[0] === rappelActuel ? ' selected' : '') + '>' + echapper(d[1] + (d[0] === '' ? ' (' + (pr.horizonEcheances != null ? pr.horizonEcheances : 7) + ' days before)' : '')) + '</option>'; }).join('') + '</select></div>'
+      + '</div><p class="hint">The reminder appears on the dashboard and in the reminders centre, with a desktop notification, then every day from the date.</p>',
+    pied: '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">Cancel</button><button class="btn" data-role="ok">Save</button></div>',
   });
   m.querySelector('[data-role=annuler]').addEventListener('click', fermerModale);
   m.querySelector('[data-role=ok]').addEventListener('click', function () {
@@ -108,7 +108,7 @@ function ouvrirEditionEcheance(id) {
 function supprimerEcheance(id) {
   var e = echeanceParId(id);
   if (!e) return;
-  confirmer('Supprimer l\'échéance « ' + e.titre + ' » ?', { ok: 'Supprimer', danger: true }).then(function (ok) {
+  confirmer('Delete the deadline "' + e.titre + '"?', { ok: 'Delete', danger: true }).then(function (ok) {
     if (!ok) return;
     ETAT.echeances.echeances = echeances().filter(function (x) { return x.id !== id; });
     sauver('echeances');

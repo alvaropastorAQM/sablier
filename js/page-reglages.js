@@ -1,6 +1,6 @@
 /* ============================================================
-   PAGE RÉGLAGES : facturation, identités, coordonnées bancaires, axes,
-   cotisations, rappels, données.
+   SETTINGS PAGE: billing, identities, bank details, areas, social
+   contributions, reminders, data.
    ============================================================ */
 'use strict';
 
@@ -39,23 +39,23 @@ function initReglages() {
       if (def[1] === 'nombre') {
         var txt = String(el.value).trim();
         v = txt === '' ? null : lireMontant(txt);
-        if (v == null || (el.min !== '' && v < Number(el.min))) { rendreReglages(); notifier('Valeur conservée : ' + (txt === '' ? 'le champ ne peut pas rester vide.' : 'nombre non compris.'), { type: 'erreur' }); return; }
+        if (v == null || (el.min !== '' && v < Number(el.min))) { rendreReglages(); notifier('Value kept: ' + (txt === '' ? 'the field cannot be left empty.' : 'number not understood.'), { type: 'erreur' }); return; }
       } else v = def[1] === 'bool' ? !!el.checked : el.value.trim();
       ecrireChemin(ETAT.reglages, def[0], v);
       sauver('reglages');
       rafraichir();
-      notifier('Réglage enregistré.', { duree: 1500 });
+      notifier('Setting saved.', { duree: 1500 });
     });
   });
   document.getElementById('reglAjouterAxe').addEventListener('click', function () {
     var n = axes().length;
-    axes().push({ id: uid('axe'), code: String(n + 1), nom: 'Nouvel axe', couleur: PALETTE_AXES[n % PALETTE_AXES.length] });
+    axes().push({ id: uid('axe'), code: String(n + 1), nom: 'New area', couleur: PALETTE_AXES[n % PALETTE_AXES.length] });
     sauver('reglages');
     rendreAxesReglages();
     var dernier = document.querySelector('#reglAxes .axe-ligne:last-child input[data-champ=nom]');
     if (dernier) { dernier.focus(); dernier.select(); }
   });
-  /* Couleur libre : le sélecteur natif, relié à l'axe en cours de réglage. */
+  /* Custom colour: the native picker, tied to the area being edited. */
   var libre = document.getElementById('reglCouleurLibre');
   libre.addEventListener('input', function () {
     var a = axeParId(libre.dataset.axe);
@@ -85,7 +85,7 @@ function initReglages() {
     if (b.dataset.action === 'monter' && idx > 0) { var t = liste[idx - 1]; liste[idx - 1] = liste[idx]; liste[idx] = t; }
     else if (b.dataset.action === 'descendre' && idx < liste.length - 1) { var u = liste[idx + 1]; liste[idx + 1] = liste[idx]; liste[idx] = u; }
     else if (b.dataset.action === 'supprimer') {
-      if (axeUtilise(id)) { notifier('Cet axe est utilisé par des saisies ou des tâches : il ne peut pas être supprimé.', { type: 'erreur' }); return; }
+      if (axeUtilise(id)) { notifier('This area is used by log entries or tasks: it cannot be deleted.', { type: 'erreur' }); return; }
       liste.splice(idx, 1);
       if (ETAT.reglages.ui.dernierAxe === id) ETAT.reglages.ui.dernierAxe = liste[0] ? liste[0].id : '';
     }
@@ -93,7 +93,7 @@ function initReglages() {
     rafraichir();
   });
   document.getElementById('reglOuvrirDossier').addEventListener('click', function () {
-    if (estApp()) window.sablier.donnees.ouvrirDossier(); else notifier('Disponible dans l\'application macOS.');
+    if (estApp()) window.sablier.donnees.ouvrirDossier(); else notifier('Only available in the desktop app.');
   });
   document.getElementById('reglExporter').addEventListener('click', exporterSauvegarde);
   document.getElementById('reglImporter').addEventListener('click', importerSauvegarde);
@@ -104,7 +104,7 @@ function initReglages() {
       ETAT.reglages.dossierFactures = d;
       sauver('reglages');
       rendreReglages();
-      notifier('Dossier des factures enregistré.', { duree: 2500 });
+      notifier('Invoices folder saved.', { duree: 2500 });
     });
   });
   document.getElementById('reglExportCsv').addEventListener('click', exporterJournalCsv);
@@ -129,10 +129,10 @@ function rendreReglages() {
   rendreAxesReglages();
   var info = document.getElementById('reglDossier');
   if (estApp()) {
-    window.sablier.donnees.dossier().then(function (d) { info.textContent = 'Fichiers JSON lisibles dans : ' + d + '. Une copie datée est faite chaque jour dans le sous-dossier Sauvegardes.'; });
-    document.getElementById('reglAPropos').textContent = 'Sablier ' + window.sablier.version + ', suivi de mission pour indépendant. Aucune donnée client n\'est enregistrée ici.';
+    window.sablier.donnees.dossier().then(function (d) { info.textContent = 'Readable JSON files in: ' + d + '. A dated copy is made every day in the Sauvegardes subfolder.'; });
+    document.getElementById('reglAPropos').textContent = 'Sablier ' + window.sablier.version + ', assignment tracking for freelancers. No client data is stored here.';
   } else {
-    info.textContent = 'Mode navigateur : les données sont conservées dans le stockage local de cette page.';
+    info.textContent = 'Browser mode: data is kept in this page\'s local storage.';
   }
 }
 
@@ -141,25 +141,25 @@ function rendreAxesReglages() {
   document.getElementById('reglAxes').innerHTML = liste.map(function (a) {
     var utilise = axeUtilise(a.id);
     return '<div class="axe-ligne" data-id="' + echapper(a.id) + '">'
-      + '<button type="button" class="axe-couleur" data-action="couleur" style="--axe:' + echapper(a.couleur) + '" title="Changer la couleur"><i class="axe-point"></i></button>'
-      + '<input type="text" data-champ="nom" value="' + echapper(a.nom) + '" placeholder="Nom de l\'axe">'
-      + '<div class="ordre">' + boutonIcone('monter', 'haut', 'Monter') + boutonIcone('descendre', 'bas', 'Descendre') + '</div>'
-      + boutonIcone('supprimer', 'corbeille', utilise ? 'Axe utilisé : suppression impossible' : 'Supprimer', 'danger')
+      + '<button type="button" class="axe-couleur" data-action="couleur" style="--axe:' + echapper(a.couleur) + '" title="Change the colour"><i class="axe-point"></i></button>'
+      + '<input type="text" data-champ="nom" value="' + echapper(a.nom) + '" placeholder="Area name">'
+      + '<div class="ordre">' + boutonIcone('monter', 'haut', 'Move up') + boutonIcone('descendre', 'bas', 'Move down') + '</div>'
+      + boutonIcone('supprimer', 'corbeille', utilise ? 'Area in use: cannot be deleted' : 'Delete', 'danger')
       + '</div>';
   }).join('');
 }
 
-/* Nuancier : dix teintes sobres, ou une couleur libre par le sélecteur natif. */
+/* Swatches: ten muted shades, or a custom colour through the native picker. */
 function ouvrirNuancier(ancre, a) {
   fermerMenu();
   var menu = document.createElement('div');
   menu.className = 'menu-blocs';
   menu.id = 'menuFlottant';
-  menu.innerHTML = '<div class="menu-blocs-titre">Couleur de « ' + echapper(a.nom) + ' »</div>'
+  menu.innerHTML = '<div class="menu-blocs-titre">Colour of "' + echapper(a.nom) + '"</div>'
     + '<div class="nuancier">' + PALETTE_AXES.map(function (c) {
       return '<button type="button" class="nuance' + (c.toLowerCase() === String(a.couleur).toLowerCase() ? ' active' : '') + '" data-couleur="' + c + '" title="' + c + '"><i style="background:' + c + '"></i></button>';
     }).join('') + '</div>'
-    + '<div class="sep"></div><button type="button" data-libre="1"><span class="ic" style="background:' + echapper(a.couleur) + '; color:#fff;">…</span><span>Autre couleur<span class="sous">Sélecteur de couleur du Mac</span></span></button>';
+    + '<div class="sep"></div><button type="button" data-libre="1"><span class="ic" style="background:' + echapper(a.couleur) + '; color:#fff;">…</span><span>Other colour<span class="sous">System colour picker</span></span></button>';
   document.body.appendChild(menu);
   var r = ancre.getBoundingClientRect();
   var top = r.bottom + 4, left = r.left;
@@ -186,37 +186,37 @@ function ouvrirNuancier(ancre, a) {
 
 function exporterSauvegarde() {
   var paquet = paquetSauvegarde();
-  var nom = 'Sablier-sauvegarde-' + aujourdhui() + '.json';
+  var nom = 'Sablier-backup-' + aujourdhui() + '.json';
   if (estApp()) {
     window.sablier.donnees.exporter(paquet, nom).then(function (res) {
-      if (res && res.ok) notifier('Sauvegarde enregistrée : ' + res.chemin.split('/').pop(), { type: 'succes', action: { libelle: 'Afficher dans le Finder', fn: function () { window.sablier.fichiers.reveler(res.chemin); } } });
+      if (res && res.ok) notifier('Backup saved: ' + res.chemin.split('/').pop(), { type: 'succes', action: { libelle: 'Show in file manager', fn: function () { window.sablier.fichiers.reveler(res.chemin); } } });
     });
   } else exporterTexte(nom, JSON.stringify(paquet, null, 2));
 }
 
 function importerSauvegarde() {
-  if (!estApp()) { notifier('Disponible dans l\'application macOS.'); return; }
+  if (!estApp()) { notifier('Only available in the desktop app.'); return; }
   window.sablier.donnees.importer().then(function (res) {
     if (!res || res.annule) return;
-    if (!res.ok) { notifier('Fichier illisible : ' + (res.message || ''), { type: 'erreur' }); return; }
+    if (!res.ok) { notifier('Unreadable file: ' + (res.message || ''), { type: 'erreur' }); return; }
     var p = res.paquet;
-    if (!p || p.application !== 'Sablier') { notifier('Ce fichier n\'est pas une sauvegarde de Sablier.', { type: 'erreur' }); return; }
+    if (!p || p.application !== 'Sablier') { notifier('This file is not a Sablier backup.', { type: 'erreur' }); return; }
     var nb = (p.journal && p.journal.entrees ? p.journal.entrees.length : 0);
-    confirmer('Remplacer toutes les données actuelles par la sauvegarde du ' + (p.exporteLe ? dateFr(p.exporteLe.slice(0, 10)) : '?') + ' (' + nb + ' lignes de journal) ? Les données actuelles seront d\'abord copiées dans le dossier Sauvegardes.', { ok: 'Remplacer', danger: true, titre: 'Importer une sauvegarde' }).then(function (ok) {
+    confirmer('Replace all current data with the backup from ' + (p.exporteLe ? dateFr(p.exporteLe.slice(0, 10)) : '?') + ' (' + nb + ' log entries)? The current data will first be copied to the Sauvegardes folder.', { ok: 'Replace', danger: true, titre: 'Import a backup' }).then(function (ok) {
       if (!ok) return;
       window.sablier.donnees.sauvegarderMaintenant().then(function () {
         var res = remplacerEtat(p);
-        if (!res.ok) { notifier('Sauvegarde incomplète (manque : ' + res.manquants.join(', ') + ') : rien n\'a été remplacé.', { type: 'erreur', duree: 8000 }); return; }
+        if (!res.ok) { notifier('Incomplete backup (missing: ' + res.manquants.join(', ') + '): nothing was replaced.', { type: 'erreur', duree: 8000 }); return; }
         NOTES_PAGE = null; RELEVE_MOIS = null; RELEVE_JOURS = {}; TABLEAU_PERIODE = null;
         afficherPage('tableau');
-        notifier('Sauvegarde importée.', { type: 'succes' });
+        notifier('Backup imported.', { type: 'succes' });
       });
     });
   });
 }
 
 function exporterJournalCsv() {
-  var lignes = [['Date', 'Axe', 'Intervention', 'Détail', 'Début', 'Fin', 'Durée (min)', 'Durée (h)']];
+  var lignes = [['Date', 'Area', 'Work item', 'Details', 'Start', 'End', 'Duration (min)', 'Duration (h)']];
   trierPar(entreesJournal(), function (e) { return e.date + (e.debut || ''); }).forEach(function (e) {
     var m = dureeEntree(e);
     lignes.push([dateFr(e.date), libelleAxe(e.axe), e.intervention, e.detail || '', e.debut || '', e.fin || '', String(m), fmtHeuresDec(m, true)]);

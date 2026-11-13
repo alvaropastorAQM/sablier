@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' sablier:; style-src 'self' 'unsafe-inline'; img-src 'self' data: sablier-piece:; font-src 'self' data:; connect-src ipc: http://ipc.localhost;">
 <title>Sablier</title>
+<link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -20,15 +21,15 @@
       <h1 class="brand">Sablier</h1>
     </div>
     <nav class="tabs" data-bulle="navigation">
-      <button class="tab-btn tab-btn-rappels" id="btnRappels" type="button" data-icone="cloche" title="Ce qu'il ne faut pas rater : échéances, tâches, factures, chrono">Rappels<span class="tab-pastille" id="pastilleRappels"></span></button>
-      <button class="tab-btn" data-tab="tableau" data-icone="grille">Tableau de bord</button>
-      <button class="tab-btn" data-tab="releve" data-icone="horloge">Journal et relevé <span class="tab-pastille" id="pastilleJournal"></span></button>
-      <button class="tab-btn" data-tab="factures" data-icone="fichier">Factures et recettes <span class="tab-pastille" id="pastilleReleve"></span></button>
-      <button class="tab-btn" data-tab="taches" data-icone="case">Tâches <span class="tab-pastille" id="pastilleTaches"></span></button>
+      <button class="tab-btn tab-btn-rappels" id="btnRappels" type="button" data-icone="cloche" title="What you must not miss: deadlines, tasks, invoices, timer">Reminders<span class="tab-pastille" id="pastilleRappels"></span></button>
+      <button class="tab-btn" data-tab="tableau" data-icone="grille">Dashboard</button>
+      <button class="tab-btn" data-tab="releve" data-icone="horloge">Log and statement <span class="tab-pastille" id="pastilleJournal"></span></button>
+      <button class="tab-btn" data-tab="factures" data-icone="fichier">Invoices and income <span class="tab-pastille" id="pastilleReleve"></span></button>
+      <button class="tab-btn" data-tab="taches" data-icone="case">Tasks <span class="tab-pastille" id="pastilleTaches"></span></button>
       <button class="tab-btn" data-tab="notes" data-icone="note">Notes</button>
-      <button class="tab-btn" data-tab="echeances" data-icone="calendrier">Échéances <span class="tab-pastille" id="pastilleEcheances"></span></button>
-      <button class="tab-btn" data-tab="reglages" data-icone="reglages">Réglages</button>
-      <button class="tab-btn tab-btn-aide" data-tab="guide" data-icone="aide">Mode d'emploi</button>
+      <button class="tab-btn" data-tab="echeances" data-icone="calendrier">Deadlines <span class="tab-pastille" id="pastilleEcheances"></span></button>
+      <button class="tab-btn" data-tab="reglages" data-icone="reglages">Settings</button>
+      <button class="tab-btn tab-btn-aide" data-tab="guide" data-icone="aide">User guide</button>
     </nav>
     <div class="lateral-pied" id="chronoPied"></div>
   </aside>
@@ -36,23 +37,23 @@
   <div class="principal" id="principal">
     <div id="chronoBandeau" class="chrono-bandeau"></div>
 
-    <!-- ===================== TABLEAU DE BORD ===================== -->
+    <!-- ===================== DASHBOARD ===================== -->
     <div class="tab-panel" data-tab-panel="tableau">
       <div id="tableauContenu"></div>
     </div>
 
-    <!-- ===================== JOURNAL ET RELEVÉ ===================== -->
+    <!-- ===================== LOG AND STATEMENT ===================== -->
     <div class="tab-panel" data-tab-panel="releve" style="display:none">
       <div id="releveContenu"></div>
       <datalist id="jrInterventionsListe"></datalist>
     </div>
 
-    <!-- ===================== FACTURES ET RECETTES ===================== -->
+    <!-- ===================== INVOICES AND INCOME ===================== -->
     <div class="tab-panel" data-tab-panel="factures" style="display:none">
       <div id="facturesContenu"></div>
     </div>
 
-    <!-- ===================== TÂCHES ===================== -->
+    <!-- ===================== TASKS ===================== -->
     <div class="tab-panel" data-tab-panel="taches" style="display:none">
       <div id="tachesContenu"></div>
     </div>
@@ -62,61 +63,61 @@
       <div id="notesContenu"></div>
     </div>
 
-    <!-- ===================== ÉCHÉANCES ===================== -->
+    <!-- ===================== DEADLINES ===================== -->
     <div class="tab-panel" data-tab-panel="echeances" style="display:none">
       <div id="echeancesContenu"></div>
     </div>
 
-    <!-- ===================== RÉGLAGES ===================== -->
+    <!-- ===================== SETTINGS ===================== -->
     <div class="tab-panel" data-tab-panel="reglages" style="display:none">
       <section class="card">
-        <h2>Réglages</h2>
+        <h2>Settings</h2>
 
         <div class="reglage-bloc">
-          <h3>Facturation</h3>
-          <p class="small">Les valeurs du contrat signé. Le tarif s'applique au temps facturé : chaque intervention compte pour son temps exact, et seul le total du relevé ou de la facture est arrondi.</p>
+          <h3>Billing</h3>
+          <p class="small">The values from the signed contract. The rate applies to billed time: each work item counts for its exact time, and only the total of the statement or invoice is rounded.</p>
           <div class="grid-4">
-            <div class="field"><label for="reglTarif">Tarif horaire (€ HT)</label><input type="number" id="reglTarif" step="0.01" min="0"></div>
-            <div class="field"><label for="reglArrondi">Arrondi du temps facturé</label>
+            <div class="field"><label for="reglTarif">Hourly rate (€ excl. tax)</label><input type="number" id="reglTarif" step="0.01" min="0"></div>
+            <div class="field"><label for="reglArrondi">Billed time rounding</label>
               <select id="reglArrondi">
-                <option value="0">Aucun (à la minute)</option>
-                <option value="0.25">Au quart d'heure supérieur</option>
-                <option value="0.5">À la demi-heure supérieure</option>
-                <option value="1">À l'heure supérieure</option>
+                <option value="0">None (to the minute)</option>
+                <option value="0.25">Up to the next quarter hour</option>
+                <option value="0.5">Up to the next half hour</option>
+                <option value="1">Up to the next hour</option>
               </select>
             </div>
-            <div class="field"><label for="reglHeuresJournee">Heures par journée</label><input type="number" id="reglHeuresJournee" step="0.5" min="1"></div>
-            <div class="field"><label for="reglRepereAnnuel">Repère annuel (heures)</label><input type="number" id="reglRepereAnnuel" step="1" min="0"></div>
-            <div class="field"><label for="reglContratDebut">Début du contrat</label><input type="date" id="reglContratDebut"></div>
-            <div class="field"><label for="reglContratFin">Fin du contrat</label><input type="date" id="reglContratFin"></div>
-            <div class="field span-2"><label for="reglMentionTVA">Mention TVA sur les factures</label><input type="text" id="reglMentionTVA"></div>
-            <div class="field"><label for="reglDelaiPaiement">Délai de paiement (jours)</label><input type="number" id="reglDelaiPaiement" step="1" min="0"></div>
-            <div class="field span-2"><label for="reglDossierFactures">Dossier des factures (facture et relevé PDF, un sous-dossier par mois)</label>
-              <div style="display:flex; gap:8px;"><input type="text" id="reglDossierFactures" style="flex:1;" placeholder="Aucun : Sablier demandera où enregistrer chaque PDF"><button type="button" class="btn btn-ghost" id="reglChoisirDossierFactures">Choisir…</button></div></div>
+            <div class="field"><label for="reglHeuresJournee">Hours per day</label><input type="number" id="reglHeuresJournee" step="0.5" min="1"></div>
+            <div class="field"><label for="reglRepereAnnuel">Yearly benchmark (hours)</label><input type="number" id="reglRepereAnnuel" step="1" min="0"></div>
+            <div class="field"><label for="reglContratDebut">Contract start</label><input type="date" id="reglContratDebut"></div>
+            <div class="field"><label for="reglContratFin">Contract end</label><input type="date" id="reglContratFin"></div>
+            <div class="field span-2"><label for="reglMentionTVA">VAT notice on invoices</label><input type="text" id="reglMentionTVA"></div>
+            <div class="field"><label for="reglDelaiPaiement">Payment term (days)</label><input type="number" id="reglDelaiPaiement" step="1" min="0"></div>
+            <div class="field span-2"><label for="reglDossierFactures">Invoices folder (invoice and statement PDFs, one subfolder per month)</label>
+              <div style="display:flex; gap:8px;"><input type="text" id="reglDossierFactures" style="flex:1;" placeholder="None: Sablier will ask where to save each PDF"><button type="button" class="btn btn-ghost" id="reglChoisirDossierFactures">Choose…</button></div></div>
           </div>
         </div>
 
         <div class="reglage-bloc">
-          <h3>Prestataire</h3>
-          <p class="small">Sur les factures et les relevés : nom, forme juridique, adresse sur deux lignes, SIREN, email et téléphone. Le SIRET et le code APE restent enregistrés mais ne sont pas imprimés.</p>
+          <h3>Contractor</h3>
+          <p class="small">On invoices and statements: name, legal form, address on two lines, SIREN, email and phone. The SIRET and the APE code stay saved but are not printed.</p>
           <div class="grid-4">
-            <div class="field"><label for="reglPrestNom">Nom</label><input type="text" id="reglPrestNom"></div>
-            <div class="field"><label for="reglPrestForme">Forme juridique</label><input type="text" id="reglPrestForme" placeholder="Entrepreneur individuel"></div>
+            <div class="field"><label for="reglPrestNom">Name</label><input type="text" id="reglPrestNom"></div>
+            <div class="field"><label for="reglPrestForme">Legal form</label><input type="text" id="reglPrestForme" placeholder="Sole trader (entrepreneur individuel)"></div>
             <div class="field"><label for="reglPrestSiren">SIREN</label><input type="text" id="reglPrestSiren"></div>
-            <div class="field"><label for="reglPrestSiret">SIRET (non imprimé)</label><input type="text" id="reglPrestSiret"></div>
-            <div class="field span-2"><label for="reglPrestAdresse">Adresse (voie, puis code postal et ville)</label><input type="text" id="reglPrestAdresse" placeholder="12 rue des Essais, 75000 Paris"></div>
+            <div class="field"><label for="reglPrestSiret">SIRET (not printed)</label><input type="text" id="reglPrestSiret"></div>
+            <div class="field span-2"><label for="reglPrestAdresse">Address (street, then postcode and city)</label><input type="text" id="reglPrestAdresse" placeholder="12 rue des Essais, 75000 Paris"></div>
             <div class="field"><label for="reglPrestEmail">Email</label><input type="email" id="reglPrestEmail"></div>
-            <div class="field"><label for="reglPrestTel">Téléphone</label><input type="text" id="reglPrestTel"></div>
-            <div class="field"><label for="reglPrestApe">Code APE (non imprimé)</label><input type="text" id="reglPrestApe"></div>
+            <div class="field"><label for="reglPrestTel">Phone</label><input type="text" id="reglPrestTel"></div>
+            <div class="field"><label for="reglPrestApe">APE code (not printed)</label><input type="text" id="reglPrestApe"></div>
           </div>
         </div>
 
         <div class="reglage-bloc">
-          <h3>Coordonnées bancaires</h3>
-          <p class="small">Imprimées dans les « Conditions de règlement » des factures : titulaire du compte, banque, IBAN par groupes de quatre, BIC. Recopiez-les depuis votre relevé d'identité bancaire.</p>
+          <h3>Bank details</h3>
+          <p class="small">Printed in the "Payment terms" of invoices: account holder, bank, IBAN in groups of four, BIC. Copy them from your bank details slip (RIB).</p>
           <div class="grid-4">
-            <div class="field"><label for="reglPrestTitulaire">Titulaire du compte</label><input type="text" id="reglPrestTitulaire" placeholder="EI Nom Prénom"></div>
-            <div class="field"><label for="reglPrestBanque">Banque</label><input type="text" id="reglPrestBanque" placeholder="Banque Exemple"></div>
+            <div class="field"><label for="reglPrestTitulaire">Account holder</label><input type="text" id="reglPrestTitulaire" placeholder="EI First Last"></div>
+            <div class="field"><label for="reglPrestBanque">Bank</label><input type="text" id="reglPrestBanque" placeholder="Example Bank"></div>
             <div class="field"><label for="reglPrestIban">IBAN</label><input type="text" id="reglPrestIban" placeholder="FR76 …"></div>
             <div class="field"><label for="reglPrestBic">BIC</label><input type="text" id="reglPrestBic"></div>
           </div>
@@ -125,147 +126,147 @@
         <div class="reglage-bloc">
           <h3>Client</h3>
           <div class="grid-4">
-            <div class="field"><label for="reglClientSociete">Société</label><input type="text" id="reglClientSociete"></div>
+            <div class="field"><label for="reglClientSociete">Company</label><input type="text" id="reglClientSociete"></div>
             <div class="field"><label for="reglClientContact">Contact</label><input type="text" id="reglClientContact"></div>
-            <div class="field span-2"><label for="reglClientAdresse">Adresse</label><input type="text" id="reglClientAdresse"></div>
+            <div class="field span-2"><label for="reglClientAdresse">Address</label><input type="text" id="reglClientAdresse"></div>
             <div class="field"><label for="reglClientSiren">SIREN</label><input type="text" id="reglClientSiren"></div>
-            <div class="field"><label for="reglClientEmail">Email de facturation</label><input type="email" id="reglClientEmail"></div>
+            <div class="field"><label for="reglClientEmail">Billing email</label><input type="email" id="reglClientEmail"></div>
           </div>
         </div>
 
         <div class="reglage-bloc">
-          <h3>Axes de la mission</h3>
-          <p class="small">Les axes du contrat. Chaque axe a sa couleur, reprise sur les cartes, le journal, le relevé et les factures : cliquez sur la pastille pour la changer. Un axe utilisé par des saisies ne peut pas être supprimé.</p>
-          <div style="position:relative;"><input type="color" id="reglCouleurLibre" aria-label="Couleur libre" style="position:absolute; left:0; top:0; width:1px; height:1px; opacity:0; border:0; padding:0;"></div>
+          <h3>Assignment areas</h3>
+          <p class="small">The areas of the contract. Each area has its own colour, used on cards, the log, the statement and invoices: click the dot to change it. An area used by log entries cannot be deleted.</p>
+          <div style="position:relative;"><input type="color" id="reglCouleurLibre" aria-label="Free colour" style="position:absolute; left:0; top:0; width:1px; height:1px; opacity:0; border:0; padding:0;"></div>
           <div class="axes-lignes" id="reglAxes"></div>
           <div class="reglage-actions">
-            <button class="btn btn-ghost btn-petit" id="reglAjouterAxe">Ajouter un axe</button>
+            <button class="btn btn-ghost btn-petit" id="reglAjouterAxe">Add an area</button>
           </div>
         </div>
 
         <div class="reglage-bloc">
-          <h3>Cotisations sociales (estimation)</h3>
-          <p class="small">Sert à la trésorerie et aux trimestres URSSAF de la vue Factures. Les cotisations se calculent sur le chiffre d'affaires encaissé ; la première déclaration regroupe le trimestre du début d'activité et le suivant.</p>
+          <h3>Social contributions (estimate)</h3>
+          <p class="small">Used for cash flow and the URSSAF quarters in the Invoices view. Contributions are calculated on the revenue collected; the first declaration covers the quarter in which the activity started and the next one.</p>
           <div class="grid-4">
-            <div class="field"><label for="reglDebutActivite">Début d'activité</label><input type="date" id="reglDebutActivite"></div>
-            <div class="field"><label for="reglTauxAcre">Taux avec ACRE (%)</label><input type="number" id="reglTauxAcre" step="0.1" min="0"></div>
-            <div class="field"><label for="reglFinAcre">Fin de l'ACRE</label><input type="date" id="reglFinAcre"></div>
-            <div class="field"><label for="reglTauxPlein">Taux plein (%)</label><input type="number" id="reglTauxPlein" step="0.1" min="0"></div>
+            <div class="field"><label for="reglDebutActivite">Activity start</label><input type="date" id="reglDebutActivite"></div>
+            <div class="field"><label for="reglTauxAcre">Rate with ACRE (%)</label><input type="number" id="reglTauxAcre" step="0.1" min="0"></div>
+            <div class="field"><label for="reglFinAcre">ACRE end</label><input type="date" id="reglFinAcre"></div>
+            <div class="field"><label for="reglTauxPlein">Full rate (%)</label><input type="number" id="reglTauxPlein" step="0.1" min="0"></div>
           </div>
         </div>
 
         <div class="reglage-bloc" id="reglRappels">
-          <h3>Rappels et notifications</h3>
-          <p class="small">Sablier surveille les échéances, les tâches datées, les mois à facturer, les factures à encaisser, un chrono oublié et un journal délaissé. Tout remonte dans le centre des rappels (barre latérale) et sur le tableau de bord ; les nouveautés sont aussi envoyées dans le centre de notifications du Mac.</p>
+          <h3>Reminders and notifications</h3>
+          <p class="small">Sablier watches deadlines, dated tasks, months to invoice, invoices awaiting payment, a forgotten timer and a neglected log. Everything shows up in the reminders center (sidebar) and on the dashboard; new items are also sent to the system notification center.</p>
           <div class="grid-4">
-            <div class="field span-2"><label>Notifications macOS</label><label class="field-ligne"><input type="checkbox" id="reglRappelNatifs"> <span>Envoyer les rappels dans le centre de notifications du Mac</span></label></div>
-            <div class="field span-2"><label>À l'ouverture</label><label class="field-ligne"><input type="checkbox" id="reglRappelDemarrage"> <span>Récapituler les rappels du jour à l'ouverture de l'application</span></label></div>
-            <div class="field"><label for="reglRappelEcheances">Échéances : jours avant</label><input type="number" id="reglRappelEcheances" step="1" min="0"></div>
-            <div class="field"><label for="reglRappelTaches">Tâches : jours avant</label><input type="number" id="reglRappelTaches" step="1" min="0"></div>
-            <div class="field"><label for="reglRappelFactures">Paiements : jours avant</label><input type="number" id="reglRappelFactures" step="1" min="0"></div>
-            <div class="field"><label for="reglRappelChrono">Chrono oublié : après (heures)</label><input type="number" id="reglRappelChrono" step="0.5" min="0"></div>
-            <div class="field"><label for="reglRappelJournal">Journal délaissé : après (jours, 0 = jamais)</label><input type="number" id="reglRappelJournal" step="1" min="0"></div>
+            <div class="field span-2"><label>System notifications</label><label class="field-ligne"><input type="checkbox" id="reglRappelNatifs"> <span>Send reminders to the system notification center</span></label></div>
+            <div class="field span-2"><label>On startup</label><label class="field-ligne"><input type="checkbox" id="reglRappelDemarrage"> <span>Summarize today's reminders when the application opens</span></label></div>
+            <div class="field"><label for="reglRappelEcheances">Deadlines: days before</label><input type="number" id="reglRappelEcheances" step="1" min="0"></div>
+            <div class="field"><label for="reglRappelTaches">Tasks: days before</label><input type="number" id="reglRappelTaches" step="1" min="0"></div>
+            <div class="field"><label for="reglRappelFactures">Payments: days before</label><input type="number" id="reglRappelFactures" step="1" min="0"></div>
+            <div class="field"><label for="reglRappelChrono">Forgotten timer: after (hours)</label><input type="number" id="reglRappelChrono" step="0.5" min="0"></div>
+            <div class="field"><label for="reglRappelJournal">Neglected log: after (days, 0 = never)</label><input type="number" id="reglRappelJournal" step="1" min="0"></div>
           </div>
           <div class="reglage-actions">
-            <button class="btn btn-ghost btn-petit" id="reglOuvrirRappels">Ouvrir le centre des rappels</button>
-            <button class="btn btn-ghost btn-petit" id="reglTesterNotif">Envoyer une notification d'essai</button>
+            <button class="btn btn-ghost btn-petit" id="reglOuvrirRappels">Open the reminders center</button>
+            <button class="btn btn-ghost btn-petit" id="reglTesterNotif">Send a test notification</button>
           </div>
         </div>
 
         <div class="reglage-bloc">
-          <h3>Données</h3>
-          <p class="small" id="reglDossier">Les données sont enregistrées dans des fichiers lisibles sur ce Mac.</p>
+          <h3>Data</h3>
+          <p class="small" id="reglDossier">The data is saved in readable files on this computer.</p>
           <div class="reglage-actions">
-            <button class="btn btn-ghost" id="reglOuvrirDossier">Ouvrir le dossier de données</button>
-            <button class="btn btn-ghost" id="reglExporter">Exporter une sauvegarde…</button>
-            <button class="btn btn-ghost" id="reglImporter">Importer une sauvegarde…</button>
-            <button class="btn btn-ghost" id="reglExportCsv">Exporter le journal (CSV)…</button>
+            <button class="btn btn-ghost" id="reglOuvrirDossier">Open the data folder</button>
+            <button class="btn btn-ghost" id="reglExporter">Export a backup…</button>
+            <button class="btn btn-ghost" id="reglImporter">Import a backup…</button>
+            <button class="btn btn-ghost" id="reglExportCsv">Export the log (CSV)…</button>
           </div>
         </div>
 
         <div class="reglage-bloc">
-          <h3>À propos</h3>
-          <p class="small" id="reglAPropos">Sablier, suivi de mission pour indépendant.</p>
+          <h3>About</h3>
+          <p class="small" id="reglAPropos">Sablier, assignment tracking for freelancers.</p>
         </div>
       </section>
     </div>
 
-    <!-- ===================== MODE D'EMPLOI ===================== -->
+    <!-- ===================== USER GUIDE ===================== -->
     <div class="tab-panel" data-tab-panel="guide" style="display:none">
       <section class="card">
-        <h2>Le rituel mensuel en bref</h2>
+        <h2>The monthly routine at a glance</h2>
         <div class="guide-flow">
-          <div class="guide-flow-step"><span class="num">1</span><h4>Saisir au fil de l'eau</h4><p>Le chrono pendant que vous travaillez, ou une ligne ajoutée dans « Journal et relevé » (<kbd>⌘</kbd><kbd>N</kbd>).</p></div>
-          <div class="guide-flow-step"><span class="num">2</span><h4>Contrôler le relevé</h4><p>En fin de mois, « Journal et relevé » montre le travail jour par jour et calcule le temps facturé.</p></div>
-          <div class="guide-flow-step"><span class="num">3</span><h4>Établir la facture</h4><p>Un clic crée la facture numérotée et enregistre la facture et le relevé en PDF dans le dossier des factures (Réglages).</p></div>
-          <div class="guide-flow-step"><span class="num">4</span><h4>Noter l'encaissement</h4><p>Page « Factures et recettes » : marquez la facture payée à réception du virement, le livre des recettes se remplit.</p></div>
-          <div class="guide-flow-step"><span class="num">5</span><h4>Déclarer à l'URSSAF</h4><p>Chaque trimestre, le tableau des recettes donne le chiffre d'affaires encaissé à déclarer.</p></div>
+          <div class="guide-flow-step"><span class="num">1</span><h4>Log as you go</h4><p>Use the timer while you work, or add an entry in “Log and statement” (<kbd>Ctrl</kbd><kbd>N</kbd>).</p></div>
+          <div class="guide-flow-step"><span class="num">2</span><h4>Check the statement</h4><p>At the end of the month, “Log and statement” shows the work day by day and calculates the billed time.</p></div>
+          <div class="guide-flow-step"><span class="num">3</span><h4>Create the invoice</h4><p>One click creates the numbered invoice and saves the invoice and the statement as PDFs in the invoices folder (Settings).</p></div>
+          <div class="guide-flow-step"><span class="num">4</span><h4>Record the payment</h4><p>On the “Invoices and income” page, mark the invoice as paid when the transfer arrives, and the income ledger fills itself in.</p></div>
+          <div class="guide-flow-step"><span class="num">5</span><h4>Declare to URSSAF</h4><p>Each quarter, the income table gives the collected revenue to declare.</p></div>
         </div>
       </section>
 
       <section class="card">
-        <h2>Page par page</h2>
+        <h2>Page by page</h2>
 
         <details class="guide-fold" open>
-          <summary>Rappels</summary>
+          <summary>Reminders</summary>
           <div class="details-body">
             <ul>
-              <li><strong>Ce que Sablier surveille</strong> : les échéances (chacune avec son délai de rappel, sinon celui des Réglages), les tâches datées, les mois écoulés pas encore facturés, les factures dont le paiement approche ou est dépassé, un chrono qui tourne depuis trop longtemps, un journal sans saisie depuis plusieurs jours.</li>
-              <li><strong>Où ils apparaissent</strong> : en tête du tableau de bord, dans le centre des rappels (bouton <span class="guide-ui">Rappels</span> de la barre latérale, <kbd>⌘</kbd><kbd>⇧</kbd><kbd>R</kbd>), sur la pastille du Dock, et par notification du Mac. Un rappel se reporte à demain ou à dans sept jours, ou se marque fait.</li>
-              <li>Au premier envoi, macOS demande l'autorisation d'afficher les notifications de Sablier : acceptez, ou réglez-la plus tard dans Réglages Système › Notifications.</li>
+              <li><strong>What Sablier watches</strong>: deadlines (each with its own reminder delay, otherwise the one from Settings), dated tasks, past months not yet invoiced, invoices whose payment is approaching or overdue, a timer that has been running for too long, and a log with no entry for several days.</li>
+              <li><strong>Where they appear</strong>: at the top of the dashboard, in the reminders center (<span class="guide-ui">Reminders</span> button in the sidebar, <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>R</kbd>), on the dock badge, and as a system notification. A reminder can be snoozed until tomorrow or for a week, or marked done.</li>
+              <li>The first time one is sent, your system may ask for permission to show Sablier's notifications: accept, or set it later in your system notification settings.</li>
             </ul>
           </div>
         </details>
 
         <details class="guide-fold">
-          <summary>Journal et chrono</summary>
+          <summary>Log and timer</summary>
           <div class="details-body">
-            <h4>Les lignes du journal</h4>
+            <h4>Log entries</h4>
             <ul>
-              <li><strong>Jour par jour</strong> : la page « Journal et relevé » montre une ligne par journée (interventions, temps facturé, montant). Un clic la déplie sur ses lignes, que l'on modifie, duplique, supprime ou reprend au chrono.</li>
-              <li><strong>Ajouter une ligne</strong> (bouton en haut de la page, ou <kbd>⌘</kbd><kbd>N</kbd>) : date, axe, intervention (le libellé du relevé), détail facultatif, puis début et fin ou une durée (<span class="guide-ui">1h30</span>, <span class="guide-ui">45 min</span>, <span class="guide-ui">2,5</span>).</li>
-              <li><strong>Chrono</strong> : le bouton en bas de la barre latérale lance le compteur ; vous nommez l'intervention à l'arrêt. Il s'affiche dans un bandeau en haut de l'écran, survit à la fermeture de l'application, et crée la ligne quand vous l'arrêtez. Raccourci : <kbd>⌘</kbd><kbd>⇧</kbd><kbd>T</kbd>, pause avec <kbd>⌘</kbd><kbd>⌥</kbd><kbd>T</kbd>.</li>
-              <li><strong>Reprendre</strong> : sur une ligne existante, ce bouton relance le chrono avec les mêmes libellés.</li>
-              <li><strong>Tâche liée</strong> : dans la fiche d'une ligne, rattachez-la à une tâche : son temps s'ajoute au temps passé de la tâche, et la ligne porte le nom de la tâche dans le journal (un clic ouvre la fiche). Le chrono lancé depuis une carte fait ce lien tout seul.</li>
-              <li><strong>Mois de facturation</strong> : dans la fiche d'une ligne, il vaut par défaut le mois du travail. Choisissez un mois plus tard pour porter ce travail sur un relevé et une facture ultérieurs : la ligne garde sa date dans le journal et porte la pastille <span class="guide-ui">facturé en octobre</span>. Utile pour un travail fait avant le début du contrat.</li>
+              <li><strong>Day by day</strong>: the “Log and statement” page shows one row per day (work items, billed time, amount). One click expands it into its entries, which you can edit, duplicate, delete or resume with the timer.</li>
+              <li><strong>Add an entry</strong> (button at the top of the page, or <kbd>Ctrl</kbd><kbd>N</kbd>): date, area, work item (the label on the statement), optional details, then start and end or a duration (<span class="guide-ui">1h30</span>, <span class="guide-ui">45 min</span>, <span class="guide-ui">2.5</span>).</li>
+              <li><strong>Timer</strong>: the button at the bottom of the sidebar starts the counter; you name the work item when you stop it. It shows in a banner at the top of the screen, survives closing the application, and creates the entry when you stop it. Shortcut: <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>T</kbd>, pause with <kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>T</kbd>.</li>
+              <li><strong>Resume</strong>: on an existing entry, this button restarts the timer with the same labels.</li>
+              <li><strong>Linked task</strong>: in an entry's sheet, attach it to a task: its time is added to the task's time spent, and the entry shows the task name in the log (one click opens the task sheet). A timer started from a card makes this link by itself.</li>
+              <li><strong>Billing month</strong>: in an entry's sheet, it defaults to the month of the work. Choose a later month to carry this work on a later statement and invoice: the entry keeps its date in the log and shows the <span class="guide-ui">moved to October</span> badge. Useful for work done before the contract started.</li>
             </ul>
-            <h4>Règle de calcul</h4>
-            <div class="guide-note">Les lignes d'une même journée qui portent le même axe et le même libellé d'intervention forment une seule intervention. Chaque intervention compte pour son temps exact ; seul le total du relevé ou de la facture est arrondi au quart d'heure supérieur, une fois (article 6.1 du contrat ; règle du 26/10/2026). Ni le découpage en lignes ni le nombre de séances ne changent donc ce que paie le client. Une intervention se reporte toujours entière : ses lignes partagent le même mois de facturation.</div>
+            <h4>Calculation rule</h4>
+            <div class="guide-note">Entries of the same day that share the same area and the same work item label form a single work item. Each work item counts for its exact time; only the total of the statement or invoice is rounded up to the next quarter hour, once (article 6.1 of the contract; rule of 26 October 2026). Neither the split into entries nor the number of sessions changes what the client pays. A work item is always moved as a whole: its entries share the same billing month.</div>
           </div>
         </details>
 
         <details class="guide-fold">
-          <summary>Journal et relevé, factures</summary>
+          <summary>Log and statement, invoices</summary>
           <div class="details-body">
             <ul>
-              <li>Le <strong>relevé</strong> reprend le modèle du contrat : date, axe, nature du travail, temps passé, temps facturé, montant ; à l'écran, il se lit jour par jour, et le PDF garde le détail complet. Les frais de déplacement autorisés s'ajoutent sur justificatifs. Une ligne peut être non facturable (0 €, motif affiché) ou porter un forfait.</li>
-              <li><strong>Travaux réalisés</strong> : les tâches terminées dans le mois peuvent être jointes au relevé en annexe, pour donner au client une vue de ce qui a avancé (les premières sont affichées, « Voir plus » montre le reste).</li>
-              <li><strong>Établir la facture</strong> fige les lignes pas encore facturées du mois : numéro continu (année-numéro), date d'émission, échéance à trente jours, conditions de règlement (pénalités de retard et indemnité de 40 € toujours imprimées) avec vos coordonnées bancaires. Un mois peut porter plusieurs factures. Seul le numéro suivant est accepté, et la date ne peut pas précéder celle de la facture précédente. Une facture émise ne se modifie plus ; seule la dernière peut être supprimée en cas d'erreur avant envoi, et jamais une fois encaissée. La facture et le relevé du mois sont enregistrés en PDF dans le dossier des factures choisi dans les Réglages, sous-dossier du mois (« 2026-11 novembre »), créé au besoin ; « Refaire les PDF » ajoute une copie (« Facture-2026-01 (2).pdf ») sans toucher aux PDF déjà enregistrés : prestataire, client et relevé restent ceux de l'émission.</li>
-              <li><strong>Reporter sur un autre mois</strong> déplace des interventions vers le relevé et la facture d'un mois ultérieur, sans toucher à leur date : le travail de septembre peut ainsi être facturé en octobre. Le relevé de départ et celui d'arrivée l'annoncent chacun d'un bandeau, la ligne porte la mention « Réalisé en septembre 2026 » sur l'écran comme sur le PDF du relevé. La facture, elle, ne dit pas quand le travail a été réalisé : ni date ni mois d'origine, et son annexe regroupe les interventions par axe et libellé, temps et montants additionnés ; la trace reste dans le journal et le relevé. Une intervention déjà portée par une facture ne se reporte plus.</li>
-              <li><strong>Factures et recettes</strong> (onglet sous « Journal et relevé ») montre les factures émises, le livre des recettes (à remplir en marquant chaque facture payée) et le tableau des trimestres URSSAF, avec cotisations estimées (taux ACRE jusqu'au 30 septembre 2027, taux plein ensuite) et une case « Déclaré » par trimestre.</li>
-            </ul>
-          </div>
-        </details>
-
-        <details class="guide-fold">
-          <summary>Tâches, notes et échéances</summary>
-          <div class="details-body">
-            <ul>
-              <li><strong>Tâches</strong> : trois colonnes (À faire, En cours, Fait). Glissez les cartes d'une colonne à l'autre ; elles se rangent d'elles-mêmes par priorité puis par échéance. Un clic ouvre la <strong>fiche</strong> : étapes à cocher (l'avancement s'affiche sur la carte), pièces jointes (fichiers et images glissés depuis le Finder, liens, extraits de code), pages de notes liées, journal d'avancement daté, temps passé d'après le journal. Depuis une carte, <span class="guide-ui">Chrono</span> lance le compteur sur cette tâche.</li>
-              <li><strong>Idées</strong> : elles se notent dans la page de notes « Idées en vrac » (style <span class="guide-ui">Idée</span> : bouton ampoule de la barre, <span class="guide-ui">/</span> puis « Idée », ou <span class="guide-ui">? </span> en début de ligne). Dans une idée, Entrée passe à la ligne pour le détail ; deux fois Entrée en sort. Le bouton <span class="guide-ui">En faire une tâche</span> crée la tâche dans « À faire », liée à la page ; le bouton <span class="guide-ui">Tâche</span> de la barre fait de même pour n'importe quelle ligne.</li>
-              <li><strong>Notes</strong> : des pages et sous-pages, à la manière d'un carnet. Une page s'écrit d'un seul tenant, comme dans Notes d'Apple : Entrée passe à la ligne, <kbd>⇧</kbd><kbd>Entrée</kbd> va à la ligne sans changer de paragraphe. La barre au-dessus de la page donne le style des lignes sélectionnées (texte ou titre, listes, cases à cocher, citation, encadré, idée, séparateur), le gras, l'italique, le souligné, le barré, le surlignage et les liens. Au clavier : <span class="guide-ui">/</span> sur une ligne vide pour insérer ; <span class="guide-ui"># </span> titre, <span class="guide-ui">- </span> liste, <span class="guide-ui">1. </span> liste numérotée, <span class="guide-ui">[] </span> case, <span class="guide-ui">&gt; </span> citation en début de ligne ; <kbd>⇧</kbd><kbd>⌘</kbd><kbd>L</kbd> case à cocher, <kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd> liste, <kbd>⌥</kbd><kbd>⌘</kbd><kbd>1</kbd> à <kbd>3</kbd> titres, <kbd>⌥</kbd><kbd>⌘</kbd><kbd>0</kbd> texte ; <kbd>Tab</kbd> décale une ligne de liste, <kbd>⌥</kbd><kbd>⇧</kbd><kbd>↑</kbd> ou <kbd>↓</kbd> la déplace ; <kbd>⌘</kbd><kbd>Entrée</kbd> coche une case ; <kbd>⌘</kbd><kbd>Z</kbd> annule. Un texte collé arrive toujours sans mise en forme. La recherche, à gauche, cherche aussi dans le contenu des pages. Sous le titre, la bande « Tâches liées » relie la page à des tâches, dans les deux sens. Tout s'enregistre au fil de la frappe.</li>
-              <li><strong>Échéances</strong> : le calendrier administratif de la micro-entreprise (ACRE, CFE, déclarations URSSAF, attestation de vigilance, bilan de l'été 2027) et vos propres rappels, chacun avec son délai de rappel.</li>
+              <li>The <strong>statement</strong> follows the contract template: date, area, nature of the work, time spent, billed time, amount; on screen it reads day by day, and the PDF keeps the full detail. Authorized travel expenses are added on receipts. An entry can be non-billable (€0, reason shown) or carry a flat fee.</li>
+              <li><strong>Work done</strong>: the tasks completed during the month can be attached to the statement as an appendix, to give the client a view of what moved forward (the first ones are shown, “See more” reveals the rest).</li>
+              <li><strong>Create the invoice</strong> locks the month's entries that are not yet invoiced: continuous number (year-number), issue date, due date at thirty days, payment terms (late payment penalties and the €40 fixed recovery fee always printed) with your bank details. A month can carry several invoices. Only the next number is accepted, and the date cannot be earlier than that of the previous invoice. An issued invoice can no longer be edited; only the latest one can be deleted, in case of an error before sending, and never once it is paid. The month's invoice and statement are saved as PDFs in the invoices folder chosen in Settings, in the month's subfolder (“2026-11 November”), created if needed; “Regenerate the PDFs” adds a copy (“Invoice-2026-01 (2).pdf”) without touching the PDFs already saved: contractor, client and statement stay as they were at issue.</li>
+              <li><strong>Move to another month</strong> moves work items to the statement and invoice of a later month, without touching their date: work done in September can thus be invoiced in October. The statement it leaves and the one it arrives on each announce it with a banner, and the entry carries the note “Done in September 2026” on screen as well as on the statement PDF. The invoice itself does not say when the work was done: no date and no original month, and its appendix groups work items by area and label, with times and amounts added up; the trace remains in the log and the statement. A work item already carried by an invoice can no longer be moved.</li>
+              <li><strong>Invoices and income</strong> (tab under “Log and statement”) shows the issued invoices, the income ledger (filled in by marking each invoice as paid) and the table of URSSAF quarters, with estimated contributions (ACRE rate until 30 September 2027, full rate after that) and a “Declared” checkbox for each quarter.</li>
             </ul>
           </div>
         </details>
 
         <details class="guide-fold">
-          <summary>Données et sauvegardes</summary>
+          <summary>Tasks, notes and deadlines</summary>
           <div class="details-body">
             <ul>
-              <li>Tout est enregistré dans des fichiers JSON lisibles, dans le dossier de données de l'application (bouton dans Réglages). Une copie datée est faite automatiquement une fois par jour, même si l'application reste ouverte, les trente dernières sont conservées. Les fichiers joints aux tâches sont copiés dans le sous-dossier <span class="guide-ui">Pieces</span>.</li>
-              <li><span class="guide-ui">Exporter une sauvegarde…</span> produit un fichier unique à conserver ailleurs (les fichiers joints n'y sont pas : sauvegardez le dossier de données entier, Time Machine s'en charge) ; <span class="guide-ui">Importer…</span> le restaure.</li>
-              <li>Aucune donnée personnelle de vos clients n'a sa place ici : le journal décrit votre travail, pas les clients.</li>
+              <li><strong>Tasks</strong>: three columns (To do, In progress, Done). Drag cards from one column to another; they sort themselves by priority, then by due date. One click opens the <strong>sheet</strong>: steps to tick off (progress shows on the card), attachments (files and images dragged from your file manager, links, code snippets), linked note pages, a dated progress log, time spent based on the log. From a card, <span class="guide-ui">Timer</span> starts the counter on that task.</li>
+              <li><strong>Ideas</strong>: they are written on the “Loose ideas” notes page (<span class="guide-ui">Idea</span> style: light bulb button in the toolbar, <span class="guide-ui">/</span> then “Idea”, or <span class="guide-ui">? </span> at the start of a line). Inside an idea, Enter starts a new line for the details; pressing Enter twice leaves it. The <span class="guide-ui">Turn into a task</span> button creates the task in “To do”, linked to the page; the <span class="guide-ui">Task</span> button in the toolbar does the same for any line.</li>
+              <li><strong>Notes</strong>: pages and subpages, like a notebook. A page is written in one go, as in Apple Notes: Enter starts a new line, <kbd>Shift</kbd><kbd>Enter</kbd> goes to the next line without changing paragraph. The toolbar above the page sets the style of the selected lines (text or heading, lists, checkboxes, quote, callout, idea, divider), bold, italic, underline, strikethrough, highlight and links. From the keyboard: <span class="guide-ui">/</span> on an empty line to insert; <span class="guide-ui"># </span> heading, <span class="guide-ui">- </span> list, <span class="guide-ui">1. </span> numbered list, <span class="guide-ui">[] </span> checkbox, <span class="guide-ui">&gt; </span> quote at the start of a line; <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>L</kbd> checkbox, <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>7</kbd> list, <kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>1</kbd> to <kbd>3</kbd> headings, <kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>0</kbd> text; <kbd>Tab</kbd> indents a list line, <kbd>Alt</kbd><kbd>Shift</kbd><kbd>↑</kbd> or <kbd>↓</kbd> moves it; <kbd>Ctrl</kbd><kbd>Enter</kbd> ticks a checkbox; <kbd>Ctrl</kbd><kbd>Z</kbd> undoes. Pasted text always arrives without formatting. The search on the left also searches the content of pages. Under the title, the “Linked tasks” strip connects the page to tasks, in both directions. Everything is saved as you type.</li>
+              <li><strong>Deadlines</strong>: the administrative calendar of the micro-business (ACRE, CFE, URSSAF declarations, vigilance certificate, summer 2027 review) and your own reminders, each with its own reminder delay.</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="guide-fold">
+          <summary>Data and backups</summary>
+          <div class="details-body">
+            <ul>
+              <li>Everything is saved in readable JSON files, in the application's data folder (button in Settings). A dated copy is made automatically once a day, even if the application stays open, and the last thirty are kept. Files attached to tasks are copied into the <span class="guide-ui">Pieces</span> subfolder.</li>
+              <li><span class="guide-ui">Export a backup…</span> produces a single file to keep elsewhere (attached files are not in it: back up the whole data folder with your usual backup tool); <span class="guide-ui">Import a backup…</span> restores it.</li>
+              <li>No personal data about your clients belongs here: the log describes your work, not your clients.</li>
             </ul>
           </div>
         </details>

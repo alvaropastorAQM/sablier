@@ -1,229 +1,227 @@
 # Sablier
 
-Application macOS de suivi de mission : le temps passé pour un client,
-le relevé d'activité mensuel et la facture qui l'accompagne, les tâches,
-les notes, le calendrier administratif de la micro-entreprise et les
-rappels qui vont avec.
+macOS app for tracking a freelance engagement: the time spent for a client,
+the monthly activity statement and the invoice that goes with it, tasks,
+notes, the administrative calendar of the micro-business and the reminders
+that come with it.
 
-Design « Graphite » (`design/design_system_macos27.md`) depuis le 25/10/2026 : neutres froids, accent bleu acier, verre de macOS, sombre et clair selon le Mac ; les PDF ont leur propre charte (blanc, marine, or, titres serif) ; l'interface
-en HTML/CSS/JS sans framework, données en fichiers JSON lisibles.
+"Graphite" design (`design/design_system_macos27.md`) since 25 October 2026:
+cool neutrals, steel-blue accent, macOS glass, dark or light following the
+Mac. The PDFs have their own look (white, navy, gold, serif headings). The
+interface is plain HTML/CSS/JS with no framework, and the data lives in
+readable JSON files. The interface bundles open fonts in `css/fonts` (Inter,
+Charter, JetBrains Mono), so it looks the same on any machine; Nunito Sans
+and Charter are embedded in the PDFs.
 
-Depuis le 13/11/2026, l'application tourne sous Tauri (fond en Rust,
-`src-tauri/`) et non plus sous Electron : 12 Mo au lieu de 280. L'interface
-n'a pas changé ; elle parle au fond par `window.sablier` (`js/pont.js`).
-Mêmes données, même dossier, même format de fichiers, mêmes PDF (WebKit
-imprime à la place de Chromium : un petit script, `src-tauri/src/paginer.js`,
-garde les lignes de tableau entières et répète l'en-tête sur chaque page).
+Since 13 November 2026 the app runs on Tauri (Rust backend, `src-tauri/`)
+instead of Electron: 12 MB instead of 280. The interface has not changed;
+it talks to the backend through `window.sablier` (`js/pont.js`). Same data,
+same folder, same file format, same PDFs (WebKit prints instead of Chromium:
+a small script, `src-tauri/src/paginer.js`, keeps table rows whole and
+repeats the header on every page).
 
-## Lancer et construire
+## Run and build
 
 ```bash
-npm start            # lance l'application en développement (sur les vraies données)
-npm test             # tests du moteur de calcul (node) et du fond Rust (données, fichiers)
-npm run smoke        # auto-test sur /tmp/sablier-smoke, jamais sur les vraies données
-npm run app:build    # tests, construction de release/Sablier.app, auto-test complet, puis installation dans /Applications
+npm start            # runs the app in development (on the real data)
+npm test             # tests of the calculation engine (node) and of the Rust backend (data, files)
+npm run smoke        # self-test on /tmp/sablier-smoke, never on the real data
+npm run app:build    # tests, build of release/Sablier.app, full self-test, then install into /Applications
 ```
 
-Il faut Node.js, Rust et les outils Xcode ; aucune dépendance npm.
-L'app ne tourne que sur macOS pour l'instant ; pour la porter sous Windows,
-voir [docs/MIGRATION-WINDOWS.md](docs/MIGRATION-WINDOWS.md).
-L'application se lance depuis `/Applications/Sablier.app` (Dock, Spotlight).
-Chaque construction y est recopiée automatiquement, seulement si elle passe
-l'auto-test, après avoir demandé à Sablier ouvert de quitter : une copie
-ancienne dans /Applications ferait revenir des défauts déjà corrigés.
+You need Node.js, Rust and the Xcode tools; there are no npm dependencies.
+For now the app only runs on macOS; to port it to Windows, see
+[docs/MIGRATION-WINDOWS.md](docs/MIGRATION-WINDOWS.md).
+The app is launched from `/Applications/Sablier.app` (Dock, Spotlight).
+Every build is copied there automatically, only if it passes the
+self-test, after asking a running Sablier to quit: an old copy in
+/Applications would bring back defects that are already fixed.
 
-Auto-test complet, sur un dossier de données jetable (jamais sur le vrai) :
+Full self-test, on a disposable data folder (never the real one):
 
 ```bash
 SABLIER_SMOKE=1 SABLIER_SMOKE_SCENARIO=1 SABLIER_SMOKE_AUDIT=1 SABLIER_SMOKE_PDF=1 SABLIER_DONNEES=/tmp/sablier-test SABLIER_CAPTURES=/tmp/sablier-test cargo run --manifest-path src-tauri/Cargo.toml
 ```
 
-Il tourne même quand Sablier est ouvert, dans une fenêtre invisible, et
-quitte avec 0 si tout est vrai (`SABLIER_SMOKE_OK`), 1 sinon
-(`SABLIER_SMOKE_ECHEC` et la liste). Les scénarios sont dans
-`tests/scenario-smoke.js` et `tests/scenario-audit.js`. Écran verrouillé ou
-en veille, WebKit ne rend pas les captures : elles sont signalées, pas
-comptées comme des échecs.
+It runs even while Sablier is open, in an invisible window, and exits with 0
+if everything holds (`SABLIER_SMOKE_OK`), 1 otherwise (`SABLIER_SMOKE_ECHEC`
+and the list). The scenarios are in `tests/scenario-smoke.js` and
+`tests/scenario-audit.js`. With the screen locked or asleep, WebKit does not
+render screenshots: they are reported, not counted as failures.
 
-Format des fichiers, vérifié sur une copie des vraies données (relus puis
-réécrits, ils ressortent à l'octet près) :
+File format, checked on a copy of the real data (read back then rewritten,
+they come out byte for byte identical):
 
 ```bash
-SABLIER_VERIF=<copie du dossier Donnees> cargo test --manifest-path src-tauri/Cargo.toml -- --ignored
+SABLIER_VERIF=<copy of the Donnees folder> cargo test --manifest-path src-tauri/Cargo.toml -- --ignored
 ```
 
-## Ce que fait chaque page
+## What each page does
 
-| Page | Rôle |
+| Page | Role |
 |---|---|
-| Rappels (bouton de la barre latérale, ⌘⇧R) | Tout ce qu'il ne faut pas rater : échéances, tâches datées, mois à facturer, factures à encaisser, chrono oublié, journal délaissé ; report à demain ou à sept jours, marquer fait |
-| Tableau de bord | Rappels du moment, heures facturables et montant facturable de la période, gagné depuis le début (factures émises, part encaissée), à garder pour l'URSSAF et date du prochain prélèvement (depuis le 27/10/2026), heures par mois, répartition par axe, tâches et échéances à venir |
-| Journal et relevé | Le travail du mois de facturation jour par jour (interventions, temps facturé, montant, état), une journée se déplie sur ses lignes de journal (modifier, dupliquer, supprimer, reprendre au chrono) ; « Ajouter une ligne » (⌘N) ; dans la fiche d'une ligne : tâche liée et mois de facturation ; report d'interventions sur un autre mois ; établissement de la facture, qui enregistre d'office la facture et le relevé PDF dans le dossier des factures (Réglages), sous-dossier « AAAA-MM mois » ; une fois tout facturé, les boutons sans objet disparaissent. Les factures émises, le livre des recettes et les trimestres URSSAF ont leur propre onglet, « Factures et recettes » (depuis le 27/10/2026). Chrono : barre latérale et bandeau (plus de saisie rapide depuis le 27/10/2026) |
-| Tâches | Tableau À faire / En cours / Fait, glisser-déposer, fiche complète (étapes, pièces jointes, notes liées, journal d'avancement, temps passé), chrono depuis une carte |
-| Notes | Pages et sous-pages, éditeur continu façon Notes d'Apple (barre de mise en forme, menu « / », raccourcis Markdown et clavier, collage toujours en texte brut, annuler et rétablir), idées transformables en tâche, recherche dans le contenu, bande des tâches liées |
-| Échéances | Calendrier administratif (ACRE, CFE, URSSAF, vigilance, bilan) et rappels, chacun avec son délai de rappel |
-| Réglages | Tarif, arrondi, identités, coordonnées bancaires, axes, cotisations, rappels et notifications, sauvegardes |
+| Reminders (sidebar button, Ctrl+Shift+R) | Everything you must not miss: deadlines, dated tasks, months to invoice, invoices to collect, forgotten timer, neglected log; snooze until tomorrow or for a week, mark done |
+| Dashboard | Current reminders, billable hours and billable amount for the period, earned since the start (issued invoices, paid share), amount to set aside for URSSAF and date of the next direct debit (since 27 October 2026), hours per month, breakdown by area, upcoming tasks and deadlines |
+| Log and statement | The work of the billing month day by day (work items, billed time, amount, status); a day unfolds into its log entries (edit, duplicate, delete, resume with the timer); "Add an entry" (Ctrl+N); in an entry's form: linked task and billing month; moving work items to another month; creating the invoice, which automatically files the invoice and the PDF statement in the invoices folder (Settings), in the "YYYY-MM month" subfolder; once everything is invoiced, the buttons with nothing left to do disappear. Issued invoices, the income ledger and the URSSAF quarters have their own tab, "Invoices and income" (since 27 October 2026). Timer: sidebar and banner (no more quick entry since 27 October 2026) |
+| Tasks | To do / In progress / Done board, drag and drop, full sheet (steps, attachments, linked notes, progress log, time spent), timer from a card |
+| Notes | Pages and subpages, continuous editor in the style of Apple Notes (formatting bar, "/" menu, Markdown and keyboard shortcuts, paste always as plain text, undo and redo), ideas that can become tasks, search in the content, strip of linked tasks |
+| Deadlines | Administrative calendar (ACRE, CFE, URSSAF, watch-outs, annual accounts) and reminders, each with its own reminder lead time |
+| Settings | Rate, rounding, identities, bank details, areas, social contributions, reminders and notifications, backups |
 
-## Règles de calcul
+## Calculation rules
 
-- Une **intervention** = même jour + même axe + même libellé. Ses lignes
-  s'additionnent ; elle compte pour son temps exact.
-- Le **temps facturé** est le total exact du relevé ou de la facture,
-  arrondi une seule fois au quart d'heure supérieur (article 6.1 du
-  contrat), réglable dans Réglages. Depuis le 26/10/2026 (règle du
-  prestataire) : l'arrondi par intervention faisait payer près de deux heures
-  de trop par mois. L'arrondi apparaît sur sa propre ligne (« Arrondi du
-  total au quart d'heure supérieur ») au relevé et dans l'annexe de la
-  facture ; la facture le fige (`arrondiMinutes`). Les forfaits restent
-  hors du total arrondi.
-- **Montant** = heures facturées x tarif horaire ; pas de TVA (franchise).
-- Une ligne peut être **non facturable** (le temps reste compté, le montant
-  vaut 0 €, avec un motif) ou porter un **forfait** (montant HT fixe qui
-  remplace heures × tarif ; la valeur au tarif horaire et la remise restent
-  visibles sur le relevé et la facture).
-- Une **facture** fige les lignes pas encore facturées du mois : un mois
-  peut donc porter plusieurs factures (par exemple une facture en cours de
-  mois, puis celle du solde à la fin). Numérotation continue
-  par année (AAAA-NN, l'année étant celle de la date d'émission) : seul le
-  numéro suivant est accepté, et la date ne précède jamais celle de la facture
-  précédente. La facture fige aussi le prestataire et le client ; le relevé
-  d'un mois facturé reste celui de l'émission, et « Refaire les PDF » ajoute
-  une copie (`Facture-2026-01 (2).pdf`) sans écraser les PDF existants. Seule
-  la dernière facture peut être supprimée, et jamais une fois encaissée. Une
-  ligne figée sur une facture ne
-  change plus de date, d'axe, de durée, de mois de facturation ni de
-  facturation (seuls le libellé
-  et le détail restent modifiables) et ne se supprime pas tant que la
-  facture existe ; le reste d'une intervention facturée en partie part au
-  temps exact sur la facture suivante, qui arrondit son propre total. Le
-  délai de paiement
-  est figé sur la facture.
-- **Mois de facturation** : une ligne se facture par défaut sur le mois de
-  sa date, mais peut être **reportée** sur un mois ultérieur (champ de la
-  fiche, ou bouton « Reporter sur un autre mois » du relevé). Le journal, le
-  tableau de bord et les pastilles restent sur le mois du travail ; le
-  relevé, la facture et le rappel « mois à facturer » suivent le mois de
-  facturation. Un report emporte toujours l'intervention entière ; les lignes qu'une
-  facture a figées ne se reportent plus. Le relevé de départ et celui
-  d'arrivée l'annoncent chacun d'un bandeau, et la ligne porte la mention
-  « Réalisé en septembre 2026 » à l'écran comme sur le PDF du relevé. La
-  **facture**, elle, ne dit pas quand le travail a été réalisé : ni date, ni
-  mois d'origine, et son annexe regroupe les interventions par axe et
-  libellé (une ligne par intervention, temps et montants additionnés) ; le
-  journal, le relevé et les lignes figées de la facture gardent la date. Si une
-  intervention se retrouve malgré tout à cheval sur deux mois (fichier
-  modifié à la main, import), le chargement réaligne ses lignes sur un seul
-  mois.
-- **Arrondis** : les montants d'une intervention restent exacts (comme les
-  cellules du classeur) ; seuls les totaux et l'affichage sont arrondis au
-  centime (arrondi commercial), si bien que « heures facturées × tarif »
-  tombe juste sur la facture.
-- **Durées** : la durée tapée prime ; début et fin ne servent qu'à la
-  pré-remplir. Des heures qui donneraient plus de seize heures (fin avant
-  début) sont refusées. Un chrono arrêté pendant une pause se termine au
-  début de la pause.
-- **Documents PDF** : en tête, seules les mentions utiles (nom suivi de
-  « EI », adresse sur deux lignes, SIRET, contact). La facture (refaite le
-  26/10/2026) : émetteur à gauche, numéro, date d'émission et échéance à
-  droite, client décalé, désignation, « Total TTC à payer », mention de
-  franchise, puis « Conditions de règlement » (échéance, escompte néant,
-  pénalités de retard et indemnité de 40 €, toujours imprimées car
-  obligatoires entre professionnels ; titulaire, banque, IBAN par groupes de
-  quatre, BIC). Son annexe regroupe les interventions par axe, avec
-  sous-totaux, sans date (le relevé d'activité daté se joint à part).
-- `outils/importer-git.js` reconstitue des sessions de travail depuis
-  l'historique d'un dépôt git et les verse dans le journal (aperçu par
-  défaut, `--appliquer` pour écrire, `--coefficient 0.6` pour pondérer). Il
-  refuse d'écrire si une ligne de la source est portée par une facture, et
-  conserve les annotations manuelles (non facturable et son motif, forfait,
-  mois de facturation) en les rattachant au travail, pas au numéro de
-  session ; celles qui ne retrouvent pas leur travail sont signalées.
-- Les **cotisations** sont estimées sur le chiffre d'affaires encaissé, au
-  taux ACRE jusqu'à sa date de fin puis au taux plein.
-- Un mois écoulé du contrat est réclamé par les **rappels** dès qu'il reste
-  quelque chose à facturer, frais de déplacement compris.
-- Les **tâches** se rangent d'elles-mêmes dans chaque colonne : priorité
-  haute, puis moyenne, puis basse, et à priorité égale l'échéance la plus
-  proche en premier. La priorité effective est la plus haute entre le choix
-  manuel et celle dictée par l'échéance (moins de 5 jours : haute ; jusqu'à
-  14 jours : moyenne ; au-delà : basse). Un choix manuel n'est jamais abaissé.
-- Les **idées** vivent dans les notes (page « Idées en vrac », style
-  « Idée ») ; « En faire une tâche » crée la tâche dans À faire, liée à la
-  page. Les anciennes cartes « Idées » ont été migrées vers cette page.
-- L'**éditeur de notes** (`js/page-notes.js`) est une seule zone
-  `contenteditable` : une ligne à l'écran = un bloc dans `notes.json`
-  (`{id, type, html, coche, tache, retrait}`, format inchangé). Entrée, retour
-  arrière, collage et annuler sont gérés par l'éditeur ; après chaque
-  modification native, `normaliserDoc` remet les lignes en ordre. Le texte
-  collé ou déposé est toujours inséré en texte brut.
-- Les **rappels** (`calculerRappels` dans `js/calculs.js`) ont trois
-  niveaux : en retard, aujourd'hui, bientôt. Horizons réglables ; chaque
-  échéance peut avoir le sien. Notifications macOS : une par jour pour les
-  retards et rappels du jour, une à l'entrée dans l'horizon (puis une par
-  semaine) pour « bientôt » ; regroupées quand il y en a plusieurs. Pastille
-  du Dock : retards et rappels du jour.
-- Chaque **axe** a une couleur (Réglages), reprise sur les cartes, le journal,
-  le relevé et les factures.
+- A **work item** = same day + same area + same label. Its entries add up;
+  it counts for its exact time.
+- The **billed time** is the exact total of the statement or the invoice,
+  rounded once up to the next quarter hour (article 6.1 of the contract),
+  adjustable in Settings. Since 26 October 2026 (the contractor's rule):
+  rounding per work item made the client pay nearly two hours too many per
+  month. The rounding appears on its own line ("Total rounded up to the next
+  quarter hour") in the statement and in the invoice annex; the invoice
+  freezes it (`arrondiMinutes`). Flat fees stay outside the rounded total.
+- **Amount** = billed hours x hourly rate; no VAT (VAT exemption).
+- An entry can be **non-billable** (the time is still counted, the amount is
+  €0, with a reason) or carry a **flat fee** (a fixed amount excl. tax that
+  replaces hours × rate; the value at the hourly rate and the discount stay
+  visible on the statement and the invoice).
+- An **invoice** freezes the month's entries that are not invoiced yet: a
+  month can therefore carry several invoices (for example one in the middle
+  of the month, then the balance at the end). Numbering is continuous per
+  year (YYYY-NN, the year being that of the issue date): only the next
+  number is accepted, and the date never precedes that of the previous
+  invoice. The invoice also freezes the contractor and the client; the
+  statement of an invoiced month stays the one from the time of issue, and
+  "Regenerate the PDFs" adds a copy (`Facture-2026-01 (2).pdf`) without
+  overwriting the existing PDFs. Only the last invoice can be deleted, and
+  never once it is paid. An entry frozen on an invoice no longer changes its
+  date, area, duration, billing month or billing status (only the label and
+  the details stay editable) and cannot be deleted while the invoice exists;
+  the rest of a partly invoiced work item goes at exact time on the next
+  invoice, which rounds its own total. The payment term is frozen on the
+  invoice.
+- **Billing month**: an entry is invoiced by default in the month of its
+  date, but it can be **moved** to a later month (field of the form, or the
+  "Move to another month" button of the statement). The log, the dashboard
+  and the badges stay on the month of the work; the statement, the invoice
+  and the "month to invoice" reminder follow the billing month. A move always
+  takes the whole work item; entries that an invoice has frozen can no longer
+  be moved. The statement of the month it leaves and the one it arrives in
+  each announce it with a banner, and the entry carries the note
+  "Done in September 2026" on screen as well as on the PDF statement. The
+  **invoice**, for its part, does not say when the work was done: no date,
+  no original month, and its annex groups the work items by area and label
+  (one line per work item, time and amounts added up); the log, the
+  statement and the frozen entries of the invoice keep the date. If a work
+  item still ends up straddling two months (hand-edited file, import), the
+  load realigns its entries on a single month.
+- **Rounding**: the amounts of a work item stay exact (like the cells of
+  the spreadsheet); only totals and display are rounded to the cent
+  (commercial rounding), so that "billed hours × rate" comes out exact on
+  the invoice.
+- **Durations**: the typed duration wins; start and end only serve to
+  pre-fill it. Hours that would give more than sixteen hours (end before
+  start) are refused. A timer stopped during a pause ends at the start of
+  the pause.
+- **PDF documents**: the header carries only the useful details (name
+  followed by "EI", address on two lines, SIRET, contact). The invoice
+  (redone on 26 October 2026): issuer on the left, number, issue date and
+  due date on the right, client offset, description, "Total due", VAT
+  exemption notice, then "Payment terms" (due date, early payment discount
+  none, late payment penalties and a fixed recovery fee of €40, always
+  printed because they are mandatory between businesses; account holder,
+  bank, IBAN in groups of four, BIC). Its annex groups the work items by
+  area, with subtotals, without dates (the dated activity statement is
+  attached separately).
+- `outils/importer-git.js` rebuilds work sessions from the history of a git
+  repository and adds them to the log (preview by default, `--appliquer` to
+  write, `--coefficient 0.6` to weight). It refuses to write if an entry of
+  the source is carried by an invoice, and it keeps manual annotations
+  (non-billable and its reason, flat fee, billing month) by attaching them
+  to the work, not to the session number; those that no longer find their
+  work are reported.
+- **Social contributions** are estimated on the revenue collected, at the
+  ACRE rate until its end date, then at the full rate.
+- A past month of the contract is claimed by the **reminders** as soon as
+  anything is left to invoice, travel expenses included.
+- **Tasks** sort themselves within each column: high priority, then medium,
+  then low, and at equal priority the nearest due date first. The effective
+  priority is the higher of the manual choice and the one dictated by the
+  due date (under 5 days: high; up to 14 days: medium; beyond: low). A
+  manual choice is never lowered.
+- **Ideas** live in the notes ("Loose ideas" page, "Idea" style); "Turn
+  into a task" creates the task in To do, linked to the page. The old
+  "Ideas" cards were migrated to that page.
+- The **notes editor** (`js/page-notes.js`) is a single `contenteditable`
+  area: one line on screen = one block in `notes.json`
+  (`{id, type, html, coche, tache, retrait}`, format unchanged). Enter,
+  Backspace, paste and undo are handled by the editor; after every native
+  edit, `normaliserDoc` puts the lines back in order. Pasted or dropped text
+  is always inserted as plain text.
+- **Reminders** (`calculerRappels` in `js/calculs.js`) have three levels:
+  overdue, today, soon. The horizons are adjustable; each deadline can have
+  its own. macOS notifications: one per day for overdue items and reminders
+  of the day, one when entering the horizon (then one per week) for "soon";
+  grouped when there are several. Dock badge: overdue items and reminders of
+  the day.
+- Each **area** has a colour (Settings), reused on the cards, the log, the
+  statement and the invoices.
 
-## Données
+## Data
 
-Audit complet (02/09/2026) : `tests/scenario-audit.js` rejoue les cas
-limites dans l'auto-test (`SABLIER_SMOKE_AUDIT=1`) : modales secondaires de
-la fiche, suppressions en cascade, chrono passant minuit, sauvegarde
-ancienne importée, numéro de facture, intervention facturée en partie,
-report sur un autre mois de facturation, champs vidés, pages sans données,
-glisser annulé. Au chargement, les
-fichiers sont assainis (éléments nuls écartés, identifiants manquants
-attribués, nombres en chaîne convertis, mois de facturation mal écrit
-ramené au mois du travail, lignes d'une même intervention réalignées sur un
-seul mois de facturation) ; un fichier illisible est mis de
-côté et signalé ; les écritures en attente sont purgées avant toute
-relecture ou fermeture.
+Full audit (2 September 2026): `tests/scenario-audit.js` replays the edge
+cases in the self-test (`SABLIER_SMOKE_AUDIT=1`): secondary modals of the
+sheet, cascading deletions, a timer crossing midnight, an old backup
+imported, invoice number, partly invoiced work item, move to another billing
+month, emptied fields, pages without data, cancelled drag. On load, the
+files are sanitised (null elements dropped, missing ids assigned, numbers
+stored as strings converted, misspelled billing month brought back to the
+month of the work, entries of one work item realigned on a single billing
+month); an unreadable file is set aside and reported; pending writes are
+flushed before any re-read or quit.
 
-`~/Library/Application Support/Sablier/Donnees/` : `reglages.json`,
-`journal.json`, `chantiers.json` (les tâches, nom historique), `notes.json`,
-`factures.json`, `echeances.json`, `chrono.json`. Une copie datée est faite
-dans `Sauvegardes/` une fois par jour, même si l'application reste ouverte
-(30 conservées). Une écriture refusée par le disque est retentée toutes les
-30 secondes, l'alerte revient toutes les 5 minutes, et Sablier prévient avant
-de quitter si des données ne sont toujours pas écrites.
-Les fichiers joints aux tâches sont copiés dans `Pieces/<tâche>/` (servis à
-l'interface par le protocole interne `sablier-piece://`) ; ils ne font pas
-partie de l'export JSON. Export et import d'une sauvegarde complète depuis
-Réglages.
+`~/Library/Application Support/Sablier/Donnees/`: `reglages.json`,
+`journal.json`, `chantiers.json` (the tasks, historical name), `notes.json`,
+`factures.json`, `echeances.json`, `chrono.json`. A dated copy is made in
+`Sauvegardes/` once a day, even if the app stays open (30 kept). A write
+refused by the disk is retried every 30 seconds, the alert comes back every
+5 minutes, and Sablier warns before quitting if data is still not written.
+Files attached to tasks are copied into `Pieces/<task>/` (served to the
+interface by the internal protocol `sablier-piece://`); they are not part of
+the JSON export. Export and import of a full backup from Settings.
 
-Pour travailler sur un jeu d'essai sans toucher aux vraies données :
+To work on a sample data set without touching the real data:
 
 ```bash
 node outils/jeu-demo.js /tmp/sablier-demo && SABLIER_DONNEES=/tmp/sablier-demo npm start
 ```
 
-## Organisation du code
+## Code layout
 
 ```
-index.html            la coquille : barre latérale, pages, réglages, mode d'emploi
-css/styles.css        tokens et composants (design Graphite)
-js/bulle.js           bulle Liquid Glass de la sélection
-js/utils.js           dates, durées, formats (IBAN, téléphone, adresse, J-n)
-js/calculs.js         moteur : regroupement, arrondi, relevé, factures, trimestres, priorités, rappels
-js/donnees.js         état, persistance, valeurs de départ, migrations
-js/graphique.js       barres SVG
-js/ui.js              navigation, notifications, modales, menus, icônes
-js/gabarits.js        documents PDF (relevé, facture)
-js/rappels.js         centre des rappels, notifications macOS, pastille du Dock
-js/page-*.js          une page par fichier (page-factures.js est une vue de page-releve.js)
-js/app.js             démarrage
-js/pont.js            window.sablier, servi par le fond avec les données (sablier://localhost/demarrage.js)
-src-tauri/src/main.rs         fenêtre, menus, commandes du pont, protocoles (données, pièces jointes)
-src-tauri/src/donnees.rs      fichiers JSON, écritures différées et retentées, sauvegardes quotidiennes
-src-tauri/src/fichiers.rs     noms sûrs, pièces jointes, noms libres des PDF
-src-tauri/src/mac.rs          AppKit et WebKit : PDF, panneaux, alertes, notifications, Dock, corbeille
-src-tauri/src/paginer.js      sauts de page des PDF, joués avant l'impression
-src-tauri/src/autotest.rs     auto-test (SABLIER_SMOKE=1)
-scripts/installer.js  construction, vérification et installation de Sablier.app
-outils/               icône, jeu de démonstration, import git
-tests/                tests node du moteur, scénarios de l'auto-test
+index.html            the shell: sidebar, pages, settings, user guide
+css/styles.css        tokens and components (Graphite design)
+css/fonts.css         @font-face of the bundled fonts (files in css/fonts)
+js/bulle.js           Liquid Glass bubble of the selection
+js/utils.js           dates, durations, formats (IBAN, phone, address, D-n)
+js/calculs.js         engine: grouping, rounding, statement, invoices, quarters, priorities, reminders
+js/donnees.js         state, persistence, starting values, migrations
+js/graphique.js       SVG bars
+js/ui.js              navigation, notifications, modals, menus, icons
+js/gabarits.js        PDF documents (statement, invoice)
+js/rappels.js         reminders centre, macOS notifications, Dock badge
+js/page-*.js          one page per file (page-factures.js is a view of page-releve.js)
+js/app.js             startup
+js/pont.js            window.sablier, served by the backend with the data (sablier://localhost/demarrage.js)
+src-tauri/src/main.rs         window, menus, bridge commands, protocols (data, attachments)
+src-tauri/src/donnees.rs      JSON files, deferred and retried writes, daily backups
+src-tauri/src/fichiers.rs     safe names, attachments, free PDF names
+src-tauri/src/mac.rs          AppKit and WebKit: PDF, panels, alerts, notifications, Dock, trash
+src-tauri/src/paginer.js      PDF page breaks, run before printing
+src-tauri/src/autotest.rs     self-test (SABLIER_SMOKE=1)
+scripts/installer.js  build, check and install of Sablier.app
+outils/               icon, demo data set, git import
+tests/                node tests of the engine, self-test scenarios
 ```
 
-Règle de style permanente : aucun tiret cadratin dans les textes de
-l'interface ; toute couleur passe par les tokens de `css/styles.css`.
+Permanent style rule: no em dash in interface texts; every colour goes
+through the tokens of `css/styles.css`.

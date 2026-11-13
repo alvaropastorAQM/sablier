@@ -1,16 +1,16 @@
 /* ============================================================
-   MOTEUR DE CALCUL : durées, regroupement par intervention, arrondi
-   du temps facturé, relevé mensuel, factures, trimestres URSSAF.
+   CALCULATION ENGINE: durations, grouping by work item, rounding
+   of billed time, monthly statement, invoices, URSSAF quarters.
 
-   Règles (contrat du 01/10/2026, article 6.1) :
-   - décompte à l'heure, arrondi au quart d'heure supérieur ;
-   - une « intervention » = même jour + même axe + même libellé ;
-     ses lignes s'additionnent AVANT l'arrondi, comme dans le
-     classeur Excel d'origine ;
-   - montant = heures facturées x tarif horaire ;
-   - aucune TVA (franchise en base).
+   Rules (contract of 01/10/2026, article 6.1):
+   - time is counted by the hour, rounded up to the next quarter hour;
+   - a "work item" = same day + same area + same label;
+     its entries are added up BEFORE rounding, as in the original
+     Excel workbook;
+   - amount = billed hours x hourly rate;
+   - no VAT (VAT exemption).
 
-   Fichier sans DOM, testé par tests/test-calculs.js.
+   No DOM; tested by tests/test-calculs.js.
    ============================================================ */
 'use strict';
 
@@ -18,8 +18,8 @@ if (typeof module !== 'undefined' && module.exports && typeof moisDe === 'undefi
   Object.assign(globalThis, require('./utils.js'));
 }
 
-/* Durée d'une ligne en minutes : la durée saisie prime ; à défaut,
-   l'écart entre début et fin. */
+/* Duration of an entry in minutes: the typed duration wins; failing
+   that, the gap between start and end. */
 function dureeEntree(e) {
   if (!e) return 0;
   var m = e.minutes;
@@ -29,8 +29,8 @@ function dureeEntree(e) {
   return d == null ? 0 : d;
 }
 
-/* Arrondi au multiple supérieur de « arrondiHeures » (0.25 = quart d'heure).
-   Un arrondi nul ou absent laisse les minutes telles quelles. */
+/* Rounds up to the next multiple of "arrondiHeures" (0.25 = quarter hour).
+   A zero or missing rounding leaves the minutes as they are. */
 function arrondirMinutes(minutes, arrondiHeures) {
   var pas = Math.round((Number(arrondiHeures) || 0) * 60);
   var m = Math.max(0, Math.round(minutes || 0));
@@ -38,28 +38,27 @@ function arrondirMinutes(minutes, arrondiHeures) {
   return Math.ceil(m / pas) * pas;
 }
 
-/* Mois de facturation d'une ligne : le champ moisFacturation quand il est
-   renseigné (un travail de septembre porté sur la facture d'octobre),
-   sinon le mois de sa date. */
+/* Billing month of an entry: the moisFacturation field when it is set
+   (September work carried onto the October invoice), otherwise the
+   month of its date. */
 function moisFacturationDe(e) {
   var m = e && e.moisFacturation;
   return moisValide(m) ? m : moisDe(e && e.date);
 }
-/* Vrai quand la ligne est facturée sur un autre mois que celui du travail. */
+/* True when the entry is billed in a different month than the one it was worked in. */
 function estReporte(e) {
   var m = moisDe(e && e.date);
   return !!m && moisFacturationDe(e) !== m;
 }
-/* Mois de facturation d'une ligne figée sur une facture : les factures
-   émises avant le report n'en portent pas, leur mois est celui de la facture. */
+/* Billing month of a line frozen on an invoice: invoices issued before
+   the move feature carry none, so their month is the invoice's. */
 function moisFacturationLigneFacture(l, f) {
   if (l && moisValide(l.moisFacturation)) return l.moisFacturation;
   if (f && moisValide(f.mois)) return f.mois;
   return moisDe(l && l.date);
 }
-/* Le travail lui-même : même jour, même axe, même libellé, quel que soit
-   le mois sur lequel il est facturé. Toutes ses lignes se reportent
-   ensemble. */
+/* The work itself: same day, same area, same label, whatever month it is
+   billed in. All its entries move together. */
 function cleTravail(e) {
   return e.date + '|' + (e.axe || '') + '|' + normaliserCle(e.intervention);
 }
@@ -70,22 +69,22 @@ function cleIntervention(e) {
   return cleGroupe(moisFacturationDe(e), e.date, e.axe, e.intervention);
 }
 
-/* Une ligne est facturable sauf mention contraire (facturable: false, avec
-   un motif : stage, geste commercial…). Un forfait est un montant HT fixe
-   qui remplace heures × tarif pour l'intervention. */
+/* An entry is billable unless stated otherwise (facturable: false, with
+   a reason: training, goodwill gesture...). A flat fee is a fixed amount
+   excl. tax that replaces hours × rate for the work item. */
 function estFacturable(e) { return !(e && e.facturable === false); }
 
-/* Les détails d'une intervention bout à bout : une virgule entre deux
-   bouts de phrase, une espace après une phrase finie (jamais « ., »). */
+/* The details of a work item end to end: a comma between two sentence
+   fragments, a space after a finished sentence (never ".,"). */
 function joindreDetails(details) {
   return (details || []).reduce(function (s, d, i) { return i ? s + (/[.!?…]$/.test(s) ? ' ' : ', ') + d : d; }, '');
 }
 
-/* Montants au centime dont la somme tombe juste sur le total arrondi
-   (méthode du plus fort reste) : chaque ligne part du centime inférieur,
-   les centimes manquants vont aux plus fortes décimales. Arrondies une à
-   une, des lignes à demi-centime (0,75 h × 42,86 = 32,145) dépasseraient
-   le total de plusieurs centimes. */
+/* Amounts to the cent whose sum lands exactly on the rounded total
+   (largest remainder method): each line starts from the lower cent, the
+   missing cents go to the largest fractions. Rounded one by one, lines
+   at half a cent (0.75 h × 42.86 = 32.145) would exceed the total by
+   several cents. */
 function montantsAuCentime(montants) {
   var cents = (montants || []).map(function (m) { return (Number(m) || 0) * 100; });
   var bas = cents.map(function (x) { return Math.floor(x + 1e-6); });
@@ -102,10 +101,9 @@ function forfaitEntree(e) {
   return isFinite(f) && f > 0 ? arrondir2(f) : null;
 }
 
-/* Regroupe les lignes en interventions (jour + axe + libellé), triées
-   par date puis heure de début. Chaque intervention porte le temps
-   passé, le temps facturé (exact, l'arrondi se fait sur le total) et le
-   montant. */
+/* Groups entries into work items (day + area + label), sorted by date
+   then start time. Each work item carries the time spent, the billed
+   time (exact, rounding is done on the total) and the amount. */
 function regrouperInterventions(entrees, reglages) {
   var tarif = Number(reglages && reglages.tarifHoraire) || 0;
   var groupes = {};
@@ -142,15 +140,15 @@ function regrouperInterventions(entrees, reglages) {
   var liste = ordre.map(function (cle) {
     var g = groupes[cle];
     g.minutesFacturables = g.minutesBrutesFacturables;
-    /* Les montants d'une intervention restent exacts (comme les cellules du
-       classeur) ; seuls les totaux et l'affichage s'arrondissent au centime,
-       si bien que « heures facturées × tarif » tombe juste sur la facture. */
+    /* The amounts of a work item stay exact (like the workbook cells); only
+       totals and display are rounded to the cent, so that "billed hours ×
+       rate" comes out right on the invoice. */
     g.valeurHoraire = g.minutesFacturables / 60 * tarif;
     g.montant = g.forfait != null ? g.forfait : g.valeurHoraire;
     g.facturable = g.minutesBrutesFacturables > 0 || g.forfait != null;
     g.remise = g.forfait != null ? g.valeurHoraire - g.forfait : 0;
     g.reporte = g.moisFacturation !== g.moisTravail;
-    g.nature = g.intervention + (g.details.length ? ' : ' + joindreDetails(g.details) : '');
+    g.nature = g.intervention + (g.details.length ? ': ' + joindreDetails(g.details) : '');
     return g;
   });
   liste.sort(function (a, b) {
@@ -161,23 +159,23 @@ function regrouperInterventions(entrees, reglages) {
   return liste;
 }
 
-/* Minutes à ajouter pour arrondir au quart d'heure supérieur le TOTAL du
-   temps facturé à l'heure (article 6.1 du contrat). Règle du prestataire du
-   26/10/2026 : arrondir chaque intervention faisait payer près de deux
-   heures de trop par mois. Les forfaits restent hors du total arrondi. */
+/* Minutes to add to round the TOTAL of the time billed by the hour up to
+   the next quarter hour (article 6.1 of the contract). Contractor's rule
+   of 26/10/2026: rounding each work item charged nearly two hours too
+   many per month. Flat fees stay out of the rounded total. */
 function arrondiDuTotal(groupes, reglages) {
   var pas = reglages && reglages.arrondi != null ? reglages.arrondi : 0.25;
   var exact = (groupes || []).reduce(function (s, g) { return s + (g.forfait == null ? g.minutesFacturables : 0); }, 0);
   return exact > 0 ? arrondirMinutes(exact, pas) - exact : 0;
 }
 
-/* Les lignes TRAVAILLÉES dans le mois : le journal, le tableau de bord et
-   les pastilles s'en tiennent là. */
+/* The entries WORKED in the month: the log, the dashboard and the chips
+   stick to these. */
 function entreesDuMois(entrees, mois) {
   return (entrees || []).filter(function (e) { return e && moisDe(e.date) === mois; });
 }
-/* Les lignes FACTURÉES sur le mois : le relevé et les factures s'appuient
-   dessus, le report les déplace d'un mois à l'autre. */
+/* The entries BILLED in the month: the statement and the invoices rely
+   on these, moving an entry shifts it from one month to another. */
 function entreesDuMoisDeFacturation(entrees, mois) {
   return (entrees || []).filter(function (e) { return e && e.date && moisFacturationDe(e) === mois; });
 }
@@ -186,9 +184,9 @@ function entreesPeriode(entrees, debut, fin) {
     return e && e.date && (!debut || e.date >= debut) && (!fin || e.date <= fin);
   });
 }
-/* Ce qui relève du contrat : le travail qui y tombe, plus celui qui y est
-   facturé après report (le travail de septembre facturé en octobre compte
-   dans l'avancement, puisqu'il est sur une facture du contrat). */
+/* What belongs to the contract: the work that falls in it, plus the work
+   billed in it after a move (September work billed in October counts
+   toward progress, since it is on an invoice of the contract). */
 function entreesDuContrat(entrees, contrat) {
   var c = contrat || {};
   var debut = c.debut || '', fin = c.fin || '';
@@ -202,9 +200,9 @@ function entreesDuContrat(entrees, contrat) {
   });
 }
 
-/* Totaux d'un ensemble de lignes (après regroupement), total arrondi. Avec
-   exact, sans arrondi : un morceau de relevé (travail reporté) n'a pas de
-   total à arrondir, l'arrondi se fait sur celui du mois qui le reçoit. */
+/* Totals of a set of entries (after grouping), rounded total. With
+   exact, no rounding: a piece of a statement (moved work) has no total
+   to round, rounding is done on the total of the month that receives it. */
 function totauxEntrees(entrees, reglages, exact) {
   var groupes = regrouperInterventions(entrees, reglages);
   var t = { minutes: 0, minutesFacturables: 0, montant: 0, nbInterventions: groupes.length, nbLignes: (entrees || []).length };
@@ -219,10 +217,10 @@ function totauxEntrees(entrees, reglages, exact) {
   return t;
 }
 
-/* Les reports d'un mois, regroupés par mois voisin : ce qu'il reçoit
-   (« versLeMois ») ou ce qu'il envoie ailleurs. Chaque groupe porte ses
-   lignes et ses totaux, pour que l'écran et les documents n'aient plus
-   qu'à les écrire. */
+/* The moves of a month, grouped by neighbouring month: what it receives
+   ("versLeMois") or what it sends elsewhere. Each group carries its
+   entries and totals, so the screen and the documents only have to
+   print them. */
 function reportsGroupes(entrees, mois, reglages, versLeMois) {
   var parMois = {}, ordre = [];
   (entrees || []).forEach(function (e) {
@@ -239,19 +237,19 @@ function reportsGroupes(entrees, mois, reglages, versLeMois) {
     return g;
   });
 }
-/* Ce que ce mois facture pour le compte d'autres mois. */
+/* What this month bills on behalf of other months. */
 function reportsVers(entrees, mois, reglages) { return reportsGroupes(entrees, mois, reglages, true); }
-/* Ce que ce mois a travaillé mais fait facturer ailleurs. */
+/* What this month worked but has billed elsewhere. */
 function reportsDepuis(entrees, mois, reglages) { return reportsGroupes(entrees, mois, reglages, false); }
 
-/* Le relevé d'un mois : lignes et totaux, prêt pour l'écran et le PDF.
-   options.exclureIds : lignes déjà facturées à laisser de côté. Les
-   interventions gardent leur temps exact ; le total est arrondi une fois
-   (arrondiMinutes), comme celui de chaque facture.
+/* The statement of a month: lines and totals, ready for the screen and
+   the PDF. options.exclureIds: entries already invoiced to leave out.
+   Work items keep their exact time; the total is rounded once
+   (arrondiMinutes), like that of each invoice.
 
-   Le relevé porte le travail FACTURÉ sur le mois, report compris : une
-   ligne de septembre reportée sur octobre quitte le relevé de septembre
-   pour celui d'octobre, en gardant sa date. */
+   The statement carries the work BILLED in the month, moves included: a
+   September entry moved to October leaves the September statement for
+   the October one, keeping its date. */
 function releveDuMois(entrees, mois, reglages, frais, options) {
   var o = options || {};
   var toutes = entreesDuMoisDeFacturation(entrees, mois);
@@ -274,7 +272,7 @@ function releveDuMois(entrees, mois, reglages, frais, options) {
   return {
     mois: mois,
     lignes: lignes,
-    /* De quoi expliquer, sur le relevé, l'écart avec le journal. */
+    /* Enough to explain, on the statement, the gap with the log. */
     reportsRecus: reportsVers(entrees, mois, reglages),
     reportsEnvoyes: reportsDepuis(entrees, mois, reglages),
     ids: ids,
@@ -293,7 +291,7 @@ function releveDuMois(entrees, mois, reglages, frais, options) {
   };
 }
 
-/* Répartition du temps par axe. */
+/* Time split by area. */
 function repartitionParAxe(entrees, reglages) {
   var groupes = regrouperInterventions(entrees, reglages);
   var parAxe = {};
@@ -311,7 +309,7 @@ function repartitionParAxe(entrees, reglages) {
   return liste;
 }
 
-/* Heures par mois sur une liste de mois. */
+/* Hours per month over a list of months. */
 function heuresParMois(entrees, moisListe, reglages) {
   return (moisListe || []).map(function (m) {
     var t = totauxEntrees(entreesDuMois(entrees, m), reglages);
@@ -319,7 +317,7 @@ function heuresParMois(entrees, moisListe, reglages) {
   });
 }
 
-/* Avancement par rapport au repère annuel du contrat. */
+/* Progress against the contract's annual benchmark. */
 function avancementContrat(entrees, reglages, dateRef) {
   var c = (reglages && reglages.contrat) || {};
   var debut = c.debut || '';
@@ -343,8 +341,8 @@ function avancementContrat(entrees, reglages, dateRef) {
   };
 }
 
-/* Libellés d'intervention déjà utilisés, du plus récent au plus ancien
-   (pour l'autocomplétion de la saisie). */
+/* Work item labels already used, newest first (for autocompleting
+   the entry form). */
 function interventionsRecentes(entrees, axe) {
   var vus = {};
   var liste = [];
@@ -358,9 +356,9 @@ function interventionsRecentes(entrees, axe) {
   return liste;
 }
 
-/* ---------- Factures ---------- */
+/* ---------- Invoices ---------- */
 
-/* Numéro continu par année : AAAA-NN. */
+/* Continuous number per year: YYYY-NN. */
 function numeroFactureSuivant(factures, annee) {
   var max = 0;
   (factures || []).forEach(function (f) {
@@ -370,8 +368,8 @@ function numeroFactureSuivant(factures, annee) {
   return annee + '-' + deuxChiffres(max + 1);
 }
 
-/* Construit l'objet facture à partir d'un relevé : les lignes, les deux
-   parties et les reports annoncés par le relevé sont figés. */
+/* Builds the invoice object from a statement: the lines, the two
+   parties and the moves announced by the statement are frozen. */
 function construireFacture(releve, reglages, options) {
   var o = options || {};
   var dateEmission = o.dateEmission || aujourdhui();
@@ -416,13 +414,13 @@ function construireFacture(releve, reglages, options) {
   };
 }
 
-/* Lignes d'une facture regroupées pour son annexe. La facture ne dit pas
-   quand le travail a été réalisé (ni date, ni mois d'origine) : une même
-   intervention menée sur plusieurs jours (même axe, même libellé) y tient
-   donc sur une seule ligne, temps et montants additionnés. Chaque forfait
-   garde sa ligne (sa remise lui est propre) ; les lignes non facturables se
-   regroupent entre elles. Les lignes figées de la facture, elles, gardent
-   leur date : c'est la trace, visible dans l'application. */
+/* Invoice lines grouped for its appendix. The invoice does not say when
+   the work was done (no date, no original month): a work item carried out
+   over several days (same area, same label) therefore fits on a single
+   line, time and amounts added up. Each flat fee keeps its own line (its
+   discount is its own); non-billable lines are grouped together. The
+   lines frozen on the invoice keep their date: that is the trail,
+   visible in the app. */
 function regrouperLignesFacture(lignes) {
   var groupes = {}, ordre = [];
   (lignes || []).forEach(function (l) {
@@ -450,12 +448,12 @@ function regrouperLignesFacture(lignes) {
   });
   return ordre.map(function (cle) {
     var g = groupes[cle];
-    g.nature = g.intervention + (g.details.length ? ' : ' + joindreDetails(g.details) : '');
+    g.nature = g.intervention + (g.details.length ? ': ' + joindreDetails(g.details) : '');
     return g;
   });
 }
 
-/* Taux de cotisations applicable à une date d'encaissement. */
+/* Social contribution rate that applies on a payment date. */
 function tauxCotisation(iso, reglages) {
   var c = (reglages && reglages.cotisations) || {};
   var finAcre = c.finAcre || '';
@@ -467,13 +465,14 @@ function tauxCotisation(iso, reglages) {
   return plein;
 }
 
-/* Abattement forfaitaire du régime micro-BNC sur le chiffre d'affaires. */
+/* Flat-rate allowance of the micro-BNC regime on revenue. */
 var ABATTEMENT_BNC = 34;
 
-/* Période déclarée et date de prélèvement URSSAF d'un encaissement. La
-   première déclaration regroupe le trimestre du début d'activité et le
-   suivant (début le 01/10/2026 : octobre à mars, prélevé le 30/04/2027) ;
-   ensuite, un trimestre civil prélevé à la fin du mois qui suit. */
+/* Declared period and URSSAF direct debit date of a payment. The first
+   declaration covers the quarter in which activity starts and the next
+   one (start on 01/10/2026: October to March, debited on 30/04/2027);
+   after that, a calendar quarter debited at the end of the following
+   month. */
 function periodeUrssaf(iso, reglages) {
   var t = trimestreDe(iso);
   var c = (reglages && reglages.cotisations) || {};
@@ -485,9 +484,9 @@ function periodeUrssaf(iso, reglages) {
   return { fin: t.fin, echeance: t.echeance, premiere: false };
 }
 
-/* Ce que laisse une facture : provision URSSAF au taux du jour
-   d'encaissement (l'échéance de paiement tant qu'elle n'est pas payée),
-   net disponible, abattement BNC et revenu imposable estimé. */
+/* What an invoice leaves: URSSAF provision at the rate of the payment
+   day (the due date while it is unpaid), net available, BNC allowance and
+   estimated taxable income. */
 function tresorerieFacture(f, reglages) {
   var encaissee = f.statut === 'payee' && !!f.datePaiement;
   var date = encaissee ? f.datePaiement : (f.dateEcheance || f.dateEmission);
@@ -503,11 +502,11 @@ function tresorerieFacture(f, reglages) {
   };
 }
 
-/* Recettes encaissées par trimestre civil, avec estimation des
-   cotisations et échéance de déclaration. Le trimestre en cours et les
-   trimestres à venir du contrat sont listés même sans encaissement. Les
-   montants sont la somme de ceux des factures, pour que les deux tableaux
-   de l'écran tombent juste. */
+/* Income collected per calendar quarter, with an estimate of the
+   contributions and the declaration deadline. The current quarter and
+   the contract's upcoming quarters are listed even with no payment. The
+   amounts are the sum of those of the invoices, so that the two tables
+   on screen agree. */
 function recettesParTrimestre(factures, reglages, dateRef) {
   var ref = dateRef || aujourdhui();
   var cles = {};
@@ -530,8 +529,8 @@ function recettesParTrimestre(factures, reglages, dateRef) {
     t.imposable += x.imposable;
     t.factures.push(f.numero);
   });
-  /* Tous les trimestres du contrat jusqu'à aujourd'hui (et jusqu'à sa fin),
-     même sans encaissement : une déclaration à néant reste à faire. */
+  /* All the contract's quarters up to today (and up to its end), even
+     with no payment: a nil declaration is still due. */
   var c = (reglages && reglages.contrat) || {};
   var de = c.debut && dateValide(c.debut) && c.debut < ref ? moisDe(c.debut) : moisDe(ref);
   var a = c.fin && dateValide(c.fin) && c.fin > ref ? moisDe(c.fin) : moisDe(ref);
@@ -550,13 +549,13 @@ function recettesParTrimestre(factures, reglages, dateRef) {
   return liste;
 }
 
-/* ---------- Priorités des tâches ----------
-   La priorité effective d'une tâche est la plus haute entre le choix
-   manuel (haute, moyenne, basse) et celle que dicte l'échéance : moins de
-   5 jours = haute, jusqu'à 14 jours = moyenne, au-delà = basse. Un choix
-   manuel n'est jamais abaissé ; « auto » s'en remet à l'échéance seule. */
+/* ---------- Task priorities ----------
+   The effective priority of a task is the higher of the manual choice
+   (high, medium, low) and the one dictated by the due date: under 5 days
+   = high, up to 14 days = medium, beyond = low. A manual choice is never
+   lowered; "auto" relies on the due date alone. */
 var NIVEAUX_PRIORITE = { basse: 1, moyenne: 2, haute: 3 };
-var LIBELLES_PRIORITE = { haute: 'Haute', moyenne: 'Moyenne', basse: 'Basse', auto: 'Automatique' };
+var LIBELLES_PRIORITE = { haute: 'High', moyenne: 'Medium', basse: 'Low', auto: 'Automatic' };
 
 function normaliserPriorite(p) {
   return p === 'haute' || p === 'moyenne' || p === 'basse' ? p : 'auto';
@@ -575,8 +574,8 @@ function prioriteEffective(t, ref) {
   if (auto && NIVEAUX_PRIORITE[auto] > NIVEAUX_PRIORITE[manuelle]) return { niveau: auto, origine: 'echeance', auto: auto, manuelle: manuelle };
   return { niveau: manuelle, origine: 'manuelle', auto: auto, manuelle: manuelle };
 }
-/* Ordre d'une colonne : priorité effective décroissante, puis échéance la
-   plus proche (les tâches datées avant les autres), puis ordre manuel. */
+/* Order of a column: effective priority descending, then nearest due
+   date (dated tasks before the others), then manual order. */
 function comparerTaches(a, b, ref) {
   var na = NIVEAUX_PRIORITE[prioriteEffective(a, ref).niveau], nb = NIVEAUX_PRIORITE[prioriteEffective(b, ref).niveau];
   if (na !== nb) return nb - na;
@@ -590,24 +589,24 @@ function trierTaches(liste, ref) {
   return liste.slice().sort(function (a, b) { return comparerTaches(a, b, ref); });
 }
 
-/* Identifiants des lignes déjà prises par une facture : toutes les factures
-   comptent (une ligne facturée ne se refacture jamais, même déplacée dans un
-   autre mois). Une facture sans liste de lignes (anciennes données) couvre
-   tout son mois. */
+/* Ids of the entries already taken by an invoice: all invoices count (an
+   invoiced entry is never invoiced again, even if moved to another
+   month). An invoice without a list of entries (old data) covers its
+   whole month. */
 function idsFactures(factures, mois, entrees) {
   var ids = [];
   (factures || []).forEach(function (f) {
     if (!f) return;
     if (Array.isArray(f.entreesIds)) ids = ids.concat(f.entreesIds.filter(function (id) { return id != null; }));
-    /* Une facture sans liste de lignes couvre le travail DATÉ dans son mois
-       et déjà saisi quand elle a été émise, quel que soit le relevé calculé :
-       une ligne qu'elle a payée ne doit pas revenir sur un autre mois par un
-       report, mais une ligne saisie après elle reste facturable. */
+    /* An invoice without a list of entries covers the work DATED in its
+       month and already entered when it was issued, whatever statement is
+       computed: an entry it paid for must not come back on another month
+       through a move, but an entry added after it stays billable. */
     else if (f.mois) (entrees || []).forEach(function (e) { if (couvertParFactureAncienne(e, f)) ids.push(e.id); });
   });
   return ids;
 }
-/* La facture qui a figé une ligne du journal, ou null. */
+/* The invoice that froze a log entry, or null. */
 function factureDeEntree(factures, id) {
   if (id == null) return null;
   for (var i = 0; i < (factures || []).length; i++) {
@@ -616,8 +615,8 @@ function factureDeEntree(factures, id) {
   }
   return null;
 }
-/* Une facture ancienne (sans liste de lignes) couvre le travail de son mois
-   qui existait au moment de son émission. */
+/* An old invoice (without a list of entries) covers the work of its month
+   that existed when it was issued. */
 function couvertParFactureAncienne(e, f) {
   if (!e || !e.date || !f || Array.isArray(f.entreesIds) || !f.mois) return false;
   if (moisDe(e.date) !== f.mois) return false;
@@ -625,8 +624,8 @@ function couvertParFactureAncienne(e, f) {
   var creee = String(e.creeLe || '').slice(0, 10);
   return !emise || !creee || creee <= emise;
 }
-/* La facture qui fige une ligne : par sa liste d'identifiants, ou, pour les
-   factures anciennes qui n'en ont pas, par le mois du travail. */
+/* The invoice that freezes an entry: by its list of ids, or, for old
+   invoices that have none, by the month of the work. */
 function factureFigeant(factures, e) {
   if (!e) return null;
   var parId = factureDeEntree(factures, e.id);
@@ -636,13 +635,13 @@ function factureFigeant(factures, e) {
   }
   return null;
 }
-/* Une ligne figée sur une facture ne change plus de mois de facturation. */
+/* An entry frozen on an invoice no longer changes billing month. */
 function peutReporter(e, factures) { return !!e && !factureFigeant(factures, e); }
-/* La part d'une intervention qu'une facture n'a pas figée : une suite faite le jour même d'une facture se reporte seule. */
+/* The part of a work item that no invoice has frozen: a follow-up done on the day of an invoice can be moved on its own. */
 function partReportable(lignes, factures) {
   return (lignes || []).filter(function (e) { return peutReporter(e, factures); });
 }
-/* Le total d'un mois déjà facturé : ses factures font foi, chacune arrondie et figée à son émission, plus ce qui reste à facturer. */
+/* The total of an already invoiced month: its invoices are authoritative, each rounded and frozen when issued, plus what is left to invoice. */
 function totalMoisFacture(lesFactures, reste) {
   return {
     minutes: lesFactures.reduce(function (s, f) { return s + (Number(f.minutesFacturees) || 0); }, 0) + reste.totalMinutesFacturables,
@@ -650,7 +649,7 @@ function totalMoisFacture(lesFactures, reste) {
   };
 }
 
-/* Statut d'affichage d'une facture (retard de paiement). */
+/* Display status of an invoice (late payment). */
 function statutFacture(f, dateRef) {
   var ref = dateRef || aujourdhui();
   if (f.statut === 'payee') return 'payee';
@@ -658,19 +657,19 @@ function statutFacture(f, dateRef) {
   return 'emise';
 }
 
-/* ---------- Rappels ----------
-   Tout ce qu'il ne faut pas rater, calculé à partir des données : échéances
-   (chacune avec son délai de rappel), tâches datées, mois écoulés à
-   facturer, factures en attente de paiement, chrono oublié, journal
-   délaissé. Trois niveaux : « retard » (dépassé), « urgent » (aujourd'hui
-   ou à faire maintenant), « bientot » (dans l'horizon de rappel).
-   Un rappel reporté (ui.rappelsReportes[cle] = date) reste listé avec sa
-   date de report ; l'écran choisit de le masquer. */
+/* ---------- Reminders ----------
+   Everything that must not be missed, computed from the data: deadlines
+   (each with its reminder lead time), dated tasks, past months to
+   invoice, invoices awaiting payment, forgotten timer, neglected log.
+   Three levels: "retard" (overdue), "urgent" (today or to do now),
+   "bientot" (within the reminder horizon).
+   A snoozed reminder (ui.rappelsReportes[cle] = date) is still listed
+   with its snooze date; the screen chooses to hide it. */
 var NIVEAUX_RAPPEL = { retard: 3, urgent: 2, bientot: 1 };
 
 function nombreOu(v, defaut) { var n = Number(v); return isFinite(n) && v !== '' && v != null ? n : defaut; }
-/* « d'octobre 2026 », « de novembre 2026 ». */
-function deLibelleMois(mois) { var l = libelleMois(mois); return (/^[aeiouyàâéèêîôûù]/i.test(l) ? 'd\'' : 'de ') + l; }
+/* "October 2026", "November 2026": the month label to drop into a sentence. */
+function deLibelleMois(mois) { return libelleMois(mois); }
 
 function calculerRappels(donnees, reglages, options) {
   var o = options || {};
@@ -694,7 +693,7 @@ function calculerRappels(donnees, reglages, options) {
     liste.push(x);
   }
 
-  /* Échéances (calendrier administratif et rappels personnels). */
+  /* Deadlines (admin calendar and personal reminders). */
   echeances.forEach(function (e) {
     if (!e || e.fait || !e.date) return;
     var j = joursEntre(ref, e.date);
@@ -704,23 +703,23 @@ function calculerRappels(donnees, reglages, options) {
     ajouter({ cle: 'echeance:' + e.id, categorie: 'echeance', niveau: niveau, titre: e.titre, detail: e.detail || '', date: e.date, jours: j, page: 'echeances', cibleId: e.id });
   });
 
-  /* Tâches datées, hors « Fait ». */
+  /* Dated tasks, excluding "Done". */
   taches.forEach(function (t) {
     if (!t || t.statut === 'fait' || !t.echeance) return;
     var j = joursEntre(ref, t.echeance);
     if (!isFinite(j)) return;
     var niveau = niveauPour(j, hTaches);
     if (!niveau) return;
-    ajouter({ cle: 'tache:' + t.id, categorie: 'tache', niveau: niveau, titre: t.titre, detail: t.statut === 'en-cours' ? 'Tâche en cours' : 'Tâche à faire', date: t.echeance, jours: j, page: 'taches', cibleId: t.id });
+    ajouter({ cle: 'tache:' + t.id, categorie: 'tache', niveau: niveau, titre: t.titre, detail: t.statut === 'en-cours' ? 'Task in progress' : 'Task to do', date: t.echeance, jours: j, page: 'taches', cibleId: t.id });
   });
 
-  /* Mois écoulés du contrat qui restent à facturer. */
+  /* Past months of the contract that are still to invoice. */
   var courant = moisDe(ref);
   var debutContrat = reglages && reglages.contrat && reglages.contrat.debut ? moisDe(reglages.contrat.debut) : '';
   var moisVus = {};
-  /* Le mois de FACTURATION : un mois qui n'existe que par report doit être
-     réclamé lui aussi, et un mois vidé par un report ne l'est plus. Un mois
-     sans ligne mais avec des frais autorisés reste à facturer. */
+  /* The BILLING month: a month that exists only through a move must be
+     claimed too, and a month emptied by a move no longer is. A month with
+     no entries but with approved expenses is still to invoice. */
   entrees.forEach(function (e) { var m = moisFacturationDe(e); if (m && m < courant && m >= debutContrat) moisVus[m] = true; });
   var moisMeta = (reglages && reglages.ui && reglages.ui.moisMeta) || {};
   Object.keys(moisMeta).forEach(function (m) { if (m && m < courant && m >= debutContrat && Number(moisMeta[m] && moisMeta[m].frais) > 0) moisVus[m] = true; });
@@ -730,35 +729,35 @@ function calculerRappels(donnees, reglages, options) {
     var fraisRestants = Math.max(0, arrondir2(fraisMois - fraisFactures));
     var rel = releveDuMois(entrees, m, reglages, fraisRestants, { exclureIds: idsFactures(factures, m, entrees) });
     if (rel.total <= 0) return;
-    var detail = fmtHeuresDec(rel.totalMinutesFacturables) + ' facturables, ' + fmtEuros(rel.montantHT) + ' HT'
-      + (rel.frais ? ' et ' + fmtEuros(rel.frais) + ' de frais' : '');
-    ajouter({ cle: 'facturer:' + m, categorie: 'facture', niveau: 'urgent', titre: 'Relevé ' + deLibelleMois(m) + ' à facturer', detail: detail, date: null, jours: null, page: 'releve', cibleId: m });
+    var detail = fmtHeuresDec(rel.totalMinutesFacturables) + ' billable, ' + fmtEuros(rel.montantHT) + ' excl. tax'
+      + (rel.frais ? ' and ' + fmtEuros(rel.frais) + ' in expenses' : '');
+    ajouter({ cle: 'facturer:' + m, categorie: 'facture', niveau: 'urgent', titre: deLibelleMois(m) + ' statement ready to invoice', detail: detail, date: null, jours: null, page: 'releve', cibleId: m });
   });
 
-  /* Factures émises : échéance de paiement proche ou dépassée. */
+  /* Issued invoices: payment due date near or past. */
   factures.forEach(function (f) {
     if (!f || f.statut === 'payee' || !f.dateEcheance) return;
     var j = joursEntre(ref, f.dateEcheance);
     if (!isFinite(j)) return;
     var niveau = niveauPour(j, hFactures);
     if (!niveau) return;
-    ajouter({ cle: 'paiement:' + f.id, categorie: 'facture', niveau: niveau, titre: 'Facture n° ' + f.numero + (j < 0 ? ' impayée' : ' à encaisser'), detail: fmtEuros(f.total) + (j < 0 ? ', échue le ' + dateFr(f.dateEcheance) : ', échéance de paiement le ' + dateFr(f.dateEcheance)), date: f.dateEcheance, jours: j, page: 'factures', cibleId: f.id });
+    ajouter({ cle: 'paiement:' + f.id, categorie: 'facture', niveau: niveau, titre: 'Invoice no. ' + f.numero + (j < 0 ? ' unpaid' : ' to collect'), detail: fmtEuros(f.total) + (j < 0 ? ', overdue since ' + dateFr(f.dateEcheance) : ', due on ' + dateFr(f.dateEcheance)), date: f.dateEcheance, jours: j, page: 'factures', cibleId: f.id });
   });
 
-  /* Chrono oublié : en marche depuis longtemps, ou en pause depuis longtemps. */
+  /* Forgotten timer: running for a long time, or paused for a long time. */
   var c = d.chrono || null;
   if (c && c.debut && chronoH > 0 && isFinite(new Date(c.debut).getTime())) {
     var finMesure = c.pauseDepuis ? new Date(c.pauseDepuis).getTime() : maintenant;
     var ms = Math.max(0, finMesure - new Date(c.debut).getTime() - (c.pauseCumuleeMs || 0));
-    var libelle = String(c.intervention || '').trim() || 'sans libellé';
+    var libelle = String(c.intervention || '').trim() || 'no label';
     if (!c.pauseDepuis && ms >= chronoH * 3600000) {
-      ajouter({ cle: 'chrono:long', categorie: 'chrono', niveau: 'urgent', titre: 'Le chrono tourne depuis ' + fmtDuree(Math.round(ms / 60000)), detail: 'Sur « ' + libelle + ' » : toujours en cours ? Sinon, arrêtez-le pour enregistrer la ligne.', date: null, jours: null, page: 'journal', cibleId: null });
+      ajouter({ cle: 'chrono:long', categorie: 'chrono', niveau: 'urgent', titre: 'The timer has been running for ' + fmtDuree(Math.round(ms / 60000)), detail: 'On "' + libelle + '": still going? If not, stop it to save the entry.', date: null, jours: null, page: 'journal', cibleId: null });
     } else if (c.pauseDepuis && maintenant - new Date(c.pauseDepuis).getTime() >= 8 * 3600000) {
-      ajouter({ cle: 'chrono:pause', categorie: 'chrono', niveau: 'urgent', titre: 'Un chrono est en pause depuis ' + fmtDuree(Math.round((maintenant - new Date(c.pauseDepuis).getTime()) / 60000)), detail: 'Sur « ' + libelle + ' » (' + fmtDuree(Math.round(ms / 60000)) + ' mesurées) : reprenez-le ou arrêtez-le.', date: null, jours: null, page: 'journal', cibleId: null });
+      ajouter({ cle: 'chrono:pause', categorie: 'chrono', niveau: 'urgent', titre: 'A timer has been paused for ' + fmtDuree(Math.round((maintenant - new Date(c.pauseDepuis).getTime()) / 60000)), detail: 'On "' + libelle + '" (' + fmtDuree(Math.round(ms / 60000)) + ' measured): resume it or stop it.', date: null, jours: null, page: 'journal', cibleId: null });
     }
   }
 
-  /* Journal délaissé pendant le contrat (jours ouvrés seulement). */
+  /* Log neglected during the contract (working days only). */
   var contrat = (reglages && reglages.contrat) || {};
   if (journalJours > 0 && contrat.debut && ref >= contrat.debut && (!contrat.fin || ref <= contrat.fin)) {
     var jourSemaine = isoVersDate(ref).getDay();
@@ -767,7 +766,7 @@ function calculerRappels(donnees, reglages, options) {
       entrees.forEach(function (e) { if (e.date && e.date <= ref && e.date > derniere) derniere = e.date; });
       var depuis = derniere ? joursEntre(derniere, ref) : joursEntre(contrat.debut, ref);
       if (isFinite(depuis) && depuis >= journalJours) {
-        ajouter({ cle: 'journal:silence', categorie: 'journal', niveau: 'bientot', titre: derniere ? 'Aucune saisie depuis ' + depuis + ' jours' : 'Aucune saisie depuis le début du contrat', detail: derniere ? 'Dernière ligne le ' + dateFr(derniere) + '. Le relevé du mois se construit au fil de l\'eau.' : 'Le relevé du mois se construit au fil de l\'eau.', date: null, jours: null, page: 'journal', cibleId: null });
+        ajouter({ cle: 'journal:silence', categorie: 'journal', niveau: 'bientot', titre: derniere ? 'No entry for ' + depuis + ' days' : 'No entry since the start of the contract', detail: derniere ? 'Last entry on ' + dateFr(derniere) + '. The monthly statement is built up as you go.' : 'The monthly statement is built up as you go.', date: null, jours: null, page: 'journal', cibleId: null });
       }
     }
   }
@@ -776,12 +775,12 @@ function calculerRappels(donnees, reglages, options) {
     if (NIVEAUX_RAPPEL[a.niveau] !== NIVEAUX_RAPPEL[b.niveau]) return NIVEAUX_RAPPEL[b.niveau] - NIVEAUX_RAPPEL[a.niveau];
     var ja = a.jours == null ? 0 : a.jours, jb = b.jours == null ? 0 : b.jours;
     if (ja !== jb) return ja - jb;
-    return String(a.titre).localeCompare(String(b.titre), 'fr');
+    return String(a.titre).localeCompare(String(b.titre), 'en');
   });
   return liste;
 }
 
-/* Temps passé sur une tâche (lignes du journal qui la référencent). */
+/* Time spent on a task (log entries that reference it). */
 function minutesTache(entrees, tacheId) {
   var total = 0, nb = 0;
   (entrees || []).forEach(function (e) { if (e && e.tache === tacheId) { total += dureeEntree(e); nb++; } });

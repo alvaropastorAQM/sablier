@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""Génère l'icône de Sablier (src-tauri/icons/icon.png en 1024 px, puis icon.icns).
+"""Generates the Sablier icon (src-tauri/icons/icon.png at 1024 px, then icon.icns).
 
-Même esprit que l'icône de Projet A : carré arrondi marine profond, anneaux
-fins, motif lumineux au centre. Ici le motif est un sablier dont le sable
-est or (la couleur précieuse de la charte). Dessin en 4096 px puis réduit
-en 1024 px pour un lissage propre. Dépendances : Pillow, iconutil (macOS).
+Same spirit as the Project A icon: deep navy rounded square, thin rings,
+glowing motif in the centre. Here the motif is an hourglass whose sand is
+gold (the precious colour of the brand palette). Drawn at 4096 px then
+scaled down to 1024 px for clean smoothing. Dependencies: Pillow,
+iconutil (macOS).
 """
 import os, subprocess, shutil, math
 from PIL import Image, ImageDraw, ImageFilter
 
 RACINE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-S = 4  # facteur de sur-échantillonnage
+S = 4  # supersampling factor
 N = 1024 * S
 
 def rgba(hexa, a=255):
@@ -27,7 +28,7 @@ OR_FONCE = rgba('#A5813C')
 
 img = Image.new('RGBA', (N, N), (0, 0, 0, 0))
 
-# --- Carré arrondi avec dégradé vertical -----------------------------
+# --- Rounded square with vertical gradient ---------------------------
 marge = 100 * S
 taille = N - 2 * marge
 rayon = 185 * S
@@ -41,12 +42,12 @@ masque = Image.new('L', (N, N), 0)
 ImageDraw.Draw(masque).rounded_rectangle([marge, marge, N - marge, N - marge], radius=rayon, fill=255)
 img.paste(degrade, (0, 0), masque)
 
-# Liseré discret sur le bord du carré.
+# Subtle outline on the edge of the square.
 bord = Image.new('RGBA', (N, N), (0, 0, 0, 0))
 ImageDraw.Draw(bord).rounded_rectangle([marge, marge, N - marge, N - marge], radius=rayon, outline=(255, 255, 255, 34), width=3 * S)
 img = Image.alpha_composite(img, bord)
 
-# --- Halo bleu au centre (comme le disque lumineux du X) -------------
+# --- Blue halo in the centre (like the glowing disc of the X) --------
 halo = Image.new('RGBA', (N, N), (0, 0, 0, 0))
 hd = ImageDraw.Draw(halo)
 cx = cy = N // 2
@@ -55,7 +56,7 @@ for r, a in ((300 * S, 40), (220 * S, 55), (150 * S, 70)):
 halo = halo.filter(ImageFilter.GaussianBlur(70 * S))
 img = Image.alpha_composite(img, halo)
 
-# --- Anneaux fins, dont certains en pointillé ------------------------
+# --- Thin rings, some of them dotted ---------------------------------
 anneaux = Image.new('RGBA', (N, N), (0, 0, 0, 0))
 ad = ImageDraw.Draw(anneaux)
 def arc(r, a0, a1, couleur, largeur, pointille=False):
@@ -77,55 +78,55 @@ arc(236 * S, 340, 30, (143, 180, 227, 80), 2 * S, pointille=True)
 arc(236 * S, 150, 210, (143, 180, 227, 80), 2 * S, pointille=True)
 img = Image.alpha_composite(img, anneaux)
 
-# --- Le sablier ------------------------------------------------------
-# Coordonnées en espace 1024 (multipliées par S au tracé).
+# --- The hourglass ---------------------------------------------------
+# Coordinates in 1024 space (multiplied by S when drawing).
 def P(x, y):
     return (x * S, y * S)
 
 haut, bas = 300, 724
-g, d = 380, 644          # gauche / droite des bulbes
+g, d = 380, 644          # left / right of the bulbs
 neck_g, neck_d = 499, 525
 neck_y_h, neck_y_b = 500, 524
 cap_g, cap_d = 356, 668
 
 def tracer_sablier(dr, couleur, largeur):
-    # Capuchons haut et bas
+    # Top and bottom caps
     dr.line([P(cap_g, haut), P(cap_d, haut)], fill=couleur, width=largeur, joint='curve')
     dr.line([P(cap_g, bas), P(cap_d, bas)], fill=couleur, width=largeur, joint='curve')
-    # Bulbe supérieur
+    # Upper bulb
     dr.line([P(g, haut), P(neck_g, neck_y_h), P(neck_d, neck_y_h), P(d, haut)], fill=couleur, width=largeur, joint='curve')
-    # Bulbe inférieur
+    # Lower bulb
     dr.line([P(g, bas), P(neck_g, neck_y_b), P(neck_d, neck_y_b), P(d, bas)], fill=couleur, width=largeur, joint='curve')
-    # Extrémités arrondies
+    # Rounded ends
     r = largeur / 2
     for (x, y) in ((cap_g, haut), (cap_d, haut), (cap_g, bas), (cap_d, bas)):
         dr.ellipse([x * S - r, y * S - r, x * S + r, y * S + r], fill=couleur)
 
-# Lueur bleue sous le trait
+# Blue glow under the stroke
 lueur = Image.new('RGBA', (N, N), (0, 0, 0, 0))
 tracer_sablier(ImageDraw.Draw(lueur), (120, 170, 230, 210), 30 * S)
 lueur = lueur.filter(ImageFilter.GaussianBlur(18 * S))
 img = Image.alpha_composite(img, lueur)
 
-# Sable : monticule inférieur, reste supérieur, filet qui s'écoule (or)
+# Sand: lower mound, remaining upper part, trickle flowing down (gold)
 sable = Image.new('RGBA', (N, N), (0, 0, 0, 0))
 sd = ImageDraw.Draw(sable)
 sd.polygon([P(402, bas - 2), P(622, bas - 2), P(512, 606)], fill=OR)
 sd.polygon([P(462, 462), P(562, 462), P(512, neck_y_h)], fill=OR)
 sd.line([P(512, neck_y_b), P(512, 640)], fill=OR, width=5 * S)
-# Reflet doux sur le sable
+# Soft highlight on the sand
 reflet = Image.new('RGBA', (N, N), (0, 0, 0, 0))
 ImageDraw.Draw(reflet).polygon([P(402, bas - 2), P(622, bas - 2), P(512, 606)], fill=(255, 235, 190, 90))
 reflet = reflet.filter(ImageFilter.GaussianBlur(10 * S))
 img = Image.alpha_composite(img, sable)
 img = Image.alpha_composite(img, reflet)
 
-# Trait principal du sablier, blanc légèrement bleuté
+# Main stroke of the hourglass, slightly bluish white
 trait = Image.new('RGBA', (N, N), (0, 0, 0, 0))
 tracer_sablier(ImageDraw.Draw(trait), BLANC, 15 * S)
 img = Image.alpha_composite(img, trait)
 
-# Point lumineux au col
+# Glowing dot at the neck
 point = Image.new('RGBA', (N, N), (0, 0, 0, 0))
 pd = ImageDraw.Draw(point)
 r = 26 * S
@@ -133,7 +134,7 @@ pd.ellipse([cx - r, 512 * S - r, cx + r, 512 * S + r], fill=(200, 225, 255, 120)
 point = point.filter(ImageFilter.GaussianBlur(12 * S))
 img = Image.alpha_composite(img, point)
 
-# Ombre portée du carré (légère), sous le tout
+# Light drop shadow of the square, under everything
 ombre = Image.new('RGBA', (N, N), (0, 0, 0, 0))
 ImageDraw.Draw(ombre).rounded_rectangle([marge, marge + 14 * S, N - marge, N - marge + 14 * S], radius=rayon, fill=(0, 0, 0, 110))
 ombre = ombre.filter(ImageFilter.GaussianBlur(22 * S))
@@ -142,7 +143,7 @@ final = Image.alpha_composite(ombre, img)
 final = final.resize((1024, 1024), Image.LANCZOS)
 chemin_png = os.path.join(RACINE, 'src-tauri', 'icons', 'icon.png')
 final.save(chemin_png)
-print('écrit', chemin_png)
+print('written', chemin_png)
 
 # --- .icns via iconutil ------------------------------------------------
 iconset = os.path.join(RACINE, 'src-tauri', 'icons', 'icon.iconset')
@@ -156,4 +157,4 @@ for taille in (16, 32, 128, 256, 512):
 icns = os.path.join(RACINE, 'src-tauri', 'icons', 'icon.icns')
 subprocess.run(['iconutil', '-c', 'icns', iconset, '-o', icns], check=True)
 shutil.rmtree(iconset, ignore_errors=True)
-print('écrit', icns, os.path.getsize(icns), 'octets')
+print('written', icns, os.path.getsize(icns), 'bytes')

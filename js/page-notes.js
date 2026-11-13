@@ -1,38 +1,37 @@
 /* ============================================================
-   PAGE NOTES : pages hiérarchiques et éditeur continu.
+   NOTES PAGE: hierarchical pages and continuous editor.
 
-   Une page s'écrit d'un seul tenant, comme dans Notes d'Apple : une
-   zone de texte unique où Entrée passe simplement à la ligne, sans bloc
-   ni poignée. Chaque ligne garde un style (texte, titres, listes, case
-   à cocher, idée, citation, encadré, séparateur), choisi dans la barre
-   d'outils, au clavier, par « / » ou par les raccourcis Markdown. Sur
-   le disque, la page reste une liste de blocs
-   {id, type, html, coche, tache, retrait} : une ligne = un bloc.
+   A page is written in one go, as in Apple Notes: a single text area
+   where Enter simply starts a new line, with no blocks or handles. Each
+   line keeps a style (text, headings, lists, checkbox, idea, quote,
+   callout, divider), chosen from the toolbar, with the keyboard, with
+   "/" or with Markdown shortcuts. On disk, the page stays a list of
+   blocks {id, type, html, coche, tache, retrait}: one line = one block.
 
-   Le texte collé ou déposé arrive toujours sans mise en forme. Annuler
-   et rétablir suivent un historique propre à l'éditeur.
+   Pasted or dropped text always arrives unformatted. Undo and redo
+   follow a history of their own, kept by the editor.
 
-   Les notes et les tâches se répondent : une page affiche les tâches qui
-   lui sont liées ; une idée (ou n'importe quelle ligne) devient une
-   tâche de la colonne À faire d'un clic, et garde le lien.
+   Notes and tasks refer to each other: a page shows the tasks linked to
+   it; an idea (or any line) becomes a task in the To do column in one
+   click, and keeps the link.
    ============================================================ */
 'use strict';
 
 var TYPES_BLOC = [
-  { type: 'p', nom: 'Texte', sous: 'Le texte courant', ic: 'T', raccourci: '⌥⌘0' },
-  { type: 'h1', nom: 'Titre 1', sous: 'Grand titre de section', ic: 'H1', raccourci: '⌥⌘1' },
-  { type: 'h2', nom: 'Titre 2', sous: 'Sous-titre', ic: 'H2', raccourci: '⌥⌘2' },
-  { type: 'h3', nom: 'Titre 3', sous: 'Petit titre', ic: 'H3', raccourci: '⌥⌘3' },
-  { type: 'puce', nom: 'Liste à puces', sous: 'Entrée continue la liste', ic: '•', raccourci: '⇧⌘7' },
-  { type: 'numero', nom: 'Liste numérotée', sous: 'Numérotation automatique', ic: '1.', raccourci: '⇧⌘9' },
-  { type: 'case', nom: 'Case à cocher', sous: 'Une chose à faire', ic: '○', raccourci: '⇧⌘L' },
-  { type: 'idee', nom: 'Idée', sous: 'À trier, transformable en tâche', ic: '✦' },
-  { type: 'citation', nom: 'Citation', sous: 'Texte en retrait, filet marine', ic: '“', raccourci: '⌘\'' },
-  { type: 'encadre', nom: 'Encadré', sous: 'Point important, filet or', ic: '!' },
-  { type: 'separateur', nom: 'Séparateur', sous: 'Un trait horizontal', ic: '···' },
+  { type: 'p', nom: 'Text', sous: 'Plain body text', ic: 'T', raccourci: 'Ctrl+Alt+0' },
+  { type: 'h1', nom: 'Heading 1', sous: 'Large section heading', ic: 'H1', raccourci: 'Ctrl+Alt+1' },
+  { type: 'h2', nom: 'Heading 2', sous: 'Subheading', ic: 'H2', raccourci: 'Ctrl+Alt+2' },
+  { type: 'h3', nom: 'Heading 3', sous: 'Small heading', ic: 'H3', raccourci: 'Ctrl+Alt+3' },
+  { type: 'puce', nom: 'Bulleted list', sous: 'Enter continues the list', ic: '•', raccourci: 'Ctrl+Shift+7' },
+  { type: 'numero', nom: 'Numbered list', sous: 'Automatic numbering', ic: '1.', raccourci: 'Ctrl+Shift+9' },
+  { type: 'case', nom: 'Checkbox', sous: 'Something to do', ic: '○', raccourci: 'Ctrl+Shift+L' },
+  { type: 'idee', nom: 'Idea', sous: 'To sort, can become a task', ic: '✦' },
+  { type: 'citation', nom: 'Quote', sous: 'Indented text, navy rule', ic: '“', raccourci: 'Ctrl+\'' },
+  { type: 'encadre', nom: 'Callout', sous: 'Important point, gold rule', ic: '!' },
+  { type: 'separateur', nom: 'Divider', sous: 'A horizontal line', ic: '···' },
 ];
 var LISTES = ['puce', 'numero', 'case'];
-var CONTINUES = ['puce', 'numero', 'case', 'citation', 'encadre'];   // Entrée garde le style
+var CONTINUES = ['puce', 'numero', 'case', 'citation', 'encadre'];   // Enter keeps the style
 var AVEC_RETRAIT = ['p', 'puce', 'numero', 'case'];
 var RETRAIT_MAX = 4;
 var BALISES_LIGNE = { B: 1, STRONG: 1, I: 1, EM: 1, U: 1, S: 1, STRIKE: 1, CODE: 1, A: 1, BR: 1, MARK: 1 };
@@ -41,7 +40,7 @@ var NOTES_RECHERCHE = '';
 var NOTES_PLIES = {};
 var MENU_SLASH = null;       // {ligne, filtre, selection}
 var HISTO = { pile: [], index: -1, nature: '', debut: 0, derniere: 0 };
-var HISTO_CLAVIER = 0;       // heure du dernier ⌘Z traité au clavier (évite le doublon du menu Édition)
+var HISTO_CLAVIER = 0;       // time of the last Ctrl+Z handled from the keyboard (avoids a duplicate from the Edit menu)
 var notesSauverDiffere = debounce(function () { sauver('notes'); }, 400);
 var notesSerialiserDiffere = debounce(function () { serialiserDoc(); }, 200);
 
@@ -70,13 +69,13 @@ function initNotes() {
       p.titre = ev.target.textContent.replace(/\n/g, ' ').trim();
       p.modifieLe = new Date().toISOString();
       var item = zone.querySelector('.nt-item[data-id="' + NOTES_PAGE + '"] .nom');
-      if (item) item.textContent = p.titre || 'Sans titre';
+      if (item) item.textContent = p.titre || 'Untitled';
       var fil = zone.querySelector('#ntFilCourant');
-      if (fil) fil.textContent = p.titre || 'Sans titre';
+      if (fil) fil.textContent = p.titre || 'Untitled';
       notesSauverDiffere();
     }
   });
-  /* Du titre, Entrée, Tab ou ↓ descendent dans la page. */
+  /* From the title, Enter, Tab or Down move into the page. */
   zone.addEventListener('keydown', function (ev) {
     if (ev.target.id !== 'ntTitre' || ev.isComposing) return;
     if (ev.key === 'Enter' || (ev.key === 'Tab' && !ev.shiftKey) || (ev.key === 'ArrowDown' && caretALaFin(ev.target))) {
@@ -86,7 +85,7 @@ function initNotes() {
       if (premiere) placerCaret(premiere, true);
     }
   });
-  /* Le titre ne reçoit que du texte, sur une ligne. */
+  /* The title only accepts text, on a single line. */
   zone.addEventListener('paste', function (ev) {
     if (!ev.target.closest || !ev.target.closest('#ntTitre')) return;
     ev.preventDefault();
@@ -94,7 +93,7 @@ function initNotes() {
     if (t) document.execCommand('insertText', false, t);
   });
   document.addEventListener('selectionchange', function () { if (PAGE_COURANTE === 'notes') majEtatEditeur(); });
-  /* Les dernières frappes partent sur le disque avant la fermeture. */
+  /* The last keystrokes are written to disk before closing. */
   window.addEventListener('pagehide', function () { notesSerialiserDiffere.flush(); notesSauverDiffere.flush(); });
 }
 
@@ -115,14 +114,14 @@ function cheminDe(id) {
   return chemin;
 }
 
-/* Ouvre la page Notes sur une page donnée (depuis une tâche, par exemple). */
+/* Opens the Notes page on a given page (from a task, for example). */
 function ouvrirPageNotes(id) {
   if (pageParId(id)) NOTES_PAGE = id;
   cheminDe(id).forEach(function (p) { if (p.parent) NOTES_PLIES[p.parent] = false; });
   afficherPage('notes');
 }
 
-/* ---------- Rendu de la page ---------- */
+/* ---------- Page rendering ---------- */
 
 function rendreNotes() {
   fermerMenuSlash();
@@ -130,8 +129,8 @@ function rendreNotes() {
     var racines = enfantsDe(null);
     NOTES_PAGE = racines.length ? racines[0].id : null;
   }
-  /* Ce qui vient d'être tapé est enregistré avant de redessiner ; sur la
-     même page, le curseur et l'historique sont conservés. */
+  /* Whatever was just typed is saved before redrawing; on the same page,
+     the cursor and the history are kept. */
   var ancien = docNotes();
   var memePage = !!ancien && ancien.dataset.page === NOTES_PAGE;
   var garder = null;
@@ -141,8 +140,8 @@ function rendreNotes() {
   }
   var zone = document.getElementById('notesContenu');
   zone.innerHTML = '<section class="card" style="padding:18px 20px;"><div class="nt-disposition">'
-    + '<aside class="nt-rail"><input type="text" id="ntRecherche" placeholder="Rechercher dans les notes…" value="' + echapper(NOTES_RECHERCHE) + '">'
-    + '<button class="btn btn-ghost btn-petit" data-action="nouvelle-page">Nouvelle page</button>'
+    + '<aside class="nt-rail"><input type="text" id="ntRecherche" placeholder="Search notes…" value="' + echapper(NOTES_RECHERCHE) + '">'
+    + '<button class="btn btn-ghost btn-petit" data-action="nouvelle-page">New page</button>'
     + '<div class="nt-arbre" id="ntArbre"></div></aside>'
     + '<div class="nt-editeur" id="ntEditeur"></div>'
     + '</div></section>';
@@ -160,11 +159,11 @@ function rendreRailNotes() {
     notesSerialiserDiffere.flush();
     var trouvees = [];
     pagesNotes().forEach(function (p) {
-      if (normaliserCle(p.titre || 'Sans titre').indexOf(recherche) >= 0) { trouvees.push({ p: p, extrait: '' }); return; }
+      if (normaliserCle(p.titre || 'Untitled').indexOf(recherche) >= 0) { trouvees.push({ p: p, extrait: '' }); return; }
       var dedans = (p.blocs || []).map(function (b) { return texteBrutDe(b.html); }).filter(function (t) { return normaliserCle(t).indexOf(recherche) >= 0; })[0];
       if (dedans != null) trouvees.push({ p: p, extrait: extraitAutour(dedans, recherche) });
     });
-    html = trouvees.length ? trouvees.map(function (x) { return itemPageHtml(x.p, 0, false, x.extrait); }).join('') : '<div class="vide" style="padding:10px;">Aucune page ne contient ce texte.</div>';
+    html = trouvees.length ? trouvees.map(function (x) { return itemPageHtml(x.p, 0, false, x.extrait); }).join('') : '<div class="vide" style="padding:10px;">No page contains this text.</div>';
   } else {
     var parcourir = function (parent, niveau) {
       enfantsDe(parent).forEach(function (p) {
@@ -174,12 +173,12 @@ function rendreRailNotes() {
       });
     };
     parcourir(null, 0);
-    if (!html) html = '<div class="vide" style="padding:10px;">Aucune page. Créez-en une.</div>';
+    if (!html) html = '<div class="vide" style="padding:10px;">No pages yet. Create one.</div>';
   }
   arbre.innerHTML = html;
 }
 
-/* Quelques mots autour du texte trouvé, pour la liste des résultats. */
+/* A few words around the matched text, for the results list. */
 function extraitAutour(texte, recherche) {
   var t = String(texte || '').replace(/\s+/g, ' ').trim();
   var i = t.toLowerCase().indexOf(recherche);
@@ -192,8 +191,8 @@ function itemPageHtml(p, niveau, aEnfants, extrait) {
   var nbTaches = tachesLieesAPage(p.id).filter(function (t) { return t.statut !== 'fait'; }).length;
   return '<button class="nt-item niveau-' + Math.min(3, niveau) + (p.id === NOTES_PAGE ? ' actif' : '') + '" data-action="ouvrir" data-id="' + echapper(p.id) + '">'
     + '<span class="pli"' + (aEnfants ? ' data-action="plier" data-id="' + echapper(p.id) + '"' : '') + '>' + (aEnfants ? (NOTES_PLIES[p.id] ? '▸' : '▾') : '') + '</span>'
-    + '<span class="nom">' + echapper(p.titre || 'Sans titre') + (extrait ? '<span class="nt-extrait">' + echapper(extrait) + '</span>' : '') + '</span>'
-    + (nbTaches ? '<span class="nt-nb" title="Tâches liées ouvertes">' + nbTaches + '</span>' : '') + '</button>';
+    + '<span class="nom">' + echapper(p.titre || 'Untitled') + (extrait ? '<span class="nt-extrait">' + echapper(extrait) + '</span>' : '') + '</span>'
+    + (nbTaches ? '<span class="nt-nb" title="Open linked tasks">' + nbTaches + '</span>' : '') + '</button>';
 }
 
 function rendreEditeurNotes(memePage) {
@@ -201,19 +200,19 @@ function rendreEditeurNotes(memePage) {
   if (!ed) return;
   var p = pageParId(NOTES_PAGE);
   if (!p) {
-    ed.innerHTML = '<div class="vide" style="margin-top:40px;">Aucune page ouverte. <button class="lien" data-action="nouvelle-page">Créer une page</button></div>';
+    ed.innerHTML = '<div class="vide" style="margin-top:40px;">No page open. <button class="lien" data-action="nouvelle-page">Create a page</button></div>';
     return;
   }
   var chemin = cheminDe(p.id);
   ed.innerHTML = '<div class="nt-fil">' + chemin.map(function (c, i) {
-    return i < chemin.length - 1 ? '<button class="lien" data-action="ouvrir" data-id="' + echapper(c.id) + '">' + echapper(c.titre || 'Sans titre') + '</button><span>›</span>' : '<span id="ntFilCourant">' + echapper(c.titre || 'Sans titre') + '</span>';
+    return i < chemin.length - 1 ? '<button class="lien" data-action="ouvrir" data-id="' + echapper(c.id) + '">' + echapper(c.titre || 'Untitled') + '</button><span>›</span>' : '<span id="ntFilCourant">' + echapper(c.titre || 'Untitled') + '</span>';
   }).join('') + '</div>'
     + '<h1 class="nt-titre" id="ntTitre" contenteditable="true" spellcheck="false">' + echapper(p.titre) + '</h1>'
     + '<div class="nt-outils"><span id="ntInfos"></span>'
-    + '<span class="a-droite"><button class="btn btn-ghost btn-petit" data-action="sous-page">Sous-page</button><button class="btn btn-ghost btn-petit" data-action="deplacer-page">Déplacer…</button><button class="btn btn-danger-ligne btn-petit" data-action="supprimer-page">Supprimer</button></span></div>'
+    + '<span class="a-droite"><button class="btn btn-ghost btn-petit" data-action="sous-page">Subpage</button><button class="btn btn-ghost btn-petit" data-action="deplacer-page">Move…</button><button class="btn btn-danger-ligne btn-petit" data-action="supprimer-page">Delete</button></span></div>'
     + '<div class="nt-taches" id="ntTaches"></div>'
-    + '<div class="nt-barre" id="ntBarre" role="toolbar" aria-label="Mise en forme">' + barreNotesHtml() + '</div>'
-    + '<div class="nt-doc" id="ntDoc" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true" aria-label="Contenu de la page" data-page="' + echapper(p.id) + '"></div>';
+    + '<div class="nt-barre" id="ntBarre" role="toolbar" aria-label="Formatting">' + barreNotesHtml() + '</div>'
+    + '<div class="nt-doc" id="ntDoc" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true" aria-label="Page content" data-page="' + echapper(p.id) + '"></div>';
   rendreTachesLieesNotes();
   var doc = docNotes();
   if (!p.blocs || !p.blocs.length) p.blocs = [bloc('p', '')];
@@ -231,10 +230,10 @@ function majInfosNotes() {
   var zone = document.getElementById('ntInfos'), doc = docNotes(), p = pageParId(NOTES_PAGE);
   if (!zone || !doc || !p) return;
   var mots = (doc.innerText.match(/\S+/g) || []).length;
-  zone.textContent = 'Modifié le ' + libelleDate(String(p.modifieLe || '').slice(0, 10), 'moyen') + ' · ' + mots + (mots > 1 ? ' mots' : ' mot');
+  zone.textContent = 'Modified ' + libelleDate(String(p.modifieLe || '').slice(0, 10), 'moyen') + ' · ' + mots + (mots === 1 ? ' word' : ' words');
 }
 
-/* La bande des tâches liées à la page ouverte. */
+/* The strip of tasks linked to the open page. */
 function rendreTachesLieesNotes() {
   var zone = document.getElementById('ntTaches');
   if (!zone || !NOTES_PAGE) return;
@@ -243,10 +242,10 @@ function rendreTachesLieesNotes() {
     if (oa !== ob) return oa - ob;
     return comparerTaches(a, b, aujourdhui());
   });
-  zone.innerHTML = '<span class="libelle">Tâches liées</span>'
+  zone.innerHTML = '<span class="libelle">Linked tasks</span>'
     + liees.map(chipTacheHtml).join('')
-    + '<button type="button" class="lien" data-action="lier-tache">' + (liees.length ? 'Lier une autre tâche…' : 'Lier une tâche…') + '</button>'
-    + '<span class="petit">·</span><button type="button" class="lien" data-action="nouvelle-tache">Nouvelle tâche liée</button>';
+    + '<button type="button" class="lien" data-action="lier-tache">' + (liees.length ? 'Link another task…' : 'Link a task…') + '</button>'
+    + '<span class="petit">·</span><button type="button" class="lien" data-action="nouvelle-tache">New linked task</button>';
 }
 
 function menuLierTache(ancre) {
@@ -256,46 +255,46 @@ function menuLierTache(ancre) {
     var liste = trierTaches(taches().filter(function (t) { return t.statut === s.id && deja.indexOf(t.id) < 0; }), aujourdhui());
     if (!liste.length) return;
     items.push({ titre: s.nom });
-    liste.forEach(function (t) { items.push({ libelle: t.titre, sous: libelleAxe(t.axe), fn: function () { lierTacheANote(t.id, NOTES_PAGE); rendreTachesLieesNotes(); rendreRailNotes(); notifier('« ' + t.titre + ' » liée à cette page.'); } }); });
+    liste.forEach(function (t) { items.push({ libelle: t.titre, sous: libelleAxe(t.axe), fn: function () { lierTacheANote(t.id, NOTES_PAGE); rendreTachesLieesNotes(); rendreRailNotes(); notifier('Linked "' + t.titre + '" to this page.'); } }); });
   });
-  ouvrirMenu(ancre, items, { titre: items.length ? 'Lier une tâche' : 'Toutes les tâches sont déjà liées' });
+  ouvrirMenu(ancre, items, { titre: items.length ? 'Link a task' : 'All tasks are already linked' });
 }
 
-/* ---------- Barre d'outils ---------- */
+/* ---------- Toolbar ---------- */
 
 function barreNotesHtml() {
   var bouton = function (attrs, contenu, titre) {
     return '<button type="button" class="nt-outil" ' + attrs + ' title="' + echapper(titre) + '" aria-label="' + echapper(titre) + '">' + contenu + '</button>';
   };
   var sep = '<span class="sep"></span>';
-  return bouton('data-outil="style"', '<span class="nt-style-nom">Texte</span><span class="chevron">▾</span>', 'Style du paragraphe : texte ou titre')
+  return bouton('data-outil="style"', '<span class="nt-style-nom">Text</span><span class="chevron">▾</span>', 'Paragraph style: text or heading')
     + sep
-    + bouton('data-cmd="bold"', '<b>G</b>', 'Gras (⌘B)')
-    + bouton('data-cmd="italic"', '<i>I</i>', 'Italique (⌘I)')
-    + bouton('data-cmd="underline"', '<u>S</u>', 'Souligné (⌘U)')
-    + bouton('data-cmd="strikeThrough"', '<s>ab</s>', 'Barré (⇧⌘X)')
-    + bouton('data-outil="surligner"', icone('surligneur', 16), 'Surligner (⇧⌘E)')
+    + bouton('data-cmd="bold"', '<b>B</b>', 'Bold (Ctrl+B)')
+    + bouton('data-cmd="italic"', '<i>I</i>', 'Italic (Ctrl+I)')
+    + bouton('data-cmd="underline"', '<u>U</u>', 'Underline (Ctrl+U)')
+    + bouton('data-cmd="strikeThrough"', '<s>ab</s>', 'Strikethrough (Ctrl+Shift+X)')
+    + bouton('data-outil="surligner"', icone('surligneur', 16), 'Highlight (Ctrl+Shift+E)')
     + sep
-    + bouton('data-type="puce"', icone('liste', 16), 'Liste à puces (⇧⌘7)')
-    + bouton('data-type="numero"', icone('listeNumeros', 16), 'Liste numérotée (⇧⌘9)')
-    + bouton('data-type="case"', icone('cercleCoche', 16), 'Case à cocher (⇧⌘L)')
+    + bouton('data-type="puce"', icone('liste', 16), 'Bulleted list (Ctrl+Shift+7)')
+    + bouton('data-type="numero"', icone('listeNumeros', 16), 'Numbered list (Ctrl+Shift+9)')
+    + bouton('data-type="case"', icone('cercleCoche', 16), 'Checkbox (Ctrl+Shift+L)')
     + sep
-    + bouton('data-type="citation"', '<span class="glyphe">“</span>', 'Citation (⌘\')')
-    + bouton('data-type="encadre"', icone('encadre', 16), 'Encadré : point important')
-    + bouton('data-type="idee"', icone('ampoule', 16), 'Idée, transformable en tâche')
-    + bouton('data-outil="separateur"', icone('trait', 16), 'Séparateur')
+    + bouton('data-type="citation"', '<span class="glyphe">“</span>', 'Quote (Ctrl+\')')
+    + bouton('data-type="encadre"', icone('encadre', 16), 'Callout: important point')
+    + bouton('data-type="idee"', icone('ampoule', 16), 'Idea, can become a task')
+    + bouton('data-outil="separateur"', icone('trait', 16), 'Divider')
     + sep
-    + bouton('data-outil="lien"', icone('lien', 16), 'Lien (⌘K)')
-    + bouton('data-outil="tache"', icone('fleche', 14) + '<span>Tâche</span>', 'En faire une tâche À faire, liée à cette page')
+    + bouton('data-outil="lien"', icone('lien', 16), 'Link (Ctrl+K)')
+    + bouton('data-outil="tache"', icone('fleche', 14) + '<span>Task</span>', 'Turn into a To do task, linked to this page')
     + '<span class="a-droite">'
-    + bouton('data-outil="annuler"', icone('annuler', 16), 'Annuler (⌘Z)')
-    + bouton('data-outil="retablir"', icone('retablir', 16), 'Rétablir (⇧⌘Z)')
+    + bouton('data-outil="annuler"', icone('annuler', 16), 'Undo (Ctrl+Z)')
+    + bouton('data-outil="retablir"', icone('retablir', 16), 'Redo (Ctrl+Shift+Z)')
     + '</span>';
 }
 
 function brancherBarre(barre) {
   if (!barre) return;
-  /* Un clic sur la barre ne retire pas le curseur de la page. */
+  /* Clicking the toolbar does not take the cursor out of the page. */
   barre.addEventListener('mousedown', function (ev) { if (ev.target.closest('.nt-outil')) ev.preventDefault(); });
   barre.addEventListener('click', function (ev) {
     var b = ev.target.closest('.nt-outil');
@@ -334,7 +333,7 @@ function menuStyle(ancre) {
   }), { titre: 'Style' });
 }
 
-/* Barre et indications suivent la ligne où se trouve le curseur. */
+/* The toolbar and hints follow the line where the cursor is. */
 function majEtatEditeur() {
   var doc = docNotes();
   if (!doc) return;
@@ -352,7 +351,7 @@ function majEtatEditeur() {
   var titre = ['h1', 'h2', 'h3'].indexOf(type) >= 0;
   Array.prototype.forEach.call(barre.querySelectorAll('[data-type]'), function (b) { b.classList.toggle('actif', b.dataset.type === type); });
   var style = barre.querySelector('[data-outil="style"] .nt-style-nom');
-  if (style) style.textContent = titre ? defType(type).nom : 'Texte';
+  if (style) style.textContent = titre ? defType(type).nom : 'Text';
   Array.prototype.forEach.call(barre.querySelectorAll('[data-cmd]'), function (b) {
     var on = false;
     if (dans && !(titre && b.dataset.cmd === 'bold')) { try { on = document.queryCommandState(b.dataset.cmd); } catch (e) { on = false; } }
@@ -364,7 +363,7 @@ function majEtatEditeur() {
   if (bt) {
     var liee = !!(el && el.dataset.tache && tacheParId(el.dataset.tache));
     bt.classList.toggle('actif', liee);
-    bt.title = liee ? 'Ouvrir la tâche liée à cette ligne' : 'En faire une tâche À faire, liée à cette page';
+    bt.title = liee ? 'Open the task linked to this line' : 'Turn into a To do task, linked to this page';
   }
   var an = barre.querySelector('[data-outil="annuler"]'), re = barre.querySelector('[data-outil="retablir"]');
   if (an) an.disabled = HISTO.index <= 0;
@@ -379,7 +378,7 @@ function parentBalise(node, balise, limite) {
   return null;
 }
 
-/* ---------- Lignes ---------- */
+/* ---------- Lines ---------- */
 
 function defType(type) { return TYPES_BLOC.filter(function (t) { return t.type === type; })[0] || TYPES_BLOC[0]; }
 function docNotes() { return document.getElementById('ntDoc'); }
@@ -400,7 +399,7 @@ function creerLigneDom(b) {
   return el;
 }
 
-/* Donne son style à une ligne en gardant son texte (sauf séparateur). */
+/* Gives a line its style while keeping its text (except for dividers). */
 function appliquerType(el, type) {
   var etait = el.dataset.type;
   Array.prototype.slice.call(el.classList).forEach(function (c) { if (c.indexOf('ligne-') === 0) el.classList.remove(c); });
@@ -413,16 +412,16 @@ function appliquerType(el, type) {
   decorerLigne(el);
 }
 
-/* Le petit bouton d'une idée ou d'une ligne reliée à une tâche, hors du
-   texte : son libellé vient du CSS, pour ne pas compter dans le texte. */
+/* The small button of an idea or of a line linked to a task, outside the
+   text: its label comes from the CSS, so it does not count as text. */
 function outilsLigneHtml(el) {
   if (el.dataset.type === 'separateur') return '';
   var t = el.dataset.tache ? tacheParId(el.dataset.tache) : null;
   if (t) {
     var st = STATUTS_TACHE.filter(function (s) { return s.id === t.statut; })[0];
-    return '<span class="ligne-outils" contenteditable="false"><button type="button" class="ligne-action liee" data-bloc-action="ouvrir-tache" data-id="' + echapper(t.id) + '" data-libelle="Tâche ' + echapper(st ? st.nom.toLowerCase() : t.statut) + '" title="Ouvrir la fiche de la tâche">' + icone('fleche', 12) + '</button></span>';
+    return '<span class="ligne-outils" contenteditable="false"><button type="button" class="ligne-action liee" data-bloc-action="ouvrir-tache" data-id="' + echapper(t.id) + '" data-libelle="Task: ' + echapper(st ? st.nom.toLowerCase() : t.statut) + '" title="Open the task">' + icone('fleche', 12) + '</button></span>';
   }
-  if (el.dataset.type === 'idee') return '<span class="ligne-outils" contenteditable="false"><button type="button" class="ligne-action" data-bloc-action="tache" data-libelle="En faire une tâche" title="Créer une tâche À faire à partir de cette idée">' + icone('fleche', 12) + '</button></span>';
+  if (el.dataset.type === 'idee') return '<span class="ligne-outils" contenteditable="false"><button type="button" class="ligne-action" data-bloc-action="tache" data-libelle="Turn into a task" title="Create a To do task from this idea">' + icone('fleche', 12) + '</button></span>';
   return '';
 }
 function outilsAttendus(el) { return el.dataset.type === 'idee' || !!(el.dataset.tache && tacheParId(el.dataset.tache)); }
@@ -433,7 +432,7 @@ function decorerLigne(el) {
   el.classList.toggle('avec-outils', !!html);
 }
 function titresLiens(el) {
-  Array.prototype.forEach.call(el.querySelectorAll('a[href]'), function (a) { a.title = '⌘ clic pour ouvrir ' + a.getAttribute('href'); });
+  Array.prototype.forEach.call(el.querySelectorAll('a[href]'), function (a) { a.title = 'Ctrl+click to open ' + a.getAttribute('href'); });
 }
 
 function ligneVide(el) { return !el.textContent.replace(/[\u200b\ufeff]/g, '').length; }
@@ -453,7 +452,7 @@ function insererLigneApres(elRef, b) {
   return nouveau;
 }
 
-/* Numérotation des listes, niveau par niveau. */
+/* Numbering of lists, level by level. */
 function renumeroter(doc) {
   doc = doc || docNotes();
   if (!doc) return;
@@ -473,7 +472,7 @@ function renumeroter(doc) {
   });
 }
 
-/* Enregistre le contenu de la page affichée (une ligne = un bloc). */
+/* Saves the content of the displayed page (one line = one block). */
 function serialiserDoc() {
   var doc = docNotes();
   if (!doc) return;
@@ -493,8 +492,8 @@ function serialiserDoc() {
   if (p.id === NOTES_PAGE) majInfosNotes();
 }
 
-/* Ne garde que les balises de mise en forme simples. Le HTML est lu dans
-   un document à part : rien ne s'y charge ni ne s'y exécute. */
+/* Keeps only simple formatting tags. The HTML is parsed in a separate
+   document: nothing is loaded or run in it. */
 var BALISES_OK = { B: 'b', STRONG: 'b', I: 'i', EM: 'i', U: 'u', S: 's', STRIKE: 's', CODE: 'code', A: 'a', BR: 'br', MARK: 'mark' };
 var DOC_INERTE = null;
 function nettoyerHtml(html) {
@@ -521,7 +520,7 @@ function nettoyerHtml(html) {
   return parcourir(src).replace(/(<br>)+$/, '');
 }
 
-/* Texte brut d'un HTML de bloc, les <br> devenant des retours à la ligne. */
+/* Plain text of a block's HTML, with <br> turned into line breaks. */
 function texteBrutDe(html) {
   if (!DOC_INERTE) DOC_INERTE = document.implementation.createHTMLDocument('');
   var d = DOC_INERTE.createElement('div');
@@ -529,12 +528,12 @@ function texteBrutDe(html) {
   return d.textContent;
 }
 
-/* ---------- Remise en ordre après une modification native ----------
-   Le navigateur gère lui-même la frappe, la suppression d'une sélection
-   sur plusieurs lignes ou le correcteur. Ensuite, chaque enfant de la
-   zone doit rester une ligne propre : mise en forme limitée,
-   identifiant unique, au moins un <br> si elle est vide. Le curseur est
-   replacé au même endroit du texte. */
+/* ---------- Tidying up after a native edit ----------
+   The browser handles typing, deleting a multi-line selection and the
+   spellchecker on its own. Afterwards, every child of the area must
+   remain a clean line: limited formatting, a unique id, at least one
+   <br> if it is empty. The cursor is put back at the same place in the
+   text. */
 
 function normaliserDoc(doc) {
   if (!doc || !besoinNormaliser(doc)) return false;
@@ -619,7 +618,7 @@ function assainirLigne(el) {
     if (/^(DIV|P|H[1-6]|LI|BLOCKQUOTE|PRE|UL|OL)$/.test(nom) && n.previousSibling) n.parentNode.insertBefore(document.createElement('br'), n);
     deballer(n);
   });
-  /* Un « \n » dans le texte devient un vrai saut de ligne. */
+  /* A "\n" in the text becomes a real line break. */
   var parcours = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), textes = [], t;
   while ((t = parcours.nextNode())) if (t.nodeValue.indexOf('\n') >= 0) textes.push(t);
   textes.forEach(function (n) {
@@ -639,8 +638,8 @@ function deballer(n) {
   parent.removeChild(n);
 }
 
-/* Position du curseur repérée par l'enfant de premier niveau qui le
-   contient et le nombre de caractères avant lui. */
+/* Cursor position identified by the top-level child that contains it
+   and the number of characters before it. */
 function memoSelectionNoeuds(doc) {
   var s = window.getSelection();
   if (!s.rangeCount) return null;
@@ -682,9 +681,9 @@ function restaurerMemoNoeuds(doc, memo) {
   s.addRange(r);
 }
 
-/* ---------- Curseur ---------- */
+/* ---------- Cursor ---------- */
 
-/* Le point du DOM qui correspond au n-ième caractère d'une ligne. */
+/* The DOM point that matches the nth character of a line. */
 function positionDans(el, o) {
   var parcours = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
   var reste = Math.max(0, o || 0), n, dernier = null;
@@ -743,7 +742,7 @@ function texteAvantCaret(el) {
   pre.setEnd(r.startContainer, r.startOffset);
   return pre.toString();
 }
-/* Extrait (et retire) ce qui suit le curseur dans une ligne. */
+/* Extracts (and removes) what follows the cursor in a line. */
 function extraireApresCaret(el) {
   var s = window.getSelection();
   if (!s.rangeCount) return '';
@@ -757,7 +756,7 @@ function extraireApresCaret(el) {
   return d.innerHTML;
 }
 
-/* La ligne qui contient un point du DOM. */
+/* The line that contains a DOM point. */
 function ligneDe(node, offset) {
   var doc = docNotes();
   if (!doc || !node || !doc.contains(node)) return null;
@@ -771,8 +770,8 @@ function ligneCourante() {
   var r = s.getRangeAt(0);
   return ligneDe(r.startContainer, r.startOffset);
 }
-/* Les lignes touchées par la sélection. Une sélection qui finit au tout
-   début d'une ligne (triple clic) ne compte pas cette dernière ligne. */
+/* The lines touched by the selection. A selection that ends at the very
+   start of a line (triple click) does not count that last line. */
 function lignesSelection() {
   var doc = docNotes(), s = window.getSelection();
   if (!doc || !s.rangeCount) return [];
@@ -801,8 +800,8 @@ function surPremiereLigneVisuelle(el) {
   return haut - el.getBoundingClientRect().top < 20;
 }
 
-/* Sélection repérée par numéro de ligne et nombre de caractères, pour
-   l'historique et après un nouveau rendu. */
+/* Selection identified by line number and character count, for the
+   history and after a re-render. */
 function memoriserSelectionIndices() {
   var doc = docNotes(), s = window.getSelection();
   if (!doc || !s.rangeCount) return null;
@@ -836,9 +835,9 @@ function restaurerSelectionIndices(m) {
   s.addRange(r);
 }
 
-/* ---------- Historique (annuler, rétablir) ----------
-   Un état est pris après chaque modification ; les frappes rapprochées
-   se regroupent en un seul pas, comme dans Notes. */
+/* ---------- History (undo, redo) ----------
+   A state is taken after each change; keystrokes close together are
+   grouped into a single step, as in Notes. */
 
 function htmlPropre(doc) {
   var marquees = Array.prototype.slice.call(doc.querySelectorAll('.ligne.courante, .ligne.indice'));
@@ -884,14 +883,14 @@ function restaurerEtat(etat) {
   majEtatEditeur();
 }
 
-/* ---------- Après chaque modification ---------- */
+/* ---------- After each change ---------- */
 
 function apresSaisie(type) {
   var doc = docNotes();
   if (!doc) return;
   type = type || '';
   normaliserDoc(doc);
-  /* Tout effacé : la page repart d'une ligne de texte simple. */
+  /* Everything erased: the page starts over with one plain text line. */
   var seule = doc.children.length === 1 ? doc.firstElementChild : null;
   if (seule && type.indexOf('delete') === 0 && ligneVide(seule) && (seule.dataset.type !== 'p' || seule.dataset.retrait || seule.innerHTML !== '<br>')) {
     seule.innerHTML = '<br>';
@@ -917,7 +916,7 @@ function apresStructure() {
   majEtatEditeur();
 }
 
-/* ---------- Événements de l'éditeur ---------- */
+/* ---------- Editor events ---------- */
 
 function brancherEditeur(doc) {
   doc.addEventListener('keydown', function (ev) {
@@ -951,7 +950,7 @@ function brancherEditeur(doc) {
     if (ev.key === 'Escape') doc.blur();
   });
 
-  /* Le menu Édition (Annuler, Rétablir) et Entrée passent aussi par ici. */
+  /* The Edit menu (Undo, Redo) and Enter also come through here. */
   doc.addEventListener('beforeinput', function (ev) {
     var t = ev.inputType;
     if (t === 'historyUndo' || t === 'historyRedo') {
@@ -970,7 +969,7 @@ function brancherEditeur(doc) {
     ev.preventDefault();
     collerTexte(texteColle(ev));
   });
-  /* Pas de glisser de texte dans la page ; un texte déposé arrive brut. */
+  /* No dragging text within the page; dropped text arrives unformatted. */
   doc.addEventListener('dragstart', function (ev) { ev.preventDefault(); });
   doc.addEventListener('dragover', function (ev) { ev.preventDefault(); });
   doc.addEventListener('drop', function (ev) {
@@ -992,8 +991,8 @@ function brancherEditeur(doc) {
     if (ev.target.closest('.ligne-outils')) { ev.preventDefault(); return; }
     var c = ev.target.closest('.ligne-case');
     if (c && dansCase(c, ev)) { ev.preventDefault(); basculerCoche(c); return; }
-    /* Un clic sous la dernière ligne y place le curseur, ou ouvre une
-       ligne de texte après un titre, une liste ou une idée. */
+    /* A click below the last line puts the cursor there, or opens a text
+       line after a heading, a list or an idea. */
     if (ev.target !== doc) return;
     var lignes = lignesDe(doc), der = lignes[lignes.length - 1];
     if (!der || ev.clientY <= der.getBoundingClientRect().bottom) return;
@@ -1029,7 +1028,7 @@ function dansCase(el, ev) {
   return x >= g - 4 && x <= g + 24 && y <= 28;
 }
 
-/* Raccourcis clavier avec ⌘ (proches de ceux de Notes). */
+/* Keyboard shortcuts with Ctrl (close to those of Notes). */
 function raccourciNotes(ev) {
   var k = (ev.key || '').toLowerCase(), code = ev.code || '';
   if (!ev.altKey && !ev.shiftKey) {
@@ -1057,12 +1056,12 @@ function raccourciNotes(ev) {
   return false;
 }
 
-/* ---------- Opérations sur les lignes ---------- */
+/* ---------- Line operations ---------- */
 
-/* Entrée : une nouvelle ligne. Les listes, cases, citations et encadrés
-   continuent ; une ligne de liste vide en sort ; après un titre vient du
-   texte. Dans une idée, Entrée passe à la ligne dans l'idée ; deux fois
-   Entrée à la fin en sort. */
+/* Enter: a new line. Lists, checkboxes, quotes and callouts continue; an
+   empty list line leaves the list; after a heading comes plain text.
+   Inside an idea, Enter breaks the line within the idea; pressing Enter
+   twice at the end leaves it. */
 function retourLigne(el) {
   var s = window.getSelection();
   if (!s.isCollapsed) {
@@ -1093,7 +1092,7 @@ function retourLigne(el) {
   var suivant = CONTINUES.indexOf(type) >= 0 ? type : 'p';
   var retrait = AVEC_RETRAIT.indexOf(suivant) >= 0 ? Number(el.dataset.retrait) || 0 : 0;
   if (!vide && caretAuDebut(el)) {
-    /* Au début d'une ligne pleine : une ligne vide s'ouvre au-dessus. */
+    /* At the start of a non-empty line: an empty line opens above. */
     el.parentNode.insertBefore(creerLigneDom({ type: suivant, retrait: retrait }), el);
     apresStructure();
     return;
@@ -1114,9 +1113,9 @@ function finitParSautDeLigne(el) {
   Array.prototype.forEach.call(d.querySelectorAll('.ligne-outils'), function (o) { o.remove(); });
   return /<br>\s*$/i.test(d.innerHTML);
 }
-/* ⇧ Entrée : à la ligne sans changer de ligne de note. Le <br> est posé
-   à la main (le navigateur mettrait un caractère « \n ») ; en fin de
-   ligne, un second <br> rend la nouvelle ligne visible. */
+/* Shift+Enter: line break without starting a new note line. The <br> is
+   inserted by hand (the browser would insert a "\n" character); at the
+   end of a line, a second <br> makes the new line visible. */
 function sautDeLigne() {
   var s = window.getSelection();
   if (!s.rangeCount) return;
@@ -1138,7 +1137,7 @@ function sautDeLigne() {
   s.addRange(r);
   apresSaisie('insertLineBreak');
 }
-/* ⌘ Entrée : coche une case, ou ouvre une ligne de texte en dessous. */
+/* Ctrl+Enter: ticks a checkbox, or opens a text line below. */
 function entreeCommande(el) {
   if (el.dataset.type === 'case') { basculerCoche(el); return; }
   var n = insererLigneApres(el, { type: 'p' });
@@ -1146,8 +1145,8 @@ function entreeCommande(el) {
   apresStructure();
 }
 
-/* Retour arrière au début d'une ligne : une ligne stylée redevient du
-   texte, un retrait diminue, sinon la ligne rejoint la précédente. */
+/* Backspace at the start of a line: a styled line goes back to plain
+   text, an indent decreases, otherwise the line joins the previous one. */
 function effacerArriere(el) {
   var s = window.getSelection();
   if (!s.isCollapsed || !caretAuDebut(el)) return false;
@@ -1172,7 +1171,7 @@ function effacerArriere(el) {
   apresStructure();
   return true;
 }
-/* Suppr à la fin d'une ligne : la suivante la rejoint. */
+/* Delete at the end of a line: the next one joins it. */
 function effacerAvant(el) {
   var s = window.getSelection();
   if (!s.isCollapsed || !caretALaFin(el)) return false;
@@ -1192,8 +1191,8 @@ function effacerAvant(el) {
   return true;
 }
 
-/* Change le style des lignes sélectionnées ; redemander le même style
-   (liste, case…) revient au texte simple, comme dans Notes. */
+/* Changes the style of the selected lines; asking for the same style
+   again (list, checkbox…) goes back to plain text, as in Notes. */
 function basculerType(type, forcer) {
   if (type === 'separateur') { insererSeparateur(); return; }
   var lignes = lignesSelection().filter(function (l) { return l.dataset.type !== 'separateur'; });
@@ -1217,7 +1216,7 @@ function insererSeparateur() {
   placerCaret(suiv, true);
   apresStructure();
 }
-/* Tab et ⇧Tab : retrait des listes, cases et paragraphes. */
+/* Tab and Shift+Tab: indent lists, checkboxes and paragraphs. */
 function decaler(delta) {
   var lignes = lignesSelection().filter(function (l) { return AVEC_RETRAIT.indexOf(l.dataset.type) >= 0; });
   if (!lignes.length) return;
@@ -1228,7 +1227,7 @@ function decalerLigne(el, delta) {
   var r = Math.max(0, Math.min(RETRAIT_MAX, (Number(el.dataset.retrait) || 0) + delta));
   if (r) el.dataset.retrait = r; else delete el.dataset.retrait;
 }
-/* ⌥⇧↑ et ⌥⇧↓ : monter ou descendre les lignes sélectionnées. */
+/* Alt+Shift+Up and Alt+Shift+Down: move the selected lines up or down. */
 function deplacerLignes(sens) {
   var lignes = lignesSelection();
   if (!lignes.length) return;
@@ -1249,7 +1248,7 @@ function basculerCoche(el) {
   apresStructure();
 }
 
-/* Surligne la sélection (ou retire le surlignage si elle en part). */
+/* Highlights the selection (or removes the highlight if it starts in one). */
 function surligner() {
   var doc = docNotes(), s = window.getSelection();
   if (!doc || !s.rangeCount || s.isCollapsed) return;
@@ -1289,14 +1288,14 @@ function surligner() {
   apresStructure();
 }
 
-/* ⌘K : ajoute, modifie ou retire un lien (adresse vide = retirer). */
+/* Ctrl+K: adds, edits or removes a link (empty address = remove). */
 function insererLien() {
   var doc = docNotes(), s = window.getSelection();
   if (!doc || !s.rangeCount || !doc.contains(s.getRangeAt(0).startContainer)) return;
   var memo = memoriserSelectionIndices();
   var existant = parentBalise(s.anchorNode, 'A', doc);
   var vide = s.isCollapsed;
-  demander({ titre: existant ? 'Modifier le lien' : 'Ajouter un lien', libelle: 'Adresse', valeur: existant ? existant.getAttribute('href') : '', placeholder: 'https://…', ok: 'Valider' }).then(function (url) {
+  demander({ titre: existant ? 'Edit link' : 'Add link', libelle: 'Address', valeur: existant ? existant.getAttribute('href') : '', placeholder: 'https://…', ok: 'OK' }).then(function (url) {
     restaurerSelectionIndices(memo);
     if (url === null) return;
     url = String(url).trim();
@@ -1314,16 +1313,16 @@ function insererLien() {
   });
 }
 
-/* ---------- Coller et déposer : toujours du texte normal ---------- */
+/* ---------- Paste and drop: always plain text ---------- */
 
 function texteColle(ev) {
   var d = ev.clipboardData || window.clipboardData;
   var t = d ? d.getData('text/plain') : '';
   return String(t || '').replace(/\r\n?/g, '\n').replace(/[\u2028\u2029\u000b]/g, '\n').replace(/[\u200b\ufeff]/g, '').replace(/\u00a0/g, ' ');
 }
-/* Le texte arrive sans aucune mise en forme : la première ligne au
-   curseur, les suivantes en lignes de texte simple. Dans une idée, tout
-   reste dans l'idée. */
+/* The text arrives with no formatting at all: the first line at the
+   cursor, the following ones as plain text lines. Inside an idea,
+   everything stays in the idea. */
 function collerTexte(t) {
   var doc = docNotes();
   if (!doc || !t) return;
@@ -1366,17 +1365,17 @@ function collerTexte(t) {
   HISTO.nature = 'collage';
 }
 
-/* ---------- Idée → tâche ---------- */
+/* ---------- Idea → task ---------- */
 
-/* Crée une tâche « À faire » depuis une ligne : la première ligne du
-   texte fait le titre, la suite la description ; la tâche est liée à la
-   page et la ligne garde le lien vers la tâche. */
+/* Creates a "To do" task from a line: the first line of the text becomes
+   the title, the rest the description; the task is linked to the page
+   and the line keeps the link to the task. */
 function creerTacheDepuisLigne(el) {
   if (!el || el.dataset.type === 'separateur') return null;
   var brut = texteBrutDe(nettoyerHtml(el.innerHTML)).replace(/\r/g, '');
   var lignes = brut.split('\n').map(function (l) { return l.trim(); });
   var titre = (lignes.filter(Boolean)[0] || '').trim();
-  if (!titre) { notifier('Écrivez d\'abord l\'idée sur la ligne.'); placerCaret(el, true); return null; }
+  if (!titre) { notifier('Write the idea on the line first.'); placerCaret(el, true); return null; }
   var description = lignes.slice(lignes.indexOf(lignes.filter(Boolean)[0]) + 1).join('\n').trim();
   var t = creerTache({ titre: titre.slice(0, 200), description: description, statut: 'a-faire', notes: NOTES_PAGE ? [NOTES_PAGE] : [] });
   el.dataset.tache = t.id;
@@ -1385,7 +1384,7 @@ function creerTacheDepuisLigne(el) {
   rendreTachesLieesNotes();
   rendreRailNotes();
   if (typeof rendrePastilles === 'function') rendrePastilles();
-  notifier('Tâche créée dans « À faire » : ' + t.titre, { type: 'succes', action: { libelle: 'Ouvrir la fiche', fn: function () { ouvrirEditionTache(t.id); } } });
+  notifier('Task created in "To do": ' + t.titre, { type: 'succes', action: { libelle: 'Open task', fn: function () { ouvrirEditionTache(t.id); } } });
   return t;
 }
 function actionTacheLigne() {
@@ -1395,7 +1394,7 @@ function actionTacheLigne() {
   else creerTacheDepuisLigne(el);
 }
 
-/* ---------- Raccourcis Markdown et menu « / » ---------- */
+/* ---------- Markdown shortcuts and "/" menu ---------- */
 
 function raccourciMarkdown(brut) {
   if (/^# $/.test(brut)) return 'h1';
@@ -1410,8 +1409,8 @@ function raccourciMarkdown(brut) {
   if (/^---$/.test(brut)) return 'separateur';
   return null;
 }
-/* Tapé en début de ligne (« - », « 1. », « [] », « # »…), le raccourci
-   donne son style à la ligne et s'efface ; le texte déjà présent reste. */
+/* Typed at the start of a line ("- ", "1. ", "[] ", "# "…), the shortcut
+   gives the line its style and disappears; any text already there stays. */
 function raccourciMarkdownLigne(el) {
   if (['p', 'puce', 'numero', 'case', 'citation'].indexOf(el.dataset.type) < 0) return false;
   var avant = texteAvantCaret(el);
@@ -1466,7 +1465,7 @@ function rendreMenuSlash() {
   var menu = document.createElement('div');
   menu.className = 'menu-blocs';
   menu.id = 'menuSlash';
-  menu.innerHTML = '<div class="menu-blocs-titre">Insérer</div>' + items.map(function (t, i) {
+  menu.innerHTML = '<div class="menu-blocs-titre">Insert</div>' + items.map(function (t, i) {
     return '<button type="button" data-type="' + t.type + '" class="' + (i === MENU_SLASH.selection ? 'selection' : '') + '"><span class="ic">' + echapper(t.ic) + '</span><span>' + echapper(t.nom) + '<span class="sous">' + echapper(t.sous) + (t.raccourci ? ' · ' + echapper(t.raccourci) : '') + '</span></span></button>';
   }).join('');
   menu.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
@@ -1516,7 +1515,7 @@ function fermerMenuSlash() {
 
 /* ---------- Pages ---------- */
 
-/* Crée une page sans l'afficher (depuis la fiche d'une tâche). */
+/* Creates a page without displaying it (from a task's edit form). */
 function creerPageNotesSilencieuse(titre, parent) {
   var freres = enfantsDe(parent);
   var p = { id: uid('page'), titre: String(titre || '').trim(), parent: parent || null, blocs: [bloc('p', '')], ordre: (freres.length ? Math.max.apply(null, freres.map(function (x) { return x.ordre || 0; })) : 0) + 1, creeLe: new Date().toISOString(), modifieLe: new Date().toISOString() };
@@ -1538,11 +1537,11 @@ function supprimerPageNotes(id) {
   var p = pageParId(id);
   if (!p) return;
   var desc = descendantsDe(id);
-  confirmer('Supprimer la page « ' + (p.titre || 'Sans titre') + ' »' + (desc.length ? ' et ses ' + desc.length + ' sous-page' + (desc.length > 1 ? 's' : '') : '') + ' ?', { ok: 'Supprimer', danger: true, titre: 'Supprimer une page' }).then(function (ok) {
+  confirmer('Delete the page "' + (p.titre || 'Untitled') + '"' + (desc.length ? ' and its ' + desc.length + ' subpage' + (desc.length > 1 ? 's' : '') : '') + '?', { ok: 'Delete', danger: true, titre: 'Delete page' }).then(function (ok) {
     if (!ok) return;
     var ids = [id].concat(desc.map(function (d) { return d.id; }));
     ETAT.notes.pages = pagesNotes().filter(function (x) { return ids.indexOf(x.id) < 0; });
-    /* Les tâches liées oublient ces pages. */
+    /* Linked tasks forget these pages. */
     var touche = false;
     taches().forEach(function (t) { if (Array.isArray(t.notes) && t.notes.some(function (n) { return ids.indexOf(n) >= 0; })) { t.notes = t.notes.filter(function (n) { return ids.indexOf(n) < 0; }); touche = true; } });
     if (touche) sauver('chantiers');
@@ -1556,14 +1555,14 @@ function deplacerPageNotes(id, ancre) {
   var p = pageParId(id);
   if (!p) return;
   var exclus = [id].concat(descendantsDe(id).map(function (d) { return d.id; }));
-  var items = [{ libelle: 'À la racine', fn: function () { p.parent = null; p.modifieLe = new Date().toISOString(); sauver('notes'); rendreNotes(); } }];
+  var items = [{ libelle: 'To the top level', fn: function () { p.parent = null; p.modifieLe = new Date().toISOString(); sauver('notes'); rendreNotes(); } }];
   var parcourir = function (parent, niveau) {
     enfantsDe(parent).forEach(function (x) {
       if (exclus.indexOf(x.id) >= 0) return;
-      items.push({ libelle: (niveau ? '   '.repeat(niveau) + '↳ ' : '') + (x.titre || 'Sans titre'), fn: function () { p.parent = x.id; p.modifieLe = new Date().toISOString(); NOTES_PLIES[x.id] = false; sauver('notes'); rendreNotes(); } });
+      items.push({ libelle: (niveau ? '   '.repeat(niveau) + '↳ ' : '') + (x.titre || 'Untitled'), fn: function () { p.parent = x.id; p.modifieLe = new Date().toISOString(); NOTES_PLIES[x.id] = false; sauver('notes'); rendreNotes(); } });
       parcourir(x.id, niveau + 1);
     });
   };
   parcourir(null, 0);
-  ouvrirMenu(ancre, items, { titre: 'Déplacer sous…' });
+  ouvrirMenu(ancre, items, { titre: 'Move under…' });
 }

@@ -1,14 +1,13 @@
 /* ============================================================
-   DONNÉES : l'état de l'application et sa persistance.
+   DATA: the application state and its persistence.
 
-   Dans l'application macOS, window.sablier (js/pont.js) lit et écrit
-   des fichiers JSON dans le dossier de données. Dans un navigateur nu
-   (développement), on retombe sur localStorage.
+   In the desktop app, window.sablier (js/pont.js) reads and writes
+   JSON files in the data folder. In a bare browser (development), it
+   falls back to localStorage.
 
-   Fichiers : reglages, journal, chantiers (les tâches, nom historique du
-   fichier), notes, factures, echeances, chrono. Chaque premier lancement
-   pose des données de départ tirées du contrat (axes, échéances
-   administratives, pages et tâches).
+   Files: reglages, journal, chantiers (the tasks, historical file name),
+   notes, factures, echeances, chrono. The first launch seeds default data
+   drawn from the contract (areas, admin deadlines, pages and tasks).
    ============================================================ */
 'use strict';
 
@@ -17,20 +16,20 @@ var ETAT = {};
 
 function estApp() { return typeof window !== 'undefined' && !!window.sablier; }
 
-/* ---------- Valeurs de départ ---------- */
+/* ---------- Default values ---------- */
 
-/* Nuancier sobre proposé pour les axes (tons du cabinet, jamais criards). */
+/* Muted palette offered for areas (never garish). */
 var PALETTE_AXES = ['#1F497D', '#2E6F9E', '#2F7F8A', '#4E8B6D', '#7A8A3A', '#A5813C', '#B3652F', '#9E3A45', '#7A4F8C', '#5F7186'];
 var COULEURS_AXES_DEFAUT = { rapports: '#2E6F9E', projeta: '#1F497D', integration: '#2F7F8A', suivi: '#7A4F8C', gouvernance: '#4E8B6D', annexe: '#A5813C' };
 
 function axesDefaut() {
   return [
-    { id: 'rapports', code: '1', nom: 'Rapports clients', couleur: '#2E6F9E' },
-    { id: 'projeta', code: '2', nom: 'Développement Projet A', couleur: '#1F497D' },
-    { id: 'integration', code: '3', nom: 'Intégration Projet B', couleur: '#2F7F8A' },
-    { id: 'suivi', code: '4', nom: 'Suivi Projet B / Partenaire', couleur: '#7A4F8C' },
-    { id: 'gouvernance', code: '5', nom: 'Gouvernance, veille et idées', couleur: '#4E8B6D' },
-    { id: 'annexe', code: 'A', nom: 'Mission annexe', couleur: '#A5813C' },
+    { id: 'rapports', code: '1', nom: 'Client reports', couleur: '#2E6F9E' },
+    { id: 'projeta', code: '2', nom: 'Project A development', couleur: '#1F497D' },
+    { id: 'integration', code: '3', nom: 'Project B integration', couleur: '#2F7F8A' },
+    { id: 'suivi', code: '4', nom: 'Project B / Partner follow-up', couleur: '#7A4F8C' },
+    { id: 'gouvernance', code: '5', nom: 'Governance, monitoring and ideas', couleur: '#4E8B6D' },
+    { id: 'annexe', code: 'A', nom: 'Side assignment', couleur: '#A5813C' },
   ];
 }
 
@@ -42,21 +41,21 @@ function reglagesDefaut() {
     heuresJournee: 7,
     repereAnnuel: 192,
     delaiPaiement: 30,
-    mentionTVA: 'TVA non applicable, article 293 B du CGI',
+    mentionTVA: 'VAT not applicable, article 293 B of the French Tax Code (CGI)',
     contrat: { debut: '2026-10-01', fin: '2027-09-30' },
     prestataire: {
-      nom: 'Prénom Nom', formeJuridique: 'Entrepreneur individuel', siren: '123 456 789', siret: '123 456 789 00015', ape: '62.02A',
+      nom: 'First Last', formeJuridique: 'Sole proprietor (EI)', siren: '123 456 789', siret: '123 456 789 00015', ape: '62.02A',
       adresse: '', email: '', telephone: '',
-      titulaireCompte: 'EI Nom Prénom', banque: 'Banque Exemple', iban: '', bic: '',
+      titulaireCompte: 'EI Last First', banque: 'Example Bank', iban: '', bic: '',
     },
     client: {
-      societe: 'Client Exemple', contact: 'Jean Dupont',
-      adresse: '1 avenue des Tests, 75000 Paris', siren: '987 654 321', email: '',
+      societe: 'Example Client', contact: 'John Smith',
+      adresse: '1 Test Avenue, 75000 Paris', siren: '987 654 321', email: '',
     },
     axes: axesDefaut(),
     cotisations: { debutActivite: '2026-10-01', tauxAcre: 19.4, finAcre: '2027-09-30', tauxPlein: 25.8 },
-    /* Rappels : horizons en jours, chrono oublié en heures, journal
-       délaissé en jours (0 pour désactiver), notifications macOS. */
+    /* Reminders: horizons in days, forgotten timer in hours, neglected
+       log in days (0 to disable), desktop notifications. */
     rappels: { natives: true, auDemarrage: true, horizonEcheances: 7, horizonTaches: 3, horizonFactures: 5, chronoOublieHeures: 3, journalJours: 7 },
     ui: { dernierAxe: 'projeta', periodeTableau: 'mois', moisMeta: {}, rappelsNotifies: {}, rappelsReportes: {}, rappelsDigestLe: '' },
   };
@@ -65,27 +64,27 @@ function reglagesDefaut() {
 function echeancesDefaut() {
   var maintenant = new Date().toISOString();
   return [
-    ['2026-10-01', 'Début du contrat et de l\'activité', 'Contrat du 1er octobre 2026 au 30 septembre 2027. Première période : mise en place (20 à 30 h en sus du rythme de croisière).', 'contrat'],
-    ['2026-10-13', 'Déposer la demande d\'ACRE à l\'URSSAF', 'Au plus tard 60 jours après le début d\'activité. Passé le délai, l\'aide est définitivement perdue. Effet : cotisations à 19,40 % jusqu\'au 30/09/2027.', 'admin'],
-    ['2026-10-31', 'Souscrire une assurance responsabilité civile professionnelle', 'Recommandée dès le démarrage (150 à 300 € par an). Vérifier la couverture des dommages immatériels non consécutifs et du travail à distance depuis l\'étranger.', 'admin'],
-    ['2026-12-31', 'Déposer la déclaration initiale de CFE (formulaire 1447-C-SD)', 'Auprès du service des impôts des entreprises, avant le 31 décembre de l\'année de création. Conditionne l\'exonération de la première année. Créer au passage l\'espace professionnel sur impots.gouv.fr.', 'admin'],
-    ['2027-03-31', 'Transmettre au client l\'attestation de vigilance URSSAF et un avis SIRENE', 'Tous les six mois : les deux documents se téléchargent en ligne en quelques minutes.', 'admin'],
-    ['2027-04-30', 'Première déclaration de chiffre d\'affaires à l\'URSSAF', 'Période d\'octobre 2026 à mars 2027, sur le chiffre d\'affaires encaissé (autoentrepreneur.urssaf.fr). Le tableau des trimestres de la vue Factures donne le montant.', 'admin'],
-    ['2027-05-31', 'Déclaration de revenus 2026 (formulaire 2042-C-PRO)', 'Reporter le chiffre d\'affaires encaissé en 2026 en case 5HQ (micro-BNC). Date exacte selon le calendrier fiscal du printemps 2027.', 'admin'],
-    ['2027-06-15', 'Préparer l\'entretien de bilan de l\'été 2027', 'Relevé consolidé des heures par axe, travaux accomplis, priorités de la période suivante, révision du tarif (article 6.7 : la fin de l\'ACRE est un motif légitime de réexamen).', 'contrat'],
-    ['2027-07-31', 'Déclaration URSSAF du 2e trimestre 2027', 'Chiffre d\'affaires encaissé d\'avril à juin 2027.', 'admin'],
-    ['2027-09-01', 'Facturation électronique obligatoire', 'À compter du 1er septembre 2027, émission des factures via une plateforme agréée. En choisir une au printemps (plusieurs sont gratuites à faible volume).', 'admin'],
-    ['2027-09-30', 'Fin du contrat et fin de l\'ACRE', 'Le contrat ne se renouvelle pas tacitement : un écrit signé des deux parties est nécessaire pour poursuivre. Les cotisations passent de 19,40 % à 25,80 % le 1er octobre 2027.', 'contrat'],
-    ['2027-10-01', 'Transmettre l\'attestation de vigilance URSSAF (six mois)', 'Si la collaboration se poursuit.', 'admin'],
-    ['2027-10-31', 'Déclaration URSSAF du 3e trimestre 2027', 'Chiffre d\'affaires encaissé de juillet à septembre 2027.', 'admin'],
-    ['2028-01-31', 'Déclaration URSSAF du 4e trimestre 2027', 'Chiffre d\'affaires encaissé d\'octobre à décembre 2027.', 'admin'],
+    ['2026-10-01', 'Contract and activity start', 'Contract from 1 October 2026 to 30 September 2027. First period: setup (20 to 30 h on top of the steady pace).', 'contrat'],
+    ['2026-10-13', 'File the ACRE application with URSSAF', 'No later than 60 days after the activity starts. After that the benefit is lost for good. Effect: social contributions at 19.40% until 30/09/2027.', 'admin'],
+    ['2026-10-31', 'Take out professional liability insurance', 'Recommended from the start (€150 to €300 per year). Check the cover for non-consequential intangible damage and for remote work from abroad.', 'admin'],
+    ['2026-12-31', 'File the initial CFE return (form 1447-C-SD)', 'With the business tax office (SIE), before 31 December of the year the business was created. It conditions the first-year exemption. While there, create the professional account on impots.gouv.fr.', 'admin'],
+    ['2027-03-31', 'Send the client the URSSAF vigilance certificate and a SIRENE extract', 'Every six months: both documents can be downloaded online in a few minutes.', 'admin'],
+    ['2027-04-30', 'First revenue declaration to URSSAF', 'Period from October 2026 to March 2027, on revenue actually collected (autoentrepreneur.urssaf.fr). The quarters table in the Invoices view gives the amount.', 'admin'],
+    ['2027-05-31', '2026 income tax return (form 2042-C-PRO)', 'Enter the revenue collected in 2026 in box 5HQ (micro-BNC). Exact date depends on the spring 2027 tax calendar.', 'admin'],
+    ['2027-06-15', 'Prepare the summer 2027 review meeting', 'Consolidated statement of hours by area, work completed, priorities for the next period, rate review (article 6.7: the end of ACRE is a legitimate reason for a review).', 'contrat'],
+    ['2027-07-31', 'URSSAF declaration for Q2 2027', 'Revenue collected from April to June 2027.', 'admin'],
+    ['2027-09-01', 'Mandatory electronic invoicing', 'From 1 September 2027, invoices must be issued through an approved platform. Pick one in the spring (several are free at low volume).', 'admin'],
+    ['2027-09-30', 'Contract end and ACRE end', 'The contract does not renew automatically: a written agreement signed by both parties is needed to continue. Social contributions go from 19.40% to 25.80% on 1 October 2027.', 'contrat'],
+    ['2027-10-01', 'Send the URSSAF vigilance certificate (six months)', 'If the collaboration continues.', 'admin'],
+    ['2027-10-31', 'URSSAF declaration for Q3 2027', 'Revenue collected from July to September 2027.', 'admin'],
+    ['2028-01-31', 'URSSAF declaration for Q4 2027', 'Revenue collected from October to December 2027.', 'admin'],
   ].map(function (t, i) {
     return { id: 'ech_defaut_' + i, date: t[0], titre: t[1], detail: t[2], type: t[3], rappelJours: null, fait: false, faitLe: null, creeLe: maintenant };
   });
 }
 
-/* Une tâche complète : les champs de suivi (étapes, pièces, notes liées,
-   journal d'avancement) sont toujours présents. */
+/* A complete task: the tracking fields (steps, attachments, linked notes,
+   progress log) are always present. */
 var STATUTS_TACHE_VALIDES = ['a-faire', 'en-cours', 'fait', 'idee'];
 function normaliserTache(t) {
   if (!t || typeof t !== 'object') return t;
@@ -106,11 +105,11 @@ function normaliserTache(t) {
 function chantiersDefaut() {
   var maintenant = new Date().toISOString();
   return [
-    ['a-faire', 'rapports', 'Préparer le premier rapport client', 'Rassembler les données, relire, envoyer.'],
-    ['en-cours', 'projeta', 'Fiabiliser le Projet A', 'Corriger les anomalies connues avant d\'ajouter des fonctionnalités.'],
-    ['a-faire', 'integration', 'Livrer une première version du Projet A au partenaire', 'Version numérotée et datée, avec une courte documentation.'],
-    ['a-faire', 'suivi', 'Premier point d\'avancement avec le partenaire', 'Ce qui a été livré, ce qui est en service, ce qui reste à faire.'],
-    ['a-faire', 'gouvernance', 'Documenter la sauvegarde et la restauration', 'Sauvegarde régulière et procédure de restauration testée.'],
+    ['a-faire', 'rapports', 'Prepare the first client report', 'Gather the data, proofread, send.'],
+    ['en-cours', 'projeta', 'Make Project A reliable', 'Fix the known bugs before adding features.'],
+    ['a-faire', 'integration', 'Deliver a first version of Project A to the partner', 'Numbered and dated version, with short documentation.'],
+    ['a-faire', 'suivi', 'First progress review with the partner', 'What was delivered, what is live, what is left to do.'],
+    ['a-faire', 'gouvernance', 'Document backup and restore', 'Regular backups and a tested restore procedure.'],
   ].map(function (t, i) {
     return normaliserTache({ id: 'tache_defaut_' + i, statut: t[0], axe: t[1], titre: t[2], description: t[3], priorite: 'auto', echeance: null, ordre: i, creeLe: maintenant, modifieLe: maintenant, faitLe: null });
   });
@@ -123,21 +122,21 @@ function bloc(type, html, extra) {
   return b;
 }
 
-/* Le texte d'un bloc « idée » : le titre en gras, puis la description et
-   les repères (intérêt, effort, prérequis) sur les lignes suivantes. */
+/* The text of an "idea" block: the title in bold, then the description and
+   the markers (interest, effort, prerequisites) on the following lines. */
 function ideeBlocHtml(titre, description, interet, effort, prerequis) {
   var lignes = ['<b>' + echapper(titre) + '</b>'];
   if (description) lignes.push(echapper(description));
-  var reperes = [interet ? 'Intérêt : ' + interet : '', effort ? 'Effort : ' + effort : '', prerequis ? 'Prérequis : ' + prerequis : ''].filter(Boolean);
+  var reperes = [interet ? 'Interest: ' + interet : '', effort ? 'Effort: ' + effort : '', prerequis ? 'Prerequisites: ' + prerequis : ''].filter(Boolean);
   if (reperes.length) lignes.push(echapper(reperes.join(' · ')));
   return lignes.join('<br>');
 }
 
 function ideesDefaut() {
   return [
-    bloc('idee', ideeBlocHtml('Alertes proactives', 'Échéances proches remontées au tableau de bord.', 'fort, évite les oublis', 'petit', 'aucun')),
-    bloc('idee', ideeBlocHtml('Export CSV du journal', 'Pour retravailler les heures dans un tableur.', 'moyen', 'petit', 'aucun')),
-    bloc('idee', ideeBlocHtml('Modèles de tâches', 'Des listes d\'étapes prêtes pour les travaux qui reviennent.', 'moyen', 'moyen', 'aucun')),
+    bloc('idee', ideeBlocHtml('Proactive alerts', 'Upcoming deadlines surfaced on the dashboard.', 'high, prevents oversights', 'small', 'none')),
+    bloc('idee', ideeBlocHtml('CSV export of the log', 'To rework the hours in a spreadsheet.', 'medium', 'small', 'none')),
+    bloc('idee', ideeBlocHtml('Task templates', 'Ready-made step lists for recurring work.', 'medium', 'medium', 'none')),
   ];
 }
 
@@ -147,29 +146,29 @@ function notesDefaut() {
     return { id: id, titre: titre, parent: parent || null, blocs: blocs, ordre: ordre || 0, creeLe: maintenant, modifieLe: maintenant };
   }
   return [
-    page('page_projeta', 'Projet A', null, [
-      bloc('encadre', 'Exemple de page : la justesse avant les fonctionnalités.'),
-      bloc('h2', 'Livrables'),
-      bloc('case', 'Paramétrage complet et vérifié'),
-      bloc('case', 'Documentation et mode d\'emploi tenus à jour'),
-      bloc('h2', 'Journal des décisions'),
+    page('page_projeta', 'Project A', null, [
+      bloc('encadre', 'Sample page: correctness before features.'),
+      bloc('h2', 'Deliverables'),
+      bloc('case', 'Complete, verified configuration'),
+      bloc('case', 'Documentation and user guide kept up to date'),
+      bloc('h2', 'Decision log'),
       bloc('p', ''),
     ], 0),
-    page('page_admin', 'Administratif', null, [
-      bloc('p', 'Le rituel de la micro-entreprise, en plus des échéances datées de la page Échéances.'),
-      bloc('h2', 'Chaque mois'),
-      bloc('puce', 'Relevé d\'activité et facture depuis Sablier, envoyés au client en fin de mois'),
-      bloc('puce', 'À l\'encaissement : marquer la facture payée (livre des recettes)'),
-      bloc('h2', 'Chaque trimestre'),
-      bloc('puce', 'Déclarer le chiffre d\'affaires encaissé sur autoentrepreneur.urssaf.fr'),
+    page('page_admin', 'Admin', null, [
+      bloc('p', 'The micro-business routine, on top of the dated deadlines on the Deadlines page.'),
+      bloc('h2', 'Every month'),
+      bloc('puce', 'Activity statement and invoice from Sablier, sent to the client at the end of the month'),
+      bloc('puce', 'When payment arrives: mark the invoice as paid (income ledger)'),
+      bloc('h2', 'Every quarter'),
+      bloc('puce', 'Declare the revenue collected on autoentrepreneur.urssaf.fr'),
     ], 1),
-    page('page_idees', 'Idées en vrac', null, [
-      bloc('p', 'Un endroit pour noter vite. Chaque idée a le style « Idée » : bouton ampoule de la barre, ou tapez / puis « Idée ». Quand elle est mûre, « En faire une tâche » l\'envoie dans la colonne À faire.'),
+    page('page_idees', 'Loose ideas', null, [
+      bloc('p', 'A place to jot things down quickly. Each idea has the "Idea" style: lightbulb button in the toolbar, or type / then "Idea". When it is ripe, "Turn into a task" sends it to the To do column.'),
     ].concat(ideesDefaut()), 2),
   ];
 }
 
-/* ---------- Lecture et écriture ---------- */
+/* ---------- Reading and writing ---------- */
 
 function lireFichier(nom) {
   if (estApp()) return window.sablier.donnees.lire(nom);
@@ -178,17 +177,17 @@ function lireFichier(nom) {
 }
 
 function sauver(nom) {
-  if (FICHIERS.indexOf(nom) < 0) throw new Error('fichier inconnu : ' + nom);
+  if (FICHIERS.indexOf(nom) < 0) throw new Error('unknown file: ' + nom);
   if (estApp()) window.sablier.donnees.ecrire(nom, ETAT[nom]);
   else localStorage.setItem('sablier_' + nom, JSON.stringify(ETAT[nom]));
 }
 
-/* Un objet (ni tableau, ni scalaire), sinon null. */
+/* An object (neither an array nor a scalar), otherwise null. */
 function objetOu(x) { return x && typeof x === 'object' && !Array.isArray(x) ? x : null; }
-/* Un tableau d'objets (les éléments nuls ou scalaires sont écartés), sinon
-   null. Une liste devenue un objet indexé ({"0":…, "1":…}, par une retouche
-   manuelle ou un outil tiers) est récupérée plutôt que perdue : on ne jette
-   jamais des données qu'on peut lire. */
+/* An array of objects (null or scalar elements are dropped), otherwise
+   null. A list that became an indexed object ({"0":…, "1":…}, through a
+   manual edit or a third-party tool) is recovered rather than lost: we
+   never throw away data we can read. */
 function tableauObjets(x) {
   if (Array.isArray(x)) return x.filter(function (e) { return e && typeof e === 'object'; });
   if (x && typeof x === 'object') {
@@ -197,7 +196,7 @@ function tableauObjets(x) {
   }
   return null;
 }
-/* Coerce un nombre écrit en chaîne ("42,86") ; sinon la valeur par défaut. */
+/* Coerces a number written as a string ("42,86"); otherwise the default value. */
 function nombreDe(v, defaut) {
   if (typeof v === 'number' && isFinite(v)) return v;
   if (typeof v === 'string' && v.trim()) { var n = Number(v.replace(',', '.')); if (isFinite(n)) return n; }
@@ -213,8 +212,8 @@ function completer(cible, defaut) {
 }
 
 function chargerEtat() {
-  /* Premier lancement : aucun des fichiers n'existe. Un fichier de réglages
-     illisible seul ne remet pas tout à zéro. */
+  /* First launch: none of the files exist. An unreadable settings file
+     alone does not reset everything. */
   var premierLancement = FICHIERS.every(function (nom) { return lireFichier(nom) == null; });
   var aReparer = {};
 
@@ -231,7 +230,7 @@ function chargerEtat() {
   if (!objetOu(ETAT.reglages.ui.moisMeta)) ETAT.reglages.ui.moisMeta = {};
   var axesLus = tableauObjets(ETAT.reglages.axes);
   ETAT.reglages.axes = axesLus && axesLus.length ? axesLus : axesDefaut();
-  /* Chaque axe porte une couleur (migration des données antérieures). */
+  /* Every area has a colour (migration of earlier data). */
   ETAT.reglages.axes.forEach(function (a, i) {
     if (!a.id) a.id = uid('axe');
     if (typeof a.nom !== 'string') a.nom = String(a.nom == null ? '' : a.nom);
@@ -245,9 +244,9 @@ function chargerEtat() {
     if (!e.id) { e.id = uid('ent'); aReparer.journal = true; }
     if (typeof e.minutes === 'string') { var m = nombreDe(e.minutes, null); if (m != null) { e.minutes = m; aReparer.journal = true; } }
     if (typeof e.forfait === 'string') { var fo = nombreDe(e.forfait, null); e.forfait = fo != null && fo > 0 ? fo : null; aReparer.journal = true; }
-    /* Mois de facturation : un mois mal écrit sortirait la ligne de son
-       propre mois sans la mettre dans aucun autre, et elle ne serait
-       jamais facturée. Le mois du travail lui-même ne se stocke pas. */
+    /* Billing month: a badly written month would pull the entry out of its
+       own month without putting it in any other, and it would never be
+       invoiced. The month of the work itself is not stored. */
     if (e.moisFacturation != null && (!moisValide(e.moisFacturation) || e.moisFacturation <= moisDe(e.date))) {
       e.moisFacturation = null;
       aReparer.journal = true;
@@ -255,8 +254,8 @@ function chargerEtat() {
   });
   ETAT.journal = { schemaVersion: 1, entrees: entrees };
 
-  /* Tâches, notes et échéances reçoivent leurs valeurs de départ tant
-     que leur fichier n'existe pas (un fichier présent mais vide reste vide). */
+  /* Tasks, notes and deadlines get their default values as long as their
+     file does not exist (a file that exists but is empty stays empty). */
   var c = lireFichier('chantiers');
   var tachesLues = c != null ? (tableauObjets(objetOu(c) && c.taches) || []) : chantiersDefaut();
   if (c != null && objetOu(c) && Array.isArray(c.taches) && tachesLues.length !== c.taches.length) aReparer.chantiers = true;
@@ -289,13 +288,13 @@ function chargerEtat() {
   var ch = objetOu(lireFichier('chrono')) || {};
   ETAT.chrono = { schemaVersion: 1, enCours: objetOu(ch.enCours) && ch.enCours.debut ? ch.enCours : null };
 
-  /* Les idées ne sont plus une colonne du tableau : celles qui y étaient
-     rejoignent la page « Idées en vrac » des notes. */
+  /* Ideas are no longer a board column: those that were there join the
+     "Loose ideas" notes page. */
   if (migrerIdeesVersNotes()) { aReparer.chantiers = true; aReparer.notes = true; }
 
-  /* Une intervention ne se coupe pas entre deux mois de facturation
-     (l'arrondi au quart d'heure serait compté deux fois). L'interface s'y
-     tient, un fichier modifié à la main ou un import pourraient non. */
+  /* A work item is never split across two billing months (the quarter-hour
+     rounding would be counted twice). The interface respects that; a
+     hand-edited file or an import might not. */
   if (alignerMoisFacturation()) aReparer.journal = true;
 
   if (premierLancement) FICHIERS.forEach(function (nom) { sauver(nom); });
@@ -303,10 +302,10 @@ function chargerEtat() {
   return premierLancement;
 }
 
-/* Remet sur un seul mois de facturation les lignes d'une même intervention
-   (même jour, même axe, même libellé) qui auraient divergé : le mois d'une
-   ligne déjà figée sur une facture fait foi, sinon le plus tardif, qui ne
-   peut jamais facturer deux fois. Renvoie le nombre de lignes corrigées. */
+/* Puts back on a single billing month the entries of the same work item
+   (same day, same area, same label) that have diverged: the month of an
+   entry already frozen on an invoice prevails, otherwise the latest one,
+   which can never bill twice. Returns the number of entries fixed. */
 function alignerMoisFacturation() {
   var lesFactures = factures();
   var groupes = {};
@@ -323,7 +322,7 @@ function alignerMoisFacturation() {
     var figee = lignes.filter(function (e) { return !!factureFigeant(lesFactures, e); })[0];
     var cible = figee ? moisFacturationDe(figee) : mois.slice().sort()[mois.length - 1];
     lignes.forEach(function (e) {
-      /* Une ligne portée par une facture ne bouge jamais. */
+      /* An entry carried by an invoice never moves. */
       if (moisFacturationDe(e) === cible || factureFigeant(lesFactures, e)) return;
       e.moisFacturation = cible === moisDe(e.date) ? null : cible;
       e.modifieLe = new Date().toISOString();
@@ -333,9 +332,9 @@ function alignerMoisFacturation() {
   return corrigees;
 }
 
-/* Déplace les tâches de statut « idee » vers la page Idées en vrac, sous
-   forme de blocs « idée » transformables en tâche. Renvoie le nombre
-   d'idées déplacées. */
+/* Moves the tasks with status "idee" to the Loose ideas page, as "idea"
+   blocks that can be turned into a task. Returns the number of ideas
+   moved. */
 function migrerIdeesVersNotes() {
   var idees = taches().filter(function (t) { return t.statut === 'idee'; });
   if (!idees.length) return 0;
@@ -348,20 +347,20 @@ function migrerIdeesVersNotes() {
   return idees.length;
 }
 
-/* La page « Idées en vrac », créée au besoin. */
+/* The "Loose ideas" page, created if needed. */
 function pageIdees() {
   var p = pagesNotes().filter(function (x) { return x.id === 'page_idees'; })[0];
   if (p) { if (!Array.isArray(p.blocs)) p.blocs = []; return p; }
   var maintenant = new Date().toISOString();
   var racines = pagesNotes().filter(function (x) { return !x.parent; });
-  p = { id: 'page_idees', titre: 'Idées en vrac', parent: null, blocs: [bloc('p', 'Un endroit pour noter vite. Quand une idée est mûre, « En faire une tâche » l\'envoie dans la colonne À faire.')], ordre: (racines.length ? Math.max.apply(null, racines.map(function (x) { return x.ordre || 0; })) : 0) + 1, creeLe: maintenant, modifieLe: maintenant };
+  p = { id: 'page_idees', titre: 'Loose ideas', parent: null, blocs: [bloc('p', 'A place to jot things down quickly. When an idea is ripe, "Turn into a task" sends it to the To do column.')], ordre: (racines.length ? Math.max.apply(null, racines.map(function (x) { return x.ordre || 0; })) : 0) + 1, creeLe: maintenant, modifieLe: maintenant };
   pagesNotes().push(p);
   return p;
 }
 
-/* Remplace tout l'état par le contenu d'une sauvegarde importée. Le
-   paquet doit porter les sept fichiers (chrono facultatif) ; sinon rien
-   n'est écrit et la liste des fichiers manquants est renvoyée. */
+/* Replaces the whole state with the content of an imported backup. The
+   bundle must carry all seven files (chrono optional); otherwise nothing
+   is written and the list of missing files is returned. */
 function remplacerEtat(paquet) {
   var manquants = FICHIERS.filter(function (nom) { return nom !== 'chrono' && !objetOu(paquet && paquet[nom]); });
   if (manquants.length) return { ok: false, manquants: manquants };
@@ -380,20 +379,20 @@ function paquetSauvegarde() {
   return p;
 }
 
-/* ---------- Accès pratiques ---------- */
+/* ---------- Convenience accessors ---------- */
 
 function axes() { return ETAT.reglages.axes || []; }
 function axeParId(id) {
   var a = axes().filter(function (x) { return x.id === id; })[0];
   return a || null;
 }
-function libelleAxe(id) { var a = axeParId(id); return a ? a.nom : (id || 'Sans axe'); }
+function libelleAxe(id) { var a = axeParId(id); return a ? a.nom : (id || 'No area'); }
 function codeAxe(id) { var a = axeParId(id); return a ? a.code : ''; }
 function couleurAxe(id) { var a = axeParId(id); return a && a.couleur ? a.couleur : '#5F7186'; }
-/* Pastille d'axe : un point de la couleur de l'axe et son nom. */
+/* Area chip: a dot in the area's colour and its name. */
 function puceAxeHtml(id) {
   var a = axeParId(id);
-  var nom = a ? a.nom : (id || 'Sans axe');
+  var nom = a ? a.nom : (id || 'No area');
   return '<span class="puce-axe" style="--axe:' + echapper(couleurAxe(id)) + '" title="' + echapper(nom) + '"><i class="axe-point"></i>' + echapper(nom) + '</span>';
 }
 function entreesJournal() { return ETAT.journal.entrees; }
@@ -401,7 +400,7 @@ function taches() { return ETAT.chantiers.taches; }
 function pagesNotes() { return ETAT.notes.pages; }
 function factures() { return ETAT.factures.factures; }
 function echeances() { return ETAT.echeances.echeances; }
-/* Les tâches qui renvoient à une page de notes. */
+/* The tasks that link to a notes page. */
 function tachesLieesAPage(pageId) {
   return taches().filter(function (t) { return Array.isArray(t.notes) && t.notes.indexOf(pageId) >= 0; });
 }
@@ -411,7 +410,7 @@ function moisMeta(mois) {
   if (!ui.moisMeta[mois]) ui.moisMeta[mois] = { frais: 0, joindreTravaux: true, note: '' };
   return ui.moisMeta[mois];
 }
-/* Les données que lit le moteur de rappels. */
+/* The data the reminders engine reads. */
 function donneesRappels() {
   return { entrees: entreesJournal(), taches: taches(), echeances: echeances(), factures: factures(), chrono: ETAT.chrono ? ETAT.chrono.enCours : null };
 }

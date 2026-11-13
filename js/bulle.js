@@ -1,10 +1,10 @@
 /* ============================================================
-   BULLE LIQUID GLASS : une seule bulle de verre par groupe de
-   sélection (barre latérale, contrôle segmenté). Elle glisse d'un
-   élément à l'autre sur un ressort, avec un effet de goutte au départ.
-   Un groupe porte data-bulle="<nom>" ; l'élément choisi porte la
-   classe active ou actif. Le groupe peut être redessiné (innerHTML) :
-   la bulle repart de la dernière position connue de ce nom.
+   LIQUID GLASS BUBBLE: a single glass bubble per selection group
+   (sidebar, segmented control). It slides from one element to the
+   next on a spring, with a droplet effect at the start.
+   A group carries data-bulle="<name>"; the chosen element carries the
+   class active or actif. The group can be redrawn (innerHTML):
+   the bubble starts again from the last known position for that name.
    ============================================================ */
 'use strict';
 
@@ -31,8 +31,8 @@ function poserBulles() {
     b.style.height = p.h + 'px';
     var bouge = avant && (avant.x !== p.x || avant.y !== p.y);
     b.classList.add('fixe');
-    /* Seul transform s'anime : la bulle part de l'ancienne place, à
-       l'ancienne taille (échelle), et rejoint la nouvelle. */
+    /* Only transform is animated: the bubble starts from the old place,
+       at the old size (scale), and moves to the new one. */
     b.style.transform = bouge ? 'translate(' + avant.x + 'px,' + avant.y + 'px) scale(' + avant.w / p.w + ',' + avant.h / p.h + ')' : fin;
     void b.offsetWidth;
     b.classList.remove('fixe');
@@ -45,8 +45,8 @@ function poserBulles() {
   });
 }
 
-/* La page se dessine d'abord, la bulle part juste après : une animation
-   lancée dans l'image qui construit la page se figerait en plein vol. */
+/* The page is drawn first, the bubble starts just after: an animation
+   launched in the frame that builds the page would freeze mid-flight. */
 function poserBullesBientot() {
   requestAnimationFrame(function () { requestAnimationFrame(poserBulles); });
 }

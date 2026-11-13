@@ -1,14 +1,14 @@
 /* ============================================================
-   Sablier : pont entre l'interface et l'application macOS (Tauri).
+   Sablier: bridge between the interface and the macOS application (Tauri).
 
-   Expose window.sablier, comme le preload de l'ancienne version Electron.
-   Servi par le fond Rust (sablier://localhost/demarrage.js, chargé
-   par index.html avant les modules js/) juste après
-   window.__SABLIER_DEMARRAGE : version, mode auto-test, dossier et
-   contenu des fichiers de données, relus à chaque chargement.
-   Chaque écriture est répercutée au fond qui la range dans le dossier
-   de données (écritures atomiques, différées).
-   window.__TAURI__ est lu à l'appel : il est posé avant la page.
+   Exposes window.sablier, like the preload of the old Electron version.
+   Served by the Rust backend (sablier://localhost/demarrage.js, loaded
+   by index.html before the js/ modules) right after
+   window.__SABLIER_DEMARRAGE: version, self-test mode, folder and
+   content of the data files, re-read at every load.
+   Each write is passed on to the backend, which files it in the data
+   folder (atomic, deferred writes).
+   window.__TAURI__ is read at call time: it is set before the page.
    ============================================================ */
 'use strict';
 
@@ -17,9 +17,9 @@
   var cache = demarrage.donnees || {};
   function invoke(commande, args, options) { return window.__TAURI__.core.invoke(commande, args || {}, options); }
 
-  /* Un fichier déposé depuis le Finder : WebKit en donne le contenu, pas le
-     chemin. Envoyé brut, fichier par fichier ; la réponse a la même forme
-     que pour des chemins. */
+  /* A file dropped from the Finder: WebKit gives its content, not its
+     path. Sent raw, one file at a time; the response has the same shape
+     as for paths. */
   function deposer(tacheId, fichiers) {
     var res = { ok: true, pieces: [], erreurs: [] };
     return fichiers.reduce(function (suite, f) {
@@ -27,8 +27,8 @@
         return invoke('pieces_deposer', new Uint8Array(octets), { headers: { 'x-tache': encodeURIComponent(tacheId), 'x-nom': encodeURIComponent(f.name) } });
       }).then(function (r) {
         res.pieces = res.pieces.concat(r.pieces || []);
-        res.erreurs = res.erreurs.concat(r.erreurs || (r.message ? [f.name + ' : ' + r.message] : []));
-      }, function (e) { res.erreurs.push(f.name + ' : ' + ((e && e.message) || e)); });
+        res.erreurs = res.erreurs.concat(r.erreurs || (r.message ? [f.name + ': ' + r.message] : []));
+      }, function (e) { res.erreurs.push(f.name + ': ' + ((e && e.message) || e)); });
     }, Promise.resolve()).then(function () { return res; });
   }
 
@@ -67,8 +67,8 @@
       exporterTexte: function (nomFichier, contenu) { return invoke('fichier_exporter_texte', { nomFichier: nomFichier, contenu: String(contenu) }); },
     },
 
-    /* Pièces jointes des tâches : copiées dans Donnees/Pieces/<tâche>/.
-       « chemins » : des chemins de fichiers, ou des fichiers déposés (File). */
+    /* Task attachments: copied into Donnees/Pieces/<task>/.
+       "chemins": file paths, or dropped files (File). */
     pieces: {
       ajouter: function (tacheId, chemins) {
         var liste = Array.isArray(chemins) ? chemins.filter(Boolean) : [];
@@ -81,13 +81,13 @@
       url: function (relatif) { return (windows ? 'http://sablier-piece.localhost/pieces/' : 'sablier-piece://pieces/') + String(relatif || '').split('/').map(encodeURIComponent).join('/'); },
     },
 
-    /* Rappels : notification du Mac et pastille du Dock. */
+    /* Reminders: Mac notification and Dock badge. */
     rappels: {
       notifier: function (o) { return invoke('rappels_notifier', { o: o || {} }); },
       badge: function (n) { return invoke('rappels_badge', { n: Number(n) || 0 }); },
     },
 
-    /* Commandes envoyées par le menu de l'application. */
+    /* Commands sent by the application menu. */
     surCommande: function (cb) { return window.__TAURI__.event.listen('commande', function (e) { cb(e.payload); }); },
   };
 })();

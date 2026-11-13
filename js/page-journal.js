@@ -1,6 +1,6 @@
 /* ============================================================
-   JOURNAL : lignes de travail (affichées, jour par jour, dans la page
-   « Journal et relevé »), fiche d'une ligne et chronomètre.
+   LOG: work entries (shown day by day in the "Log and statement"
+   page), entry sheet and timer.
    ============================================================ */
 'use strict';
 
@@ -15,32 +15,32 @@ function initJournal() {
   });
 }
 
-/* La page « Journal et relevé » se place sur le mois qui facture la ligne,
-   journée dépliée. */
+/* The "Log and statement" page moves to the month that bills the entry,
+   with its day expanded. */
 function montrerLigne(e) {
   RELEVE_MOIS = moisFacturationDe(e);
   RELEVE_JOURS[e.date] = true;
 }
 
-/* La durée tapée prime ; début et fin ne servent qu'à la pré-remplir. */
+/* The typed duration wins; start and end only serve to prefill it. */
 function dureeSaisie(dureeTxt, debut, fin) {
   var minutes = parseDuree(dureeTxt);
   if (minutes != null) return { minutes: minutes, depuisHoraires: false };
   if (debut && fin) return { minutes: minutesEntre(debut, fin), depuisHoraires: true };
   return { minutes: null, depuisHoraires: false };
 }
-var MAX_MINUTES_HORAIRES = 16 * 60;   // au-delà, une fin avant le début est plus probable qu'une nuit de travail
+var MAX_MINUTES_HORAIRES = 16 * 60;   // beyond this, an end before the start is more likely than a night of work
 
 function ligneJournalHtml(e) {
-  var heure = e.debut && e.fin ? e.debut + ' à ' + e.fin : (e.debut ? 'dès ' + e.debut : 'durée saisie');
+  var heure = e.debut && e.fin ? e.debut + ' to ' + e.fin : (e.debut ? 'from ' + e.debut : 'duration entered');
   var moisF = moisFacturationDe(e);
   var reportee = estReporte(e);
-  var chips = (e.facturable === false ? '<span class="puce neutre" title="' + echapper(e.motif || '') + '">non facturable</span>' : '')
-    + (forfaitEntree(e) != null && e.facturable !== false ? '<span class="puce or">forfait ' + fmtEuros(forfaitEntree(e)) + '</span>' : '')
-    + (reportee ? '<span class="puce" title="Travail du ' + dateFr(e.date) + ', porté sur le relevé ' + echapper(deLibelleMois(moisF)) + '">'
-        + 'reporté sur ' + echapper(libelleMoisSeul(moisF)) + '</span>' : '');
+  var chips = (e.facturable === false ? '<span class="puce neutre" title="' + echapper(e.motif || '') + '">non-billable</span>' : '')
+    + (forfaitEntree(e) != null && e.facturable !== false ? '<span class="puce or">flat fee ' + fmtEuros(forfaitEntree(e)) + '</span>' : '')
+    + (reportee ? '<span class="puce" title="Work done on ' + dateFr(e.date) + ', carried on the ' + echapper(libelleMois(moisF)) + ' statement">'
+        + 'moved to ' + echapper(libelleMoisSeul(moisF)) + '</span>' : '');
   var tacheLiee = e.tache ? tacheParId(e.tache) : null;
-  if (tacheLiee) chips += '<button type="button" class="puce tache" data-action="tache" title="Ouvrir la tâche « ' + echapper(tacheLiee.titre) + ' »">' + icone('coche', 11) + echapper(tacheLiee.titre) + '</button>';
+  if (tacheLiee) chips += '<button type="button" class="puce tache" data-action="tache" title="Open the task &quot;' + echapper(tacheLiee.titre) + '&quot;">' + icone('coche', 11) + echapper(tacheLiee.titre) + '</button>';
   var detail = [e.detail, e.facturable === false && e.motif ? e.motif : ''].filter(Boolean).join(' · ');
   return '<div class="jr-ligne' + (e.facturable === false ? ' non-facturable' : '') + '" data-id="' + echapper(e.id) + '">'
     + '<div class="jr-heure">' + echapper(heure) + '</div>'
@@ -48,10 +48,10 @@ function ligneJournalHtml(e) {
     + (detail ? '<div class="jr-detail">' + echapper(detail) + '</div>' : '') + '</div>'
     + '<div class="jr-duree">' + fmtDuree(dureeEntree(e)) + '</div>'
     + '<div class="jr-actions">'
-    + boutonIcone('reprendre', 'play', 'Reprendre au chrono')
-    + boutonIcone('modifier', 'crayon', 'Modifier')
-    + boutonIcone('dupliquer', 'copie', 'Dupliquer sur aujourd\'hui')
-    + boutonIcone('supprimer', 'corbeille', 'Supprimer', 'danger')
+    + boutonIcone('reprendre', 'play', 'Resume with the timer')
+    + boutonIcone('modifier', 'crayon', 'Edit')
+    + boutonIcone('dupliquer', 'copie', 'Duplicate to today')
+    + boutonIcone('supprimer', 'corbeille', 'Delete', 'danger')
     + '</div></div>';
 }
 
@@ -68,25 +68,25 @@ function clicListeJournal(ev) {
   else if (action === 'tache') { if (e.tache && tacheParId(e.tache)) ouvrirEditionTache(e.tache); }
   else if (action === 'reprendre') demarrerChrono({ axe: e.axe, intervention: e.intervention, detail: e.detail, tache: e.tache });
   else if (action === 'dupliquer') {
-    /* La copie ne reprend ni le forfait ni le mois de facturation : un
-       montant fixe et un report ne se dupliquent pas par mégarde. */
+    /* The copy keeps neither the flat fee nor the billing month: a fixed
+       amount and a move to another month must not be duplicated by accident. */
     var copie = Object.assign({}, e, { id: uid('ent'), date: aujourdhui(), debut: '', fin: '', forfait: null, moisFacturation: null, creeLe: new Date().toISOString(), modifieLe: new Date().toISOString() });
     entreesJournal().push(copie);
     heriterMoisFacturation(copie);
     sauver('journal');
     montrerLigne(copie);
     rafraichir();
-    notifier('Ligne dupliquée sur aujourd\'hui.', { action: { libelle: 'Modifier', fn: function () { ouvrirEditionEntree(copie.id); } } });
+    notifier('Entry duplicated to today.', { action: { libelle: 'Edit', fn: function () { ouvrirEditionEntree(copie.id); } } });
   }
   else if (action === 'supprimer') {
     var fac = factureDeEntree(factures(), e.id);
-    if (fac) { notifier('Cette ligne est figée sur la facture n° ' + fac.numero + ' : supprimez d\'abord la facture (dernière facture seulement).', { type: 'erreur', duree: 7000 }); return; }
-    confirmer('Supprimer cette ligne (' + fmtDuree(dureeEntree(e)) + ', ' + e.intervention + ') ?', { ok: 'Supprimer', danger: true, titre: 'Supprimer une ligne' }).then(function (ok) {
+    if (fac) { notifier('This entry is locked on invoice no. ' + fac.numero + ': delete the invoice first (latest invoice only).', { type: 'erreur', duree: 7000 }); return; }
+    confirmer('Delete this entry (' + fmtDuree(dureeEntree(e)) + ', ' + e.intervention + ')?', { ok: 'Delete', danger: true, titre: 'Delete an entry' }).then(function (ok) {
       if (!ok) return;
       ETAT.journal.entrees = entreesJournal().filter(function (x) { return x.id !== e.id; });
       sauver('journal');
       rafraichir();
-      notifier('Ligne supprimée.');
+      notifier('Entry deleted.');
     });
   }
 }
@@ -95,60 +95,60 @@ function entreeParId(id) {
   return entreesJournal().filter(function (e) { return e.id === id; })[0] || null;
 }
 
-/* ---------- Modale d'édition ---------- */
+/* ---------- Edit modal ---------- */
 
 function ouvrirEditionEntree(id, prefill) {
   var e = id ? entreeParId(id) : null;
   if (id && !e) return;
   var v = Object.assign({ date: aujourdhui(), axe: ETAT.reglages.ui.dernierAxe, intervention: '', detail: '', debut: '', fin: '', minutes: null, moisFacturation: null, tache: null }, prefill || {}, e || {});
-  /* Une ligne figée sur une facture ne change plus de date, d'axe, de durée
-     ni de facturation : seuls le libellé et le détail restent modifiables. */
+  /* An entry locked on an invoice no longer changes date, area, duration
+     or billing: only the label and details remain editable. */
   var fac = e ? factureDeEntree(factures(), e.id) : null;
-  /* Le mois de facturation appartient à l'intervention entière : il se fige
-     dès qu'une seule de ses lignes est portée par une facture. */
+  /* The billing month belongs to the whole work item: it is locked as soon
+     as a single one of its entries is carried by an invoice. */
   var moisTravail = moisDe(v.date) || moisCourant();
   var moisFact = moisFacturationDe(v) || moisTravail;
   var interFigee = !fac && e && interventionFigee(e);
-  var verrouMois = fac ? 'Ligne figée sur la facture n° ' + fac.numero + ' : le mois de facturation ne change plus.'
-    : (interFigee ? 'Une autre ligne de cette intervention est déjà portée par une facture : le mois de facturation ne change plus.' : '');
+  var verrouMois = fac ? 'Entry locked on invoice no. ' + fac.numero + ': the billing month can no longer change.'
+    : (interFigee ? 'Another entry of this work item is already carried by an invoice: the billing month can no longer change.' : '');
   var m = ouvrirModale({
-    titre: e ? 'Modifier une ligne' : 'Nouvelle ligne',
-    sousTitre: e ? 'Saisie du ' + libelleDate(e.date, 'moyen') : '',
-    corps: (fac ? '<div class="alert alert-info" style="margin-bottom:14px;"><span>Ligne figée sur la facture n° <b>' + echapper(fac.numero) + '</b> : la date, l\'axe, la durée, le mois de facturation et la facturation ne se modifient plus. Pour les changer, supprimez d\'abord la facture (dernière facture seulement).</span></div>' : '')
+    titre: e ? 'Edit an entry' : 'New log entry',
+    sousTitre: e ? 'Entry of ' + libelleDate(e.date, 'moyen') : '',
+    corps: (fac ? '<div class="alert alert-info" style="margin-bottom:14px;"><span>Entry locked on invoice no. <b>' + echapper(fac.numero) + '</b>: the date, area, duration, billing month and billing can no longer be edited. To change them, delete the invoice first (latest invoice only).</span></div>' : '')
       + '<div class="grid-2">'
       + champHtml('edDate', 'Date', 'date', v.date)
-      + '<div class="field"><label for="edAxe">Axe</label><select id="edAxe">' + optionsAxesHtml(v.axe) + '</select></div>'
-      + champHtml('edIntervention', 'Intervention', 'text', v.intervention, { classe: 'span-2', attrs: 'list="jrInterventionsListe"' })
-      + champHtml('edDetail', 'Détail (facultatif)', 'text', v.detail, { classe: 'span-2' })
-      + champHtml('edDebut', 'Début', 'time', v.debut)
-      + champHtml('edFin', 'Fin', 'time', v.fin)
-      + champHtml('edDuree', 'Durée', 'text', v.minutes != null ? fmtDuree(v.minutes) : '', { attrs: 'placeholder="ex. 1h30, 45 min, 2,5"' })
-      + '<div class="field"><label>Facturation</label><label class="field-ligne" style="padding:6px 0;"><input type="checkbox" id="edNonFacturable"' + (v.facturable === false ? ' checked' : '') + '> <span>Non facturable (0 €, le temps reste compté)</span></label></div>'
-      + champHtml('edMotif', 'Motif (si non facturable)', 'text', v.motif || '', { attrs: 'placeholder="ex. stage, geste commercial"' })
-      + champHtml('edForfait', 'Forfait HT en € (facultatif, remplace heures × tarif)', 'text', v.forfait != null ? fmtNombreSaisie(v.forfait, 2) : '', { attrs: 'inputmode="decimal" placeholder="ex. 600 ou 600,50"' })
-      + '<div class="field span-2"><label for="edTache">Tâche liée</label><select id="edTache">' + optionsTachesHtml(v.tache) + '</select>'
-      + '<p class="hint">Le temps de cette ligne s\'ajoute au temps passé de la tâche, dans sa fiche.</p></div>'
-      + '<div class="field span-2"><label for="edMoisFacturation">Mois de facturation</label>'
+      + '<div class="field"><label for="edAxe">Area</label><select id="edAxe">' + optionsAxesHtml(v.axe) + '</select></div>'
+      + champHtml('edIntervention', 'Work item', 'text', v.intervention, { classe: 'span-2', attrs: 'list="jrInterventionsListe"' })
+      + champHtml('edDetail', 'Details (optional)', 'text', v.detail, { classe: 'span-2' })
+      + champHtml('edDebut', 'Start', 'time', v.debut)
+      + champHtml('edFin', 'End', 'time', v.fin)
+      + champHtml('edDuree', 'Duration', 'text', v.minutes != null ? fmtDuree(v.minutes) : '', { attrs: 'placeholder="e.g. 1h30, 45 min, 2.5"' })
+      + '<div class="field"><label>Billing</label><label class="field-ligne" style="padding:6px 0;"><input type="checkbox" id="edNonFacturable"' + (v.facturable === false ? ' checked' : '') + '> <span>Non-billable (€0, the time is still counted)</span></label></div>'
+      + champHtml('edMotif', 'Reason (if non-billable)', 'text', v.motif || '', { attrs: 'placeholder="e.g. internship, goodwill gesture"' })
+      + champHtml('edForfait', 'Flat fee excl. tax in € (optional, replaces hours × rate)', 'text', v.forfait != null ? fmtNombreSaisie(v.forfait, 2) : '', { attrs: 'inputmode="decimal" placeholder="e.g. 600 or 600.50"' })
+      + '<div class="field span-2"><label for="edTache">Linked task</label><select id="edTache">' + optionsTachesHtml(v.tache) + '</select>'
+      + '<p class="hint">The time of this entry is added to the task\'s time spent, in its sheet.</p></div>'
+      + '<div class="field span-2"><label for="edMoisFacturation">Billing month</label>'
       + selectMoisHtml('edMoisFacturation', moisFact, { liste: moisFacturationPossibles(moisTravail, moisFact), pleineLargeur: true })
       + '<p class="hint" id="edAideMois">' + echapper(verrouMois || aideMoisFacturation(moisTravail, moisFact)) + '</p></div>'
       + '</div><p class="hint" id="edAide"></p>',
-    pied: (e && !fac ? '<button class="btn btn-danger-ligne btn-petit" data-role="supprimer">Supprimer</button>' : '')
-      + '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">Annuler</button><button class="btn" data-role="ok">Enregistrer</button></div>',
+    pied: (e && !fac ? '<button class="btn btn-danger-ligne btn-petit" data-role="supprimer">Delete</button>' : '')
+      + '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">Cancel</button><button class="btn" data-role="ok">Save</button></div>',
   });
   var sup = m.querySelector('[data-role=supprimer]');
   if (sup) sup.addEventListener('click', function () {
     fermerModale();
-    confirmer('Supprimer cette ligne (' + fmtDuree(dureeEntree(e)) + ', ' + e.intervention + ') ?', { ok: 'Supprimer', danger: true, titre: 'Supprimer une ligne' }).then(function (ok) {
+    confirmer('Delete this entry (' + fmtDuree(dureeEntree(e)) + ', ' + e.intervention + ')?', { ok: 'Delete', danger: true, titre: 'Delete an entry' }).then(function (ok) {
       if (!ok) return;
       ETAT.journal.entrees = entreesJournal().filter(function (x) { return x.id !== e.id; });
       sauver('journal');
       rafraichir();
-      notifier('Ligne supprimée.');
+      notifier('Entry deleted.');
     });
   });
   if (fac) ['edDate', 'edAxe', 'edDebut', 'edFin', 'edDuree', 'edNonFacturable', 'edMotif', 'edForfait', 'edMoisFacturation'].forEach(function (idc) { var el = m.querySelector('#' + idc); if (el) el.disabled = true; });
   var champMois = m.querySelector('#edMoisFacturation');
-  /* Une intervention déjà facturée en partie garde sa date et son mois. */
+  /* A work item that is already partly invoiced keeps its date and month. */
   if (interFigee) { champMois.disabled = true; m.querySelector('#edDate').disabled = true; }
   var majDuree = function () {
     var d = m.querySelector('#edDebut').value, f = m.querySelector('#edFin').value;
@@ -156,7 +156,7 @@ function ouvrirEditionEntree(id, prefill) {
   };
   m.querySelector('#edDebut').addEventListener('change', majDuree);
   m.querySelector('#edFin').addEventListener('change', majDuree);
-  /* Le mois suit la date tant qu'il n'a pas été choisi à la main. */
+  /* The month follows the date until it has been chosen by hand. */
   var moisLibre = !moisValide(v.moisFacturation);
   m.querySelector('#edDate').addEventListener('change', function () {
     var mt = moisDe(this.value);
@@ -184,7 +184,7 @@ function ouvrirEditionEntree(id, prefill) {
     var tacheChoisie = m.querySelector('#edTache').value || null;
     if (!intervention) { m.querySelector('#edIntervention').classList.add('invalide'); m.querySelector('#edIntervention').focus(); return; }
     if (fac) {
-      /* Ligne facturée : libellé, détail et tâche liée seulement. */
+      /* Invoiced entry: only label, details and linked task. */
       e.intervention = intervention;
       e.detail = m.querySelector('#edDetail').value.trim();
       e.tache = tacheChoisie;
@@ -192,7 +192,7 @@ function ouvrirEditionEntree(id, prefill) {
       sauver('journal');
       fermerModale();
       rafraichir();
-      notifier('Libellé modifié (ligne facturée : le reste est figé).', { type: 'succes' });
+      notifier('Label updated (invoiced entry: the rest is locked).', { type: 'succes' });
       return;
     }
     var debut = m.querySelector('#edDebut').value, fin = m.querySelector('#edFin').value;
@@ -200,11 +200,11 @@ function ouvrirEditionEntree(id, prefill) {
     var minutes = d.minutes;
     var date = m.querySelector('#edDate').value;
     if (!date) { m.querySelector('#edDate').classList.add('invalide'); return; }
-    if (!(minutes > 0)) { m.querySelector('#edDuree').classList.add('invalide'); m.querySelector('#edAide').textContent = 'Indiquez une durée, ou un début et une fin.'; return; }
-    if (d.depuisHoraires && minutes > MAX_MINUTES_HORAIRES) { m.querySelector('#edFin').classList.add('invalide'); m.querySelector('#edAide').textContent = 'Les heures donnent ' + fmtDuree(minutes) + ' : fin antérieure au début ? Vérifiez, ou tapez la durée.'; return; }
+    if (!(minutes > 0)) { m.querySelector('#edDuree').classList.add('invalide'); m.querySelector('#edAide').textContent = 'Enter a duration, or a start and an end.'; return; }
+    if (d.depuisHoraires && minutes > MAX_MINUTES_HORAIRES) { m.querySelector('#edFin').classList.add('invalide'); m.querySelector('#edAide').textContent = 'The times give ' + fmtDuree(minutes) + ': end before the start? Check them, or type the duration.'; return; }
     var forfaitTxt = m.querySelector('#edForfait').value.trim();
     var forfait = forfaitTxt ? lireMontant(forfaitTxt) : null;
-    if (forfaitTxt && forfait == null) { m.querySelector('#edForfait').classList.add('invalide'); m.querySelector('#edAide').textContent = 'Forfait non compris (ex. 600 ou 600,50).'; return; }
+    if (forfaitTxt && forfait == null) { m.querySelector('#edForfait').classList.add('invalide'); m.querySelector('#edAide').textContent = 'Flat fee not understood (e.g. 600 or 600.50).'; return; }
     var cible = e || { id: uid('ent'), creeLe: new Date().toISOString(), tache: (prefill && prefill.tache) || null };
     cible.date = date;
     cible.axe = m.querySelector('#edAxe').value;
@@ -222,14 +222,14 @@ function ouvrirEditionEntree(id, prefill) {
       var choix = champMois.value;
       cible.moisFacturation = choix && choix !== moisT ? choix : null;
     }
-    /* Un mois de facturation antérieur au travail n'a pas de sens : la
-       date a pu bouger après le choix du mois. */
+    /* A billing month before the work makes no sense: the date may have
+       moved after the month was chosen. */
     if (cible.moisFacturation && cible.moisFacturation < moisT) cible.moisFacturation = null;
     cible.modifieLe = new Date().toISOString();
     if (!e) entreesJournal().push(cible);
-    /* Le mois de facturation appartient au travail entier, pas à la ligne.
-       Si une sœur est déjà portée par une facture, la ligne la rejoint pour
-       que l'intervention ne soit pas à cheval sur deux mois. */
+    /* The billing month belongs to the whole work item, not to the entry.
+       If a sibling is already carried by an invoice, the entry joins it so
+       that the work item does not straddle two months. */
     var soeurs = lignesMemeIntervention(cible).filter(function (x) { return x.id !== cible.id; });
     var figee = soeurs.filter(function (x) { return !peutReporter(x, factures()); })[0];
     var adopte = '';
@@ -244,19 +244,19 @@ function ouvrirEditionEntree(id, prefill) {
     fermerModale();
     montrerLigne(cible);
     rafraichir();
-    var suite = adopte ? ' Cette intervention est déjà portée par une facture ' + deLibelleMois(adopte) + ' : la ligne y est rattachée.'
-      : (suivies ? ' Les ' + (suivies + 1) + ' lignes de cette intervention sont facturées en ' + libelleMois(moisFacturationDe(cible)) + '.' : '');
-    notifier((e ? 'Ligne modifiée.' : 'Ligne enregistrée.') + suite, { type: 'succes', duree: suite ? 9000 : undefined });
+    var suite = adopte ? ' This work item is already carried by an invoice for ' + libelleMois(adopte) + ': the entry is attached to it.'
+      : (suivies ? ' The ' + (suivies + 1) + ' entries of this work item are billed in ' + libelleMois(moisFacturationDe(cible)) + '.' : '');
+    notifier((e ? 'Entry updated.' : 'Entry saved.') + suite, { type: 'succes', duree: suite ? 9000 : undefined });
   });
   m.querySelectorAll('input').forEach(function (i) {
     i.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); m.querySelector('[data-role=ok]').click(); } });
   });
 }
 
-/* ---------- Chronomètre ----------
-   État (chrono.json) : { debut, axe, intervention, detail, tache,
-   pauseDepuis (ISO ou null), pauseCumuleeMs }. Le temps mesuré exclut
-   les pauses ; le chrono survit à la fermeture de l'application. */
+/* ---------- Timer ----------
+   State (chrono.json): { debut, axe, intervention, detail, tache,
+   pauseDepuis (ISO or null), pauseCumuleeMs }. The measured time excludes
+   pauses; the timer survives closing the application. */
 
 function chronoEnCours() { return ETAT.chrono && ETAT.chrono.enCours ? ETAT.chrono.enCours : null; }
 function chronoEnPause() { var c = chronoEnCours(); return !!(c && c.pauseDepuis); }
@@ -275,10 +275,10 @@ function heureDebutChrono(c) {
   var d = new Date(c.debut);
   return deuxChiffres(d.getHours()) + ':' + deuxChiffres(d.getMinutes());
 }
-function libelleChrono(c) { return String(c.intervention || '').trim() || 'Sans libellé'; }
+function libelleChrono(c) { return String(c.intervention || '').trim() || 'No label'; }
 
-/* Démarre un chrono ; un chrono déjà en cours est d'abord arrêté et
-   enregistré. Le libellé peut rester vide : il sera demandé à l'arrêt. */
+/* Starts a timer; a timer already running is stopped and saved first.
+   The label can stay empty: it will be asked for on stop. */
 function demarrerChrono(o) {
   var precedent = null;
   if (chronoEnCours()) {
@@ -300,9 +300,9 @@ function demarrerChrono(o) {
   rafraichir();
   var c = ETAT.chrono.enCours;
   if (precedent) {
-    notifier('Chrono démarré. Le précédent, sans libellé (' + fmtDuree(precedent.minutes) + '), est enregistré sous « Intervention ».', { duree: 9000, action: { libelle: 'Nommer la ligne', fn: function () { ouvrirEditionEntree(precedent.id); } } });
+    notifier('Timer started. The previous one, with no label (' + fmtDuree(precedent.minutes) + '), was saved as "Work item".', { duree: 9000, action: { libelle: 'Name the entry', fn: function () { ouvrirEditionEntree(precedent.id); } } });
   } else {
-    notifier(c.intervention ? 'Chrono démarré : ' + c.intervention : 'Chrono démarré. Vous nommerez l\'intervention à l\'arrêt.');
+    notifier(c.intervention ? 'Timer started: ' + c.intervention : 'Timer started. You will name the work item when you stop.');
   }
 }
 
@@ -327,12 +327,12 @@ function basculerPauseChrono() {
   if (chronoEnPause()) reprendreChrono(); else mettreEnPauseChrono();
 }
 
-/* Arrête le chrono et enregistre la ligne : une minute au minimum, pour
-   que rien ne se perde (la ligne se modifie ou se supprime ensuite). */
+/* Stops the timer and saves the entry: one minute at least, so that
+   nothing is lost (the entry can be edited or deleted afterwards). */
 function arreterChrono(silencieux) {
   var c = chronoEnCours();
   if (!c) return null;
-  /* Un chrono arrêté pendant une pause se termine au début de la pause. */
+  /* A timer stopped during a pause ends when the pause began. */
   var debut = new Date(c.debut), fin = c.pauseDepuis ? new Date(c.pauseDepuis) : new Date();
   if (isNaN(debut.getTime())) debut = new Date();
   if (isNaN(fin.getTime()) || fin < debut) fin = new Date();
@@ -342,7 +342,7 @@ function arreterChrono(silencieux) {
   sauver('chrono');
   lancerTicChrono();
   var e = {
-    id: uid('ent'), date: dateVersIso(debut), axe: c.axe, intervention: libelle || 'Intervention', detail: c.detail || '',
+    id: uid('ent'), date: dateVersIso(debut), axe: c.axe, intervention: libelle || 'Work item', detail: c.detail || '',
     debut: deuxChiffres(debut.getHours()) + ':' + deuxChiffres(debut.getMinutes()),
     fin: deuxChiffres(fin.getHours()) + ':' + deuxChiffres(fin.getMinutes()),
     minutes: minutes, tache: c.tache || null,
@@ -355,28 +355,28 @@ function arreterChrono(silencieux) {
   rafraichir();
   if (!silencieux) {
     if (!libelle && modaleOuverte()) {
-      /* Une modale est ouverte (facture, fiche…) : on ne la ferme pas. */
-      notifier('Chrono arrêté : ' + fmtDuree(minutes) + ' enregistrées sous « Intervention ».', { type: 'succes', duree: 9000, action: { libelle: 'Nommer la ligne', fn: function () { ouvrirEditionEntree(e.id); } } });
+      /* A modal is open (invoice, task sheet...): do not close it. */
+      notifier('Timer stopped: ' + fmtDuree(minutes) + ' saved as "Work item".', { type: 'succes', duree: 9000, action: { libelle: 'Name the entry', fn: function () { ouvrirEditionEntree(e.id); } } });
     } else if (!libelle) {
-      notifier('Chrono arrêté : ' + fmtDuree(minutes) + ' enregistrées. Donnez un libellé à la ligne.', { type: 'succes' });
+      notifier('Timer stopped: ' + fmtDuree(minutes) + ' saved. Give the entry a label.', { type: 'succes' });
       ouvrirEditionEntree(e.id);
     } else {
-      notifier('Chrono arrêté : ' + fmtDuree(minutes) + ' enregistrées sur « ' + libelle + ' ».', {
-        type: 'succes', action: { libelle: 'Modifier la ligne', fn: function () { ouvrirEditionEntree(e.id); } },
+      notifier('Timer stopped: ' + fmtDuree(minutes) + ' saved on "' + libelle + '".', {
+        type: 'succes', action: { libelle: 'Edit the entry', fn: function () { ouvrirEditionEntree(e.id); } },
       });
     }
   }
   return e;
 }
 
-/* Raccourci ⌘⇧T : arrête le chrono en cours, sinon en démarre un tout de
-   suite (le libellé se donne à l'arrêt). */
+/* Shortcut Ctrl+Shift+T: stops the running timer, otherwise starts one
+   right away (the label is given on stop). */
 function basculerChrono() {
   if (chronoEnCours()) { arreterChrono(); return; }
   demarrerChrono({});
 }
 
-/* Bandeau en haut de la zone de travail, visible sur toutes les pages. */
+/* Banner at the top of the work area, visible on every page. */
 function rendreChronoBandeau() {
   var b = document.getElementById('chronoBandeau');
   if (!b) return;
@@ -385,30 +385,30 @@ function rendreChronoBandeau() {
   var pause = !!c.pauseDepuis;
   b.className = 'chrono-bandeau visible' + (pause ? ' en-pause' : '');
   b.innerHTML = '<div class="chrono-bandeau-temps" data-chrono-temps>' + texteChrono(c) + '</div>'
-    + '<div class="chrono-bandeau-texte"><div class="chrono-bandeau-titre"><span>' + echapper(libelleChrono(c)) + '</span><span class="puce' + (pause ? '' : ' or') + '">' + (pause ? 'en pause' : 'en cours') + '</span></div>'
-    + '<div class="chrono-bandeau-sous">' + echapper(libelleAxe(c.axe)) + (c.detail ? ' · ' + echapper(c.detail) : '') + ' · démarré à ' + heureDebutChrono(c) + '</div></div>'
-    + '<div class="chrono-bandeau-actions"><button type="button" class="btn btn-ghost" data-action="pause">' + (pause ? 'Reprendre' : 'Pause') + '</button>'
-    + '<button type="button" class="btn" data-action="arreter">Arrêter et enregistrer</button></div>';
+    + '<div class="chrono-bandeau-texte"><div class="chrono-bandeau-titre"><span>' + echapper(libelleChrono(c)) + '</span><span class="puce' + (pause ? '' : ' or') + '">' + (pause ? 'paused' : 'running') + '</span></div>'
+    + '<div class="chrono-bandeau-sous">' + echapper(libelleAxe(c.axe)) + (c.detail ? ' · ' + echapper(c.detail) : '') + ' · started at ' + heureDebutChrono(c) + '</div></div>'
+    + '<div class="chrono-bandeau-actions"><button type="button" class="btn btn-ghost" data-action="pause">' + (pause ? 'Resume' : 'Pause') + '</button>'
+    + '<button type="button" class="btn" data-action="arreter">Stop and save</button></div>';
 }
 
-/* Pied de la barre latérale : l'état du chrono, en miroir du bandeau. */
+/* Sidebar footer: the timer state, mirroring the banner. */
 function rendreChronoPied() {
   var pied = document.getElementById('chronoPied');
   if (!pied) return;
   var c = chronoEnCours();
-  /* Module d'état : point, deux lignes courtes, boutons d'icône (rien de tronqué). */
+  /* Status module: dot, two short lines, icon buttons (nothing truncated). */
   if (!c) {
-    pied.innerHTML = '<div class="chrono-pied"><span class="voyant"></span><div class="chrono-pied-textes"><div class="chrono-pied-titre">Chrono à l\'arrêt</div><div class="chrono-pied-sous">⌘⇧T pour démarrer</div></div>'
-      + '<div class="chrono-pied-boutons"><button class="btn-lateral" id="chronoPiedDemarrer" title="Démarrer un chrono" aria-label="Démarrer un chrono">' + icone('play', 14) + '</button></div></div>';
+    pied.innerHTML = '<div class="chrono-pied"><span class="voyant"></span><div class="chrono-pied-textes"><div class="chrono-pied-titre">Timer stopped</div><div class="chrono-pied-sous">Ctrl+Shift+T to start</div></div>'
+      + '<div class="chrono-pied-boutons"><button class="btn-lateral" id="chronoPiedDemarrer" title="Start a timer" aria-label="Start a timer">' + icone('play', 14) + '</button></div></div>';
     pied.querySelector('#chronoPiedDemarrer').addEventListener('click', basculerChrono);
     return;
   }
   var pause = !!c.pauseDepuis;
   pied.innerHTML = '<div class="chrono-pied"><span class="voyant ' + (pause ? 'pause' : 'actif') + '"></span><div class="chrono-pied-textes">'
-    + '<div class="chrono-pied-titre"><span data-chrono-temps>' + texteChrono(c) + '</span>' + (pause ? ' · en pause' : '') + '</div>'
+    + '<div class="chrono-pied-titre"><span data-chrono-temps>' + texteChrono(c) + '</span>' + (pause ? ' · paused' : '') + '</div>'
     + '<div class="chrono-pied-sous" title="' + echapper(libelleAxe(c.axe)) + ' · ' + echapper(libelleChrono(c)) + '">' + echapper(libelleChrono(c)) + '</div></div>'
-    + '<div class="chrono-pied-boutons"><button class="btn-lateral" id="chronoPiedPause" title="' + (pause ? 'Reprendre' : 'Pause') + '" aria-label="' + (pause ? 'Reprendre' : 'Pause') + '">' + icone(pause ? 'play' : 'pause', 14) + '</button>'
-    + '<button class="btn-lateral" id="chronoPiedArreter" title="Arrêter et enregistrer" aria-label="Arrêter et enregistrer">' + icone('stop', 14) + '</button></div></div>';
+    + '<div class="chrono-pied-boutons"><button class="btn-lateral" id="chronoPiedPause" title="' + (pause ? 'Resume' : 'Pause') + '" aria-label="' + (pause ? 'Resume' : 'Pause') + '">' + icone(pause ? 'play' : 'pause', 14) + '</button>'
+    + '<button class="btn-lateral" id="chronoPiedArreter" title="Stop and save" aria-label="Stop and save">' + icone('stop', 14) + '</button></div></div>';
   pied.querySelector('#chronoPiedPause').addEventListener('click', basculerPauseChrono);
   pied.querySelector('#chronoPiedArreter').addEventListener('click', function () { arreterChrono(); });
   lancerTicChrono();
@@ -423,7 +423,7 @@ function lancerTicChrono() {
     if (!c) { clearInterval(CHRONO_TIMER); CHRONO_TIMER = null; document.title = 'Sablier'; return; }
     var txt = texteChrono(c);
     document.querySelectorAll('[data-chrono-temps]').forEach(function (el) { el.textContent = txt; });
-    document.title = txt + (c.pauseDepuis ? ' (pause)' : '') + ' · Sablier';
+    document.title = txt + (c.pauseDepuis ? ' (paused)' : '') + ' · Sablier';
   };
   tic();
   CHRONO_TIMER = setInterval(tic, 1000);
