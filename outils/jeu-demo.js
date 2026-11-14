@@ -13,9 +13,13 @@ fs.mkdirSync(dossier, { recursive: true });
 
 const reglages = {
   tarifHoraire: 42.86, arrondi: 0.25, heuresJournee: 7, repereAnnuel: 192, delaiPaiement: 30,
-  mentionTVA: 'VAT not applicable, article 293 B of the French Tax Code (CGI)',
   contrat: { debut: '2026-07-01', fin: '2027-06-30' },
-  cotisations: { tauxAcre: 19.4, finAcre: '2027-09-30', tauxPlein: 25.8 },
+  prestataire: {
+    nom: 'Ana García López', nif: '12345678Z', adresse: 'Calle Mayor 1, 3º B, 28013 Madrid', email: 'ana@example.org', telephone: '612345678',
+    titulaireCompte: 'Ana García López', banque: 'Banco de Pruebas', iban: 'ES9121000418450200051332', bic: 'CAIXESBBXXX',
+  },
+  client: { societe: 'Cliente de Pruebas SL', contact: 'Luis Pérez', adresse: 'Avenida de la Prueba 5, 08001 Barcelona', nif: 'B12345678', email: '' },
+  impots: { tauxTva: 21, tauxIrpf: 15, cotisationMensuelle: 80, debutActivite: '2026-07-01' },
   ui: { dernierAxe: 'projeta', moisMeta: { '2026-08': { frais: 18.4, joindreTravaux: true } } },
 };
 

@@ -10,9 +10,8 @@ function test(nom, fn) { fn(); n++; console.log('  ✓ ' + nom); }
 
 const reglages = {
   tarifHoraire: 42.86, arrondi: 0.25, heuresJournee: 7, repereAnnuel: 192, delaiPaiement: 30,
-  mentionTVA: 'VAT not applicable, article 293 B of the French Tax Code (CGI)',
   contrat: { debut: '2026-10-01', fin: '2027-09-30' },
-  cotisations: { tauxAcre: 19.4, finAcre: '2027-09-30', tauxPlein: 25.8 },
+  impots: { tauxTva: 21, tauxIrpf: 15, cotisationMensuelle: 0, debutActivite: '2026-10-01' },
 };
 
 console.log('Durations and formats');
@@ -45,7 +44,8 @@ test('dates: months, quarters', () => {
   assert.deepStrictEqual(u.listeMois('2026-10', '2027-01'), ['2026-10', '2026-11', '2026-12', '2027-01']);
   const t = u.trimestreDe('2026-11-15');
   assert.strictEqual(t.libelle, 'Q4 2026');
-  assert.strictEqual(t.echeance, '2027-01-31');
+  assert.strictEqual(t.debut, '2026-10-01');
+  assert.strictEqual(t.fin, '2026-12-31');
   assert.strictEqual(u.libelleDate('2026-10-01', 'long'), 'Thursday 1 October 2026');
   assert.strictEqual(u.libelleDate('2026-10-01', 'moyen'), '1 Oct 2026');
   assert.strictEqual(u.libelleDate('2026-10-01', 'jour'), 'Thu 1 Oct');
@@ -136,37 +136,68 @@ test('building a frozen invoice', () => {
   assert.strictEqual(f.numero, '2026-01');
   assert.strictEqual(f.dateEcheance, '2026-11-30');
   assert.strictEqual(f.lignes.length, 3);
-  assert.strictEqual(f.total, r.total);
+  assert.strictEqual(f.baseImposable, r.total);
   assert.strictEqual(f.statut, 'emise');
   assert.strictEqual(c.statutFacture(f, '2026-11-15'), 'emise');
   assert.strictEqual(c.statutFacture(f, '2026-12-01'), 'retard');
 });
-test('ACRE contribution rate, then full rate', () => {
-  assert.strictEqual(c.tauxCotisation('2027-06-01', reglages), 19.4);
-  assert.strictEqual(c.tauxCotisation('2027-09-30', reglages), 19.4);
-  assert.strictEqual(c.tauxCotisation('2027-10-01', reglages), 25.8);
+test('the invoice adds 21% VAT and withholds 15% IRPF, frozen at issue', () => {
+  const rel = c.releveDuMois([{ id: 'a', date: '2026-10-05', axe: 'x', intervention: 'Mil', minutes: 60 }], '2026-10', Object.assign({}, reglages, { tarifHoraire: 1000 }), 0);
+  const r2 = Object.assign({}, reglages, { impots: Object.assign({}, reglages.impots) });
+  const f = c.construireFacture(rel, r2, { numero: '2026-01', dateEmission: '2026-10-31' });
+  assert.strictEqual(f.baseImposable, 1000);
+  assert.strictEqual(f.montantTva, 210);
+  assert.strictEqual(f.montantIrpf, 150);
+  assert.strictEqual(f.total, 1060);
+  r2.impots.tauxIrpf = 7;
+  assert.strictEqual(f.tauxIrpf, 15);
+  assert.strictEqual(c.construireFacture(rel, r2, { numero: '2026-02', dateEmission: '2026-10-31' }).total, 1140);
+  assert.deepStrictEqual(c.tauxImpots({}), { tva: 21, irpf: 15 });
+  assert.deepStrictEqual(c.tauxImpots({ impots: { tauxTva: 0, tauxIrpf: 7 } }), { tva: 0, irpf: 7 });
 });
-test('income per calendar quarter', () => {
+test('models 303 and 130 are due on the 20th after the quarter, the fourth on 30 January', () => {
+  assert.strictEqual(c.echeanceTrimestre(u.trimestreDe('2027-02-10')), '2027-04-20');
+  assert.strictEqual(c.echeanceTrimestre(u.trimestreDe('2027-05-02')), '2027-07-20');
+  assert.strictEqual(c.echeanceTrimestre(u.trimestreDe('2027-09-30')), '2027-10-20');
+  assert.strictEqual(c.echeanceTrimestre(u.trimestreDe('2026-11-15')), '2027-01-30');
+});
+test('quarters count invoices on their issue date, paid or not', () => {
   const factures = [
-    { numero: '2026-01', total: 300, statut: 'payee', datePaiement: '2026-11-20' },
-    { numero: '2026-02', total: 450, statut: 'payee', datePaiement: '2026-12-28' },
-    { numero: '2026-03', total: 500, statut: 'emise', datePaiement: null },
-    { numero: '2027-05', total: 1000, statut: 'payee', datePaiement: '2027-10-15' },
+    { numero: '2026-01', dateEmission: '2026-11-30', baseImposable: 1000, montantTva: 210, montantIrpf: 150, total: 1060, statut: 'payee', datePaiement: '2027-01-05' },
+    { numero: '2026-02', dateEmission: '2026-12-31', baseImposable: 500, montantTva: 105, montantIrpf: 75, total: 530, statut: 'emise' },
   ];
-  const t = c.recettesParTrimestre(factures, reglages, '2027-01-10');
+  const t = c.trimestresFiscaux(factures, reglages, '2027-01-10');
   const t4 = t.filter(x => x.cle === '2026-T4')[0];
-  assert.strictEqual(t4.encaisse, 750);
-  assert.strictEqual(t4.cotisations, u.arrondir2(750 * 0.194));
-  /* First declaration: October 2026 to March 2027, debited on 30/04/2027. */
-  assert.strictEqual(t4.aDeclarer, false);
-  assert.strictEqual(t4.echeance, '2027-04-30');
-  assert.strictEqual(t4.premiere, true);
-  const avril = c.recettesParTrimestre(factures, reglages, '2027-04-10');
-  assert.ok(avril.filter(x => x.cle === '2026-T4' || x.cle === '2027-T1').every(x => x.aDeclarer && x.echeance === '2027-04-30'));
+  assert.strictEqual(t4.base, 1500);
+  assert.strictEqual(t4.tva, 315);
+  assert.strictEqual(t4.irpf, 225);
+  assert.strictEqual(t4.echeance, '2027-01-30');
+  assert.strictEqual(t4.aDeclarer, true);
+  /* Every invoice has IRPF withheld: model 130 is not due. */
+  assert.strictEqual(t4.partRetenue, 100);
+  assert.strictEqual(t4.obligation130, false);
+  assert.strictEqual(t4.aMettreDeCote, 315);
   const t1 = t.filter(x => x.cle === '2027-T1')[0];
   assert.strictEqual(t1.enCours, true);
-  const t4b = t.filter(x => x.cle === '2027-T4')[0];
-  assert.strictEqual(t4b.cotisations, 258);
+  assert.strictEqual(t1.base, 0);
+  assert.strictEqual(t1.partRetenue, null, 'a new year restarts the totals');
+});
+test('model 130 without withholding: 20% of the net income of the year so far, minus what was already paid', () => {
+  const r2 = Object.assign({}, reglages, { impots: { tauxTva: 21, tauxIrpf: 0, cotisationMensuelle: 80, debutActivite: '2026-11-15' } });
+  const factures = [
+    { numero: '2026-01', dateEmission: '2026-12-31', baseImposable: 3000, montantTva: 630, montantIrpf: 0 },
+    { numero: '2027-01', dateEmission: '2027-03-31', baseImposable: 2000, montantTva: 420, montantIrpf: 0 },
+    { numero: '2027-02', dateEmission: '2027-06-30', baseImposable: 1000, montantTva: 210, montantIrpf: 0 },
+  ];
+  const t = c.trimestresFiscaux(factures, r2, '2027-07-01');
+  const par = cle => t.filter(x => x.cle === cle)[0];
+  /* Fees from November only: 2 x 80. */
+  assert.strictEqual(par('2026-T4').cotisations, 160);
+  assert.strictEqual(par('2026-T4').obligation130, true);
+  assert.strictEqual(par('2026-T4').paiement130, u.arrondir2((3000 - 160) * 0.2));
+  assert.strictEqual(par('2027-T1').paiement130, u.arrondir2((2000 - 240) * 0.2));
+  assert.strictEqual(par('2027-T2').paiement130, u.arrondir2((3000 - 480) * 0.2 - (2000 - 240) * 0.2));
+  assert.strictEqual(par('2027-T2').aMettreDeCote, u.arrondir2(210 + par('2027-T2').paiement130));
 });
 
 console.log('Non-billable, flat fee, multiple invoices');
@@ -207,7 +238,7 @@ test('a flat fee replaces hours × rate and computes the discount', () => {
   const f = c.construireFacture(r, reglages, { dateEmission: '2026-10-31', factures: [] });
   assert.deepStrictEqual(f.entreesIds, ['p1', 'o1']);
   assert.strictEqual(f.lignes[0].forfait, 600);
-  assert.strictEqual(f.total, 642.86);
+  assert.strictEqual(f.baseImposable, 642.86);
 });
 test('several invoices per month: entries already invoiced are excluded', () => {
   const lignes = [
@@ -264,13 +295,15 @@ test('sort: priority, then nearest due date, then order', () => {
 
 console.log('Document formats');
 test('IBAN, phone number and address formatting', () => {
-  assert.strictEqual(u.formaterIban('FR7630006000011234567890189'), 'FR76 3000 6000 0112 3456 7890 189');
-  assert.strictEqual(u.formaterIban(' fr76 3000 6000 0112 3456 7890 189 '), 'FR76 3000 6000 0112 3456 7890 189');
-  assert.strictEqual(u.formaterTelephone('06 12 34 5678'), '06 12 34 56 78');
-  assert.strictEqual(u.formaterTelephone('0612345678'), '06 12 34 56 78');
-  assert.strictEqual(u.formaterTelephone('+33 6 12 34 56 78'), '+33 6 12 34 56 78');
-  assert.deepStrictEqual(u.adresseLignes('12 rue des Essais, 75000 Paris'), ['12 rue des Essais', '75000 Paris']);
-  assert.deepStrictEqual(u.adresseLignes('1 avenue des Tests 75000 Paris'), ['1 avenue des Tests', '75000 Paris']);
+  assert.strictEqual(u.formaterIban('ES9121000418450200051332'), 'ES91 2100 0418 4502 0005 1332');
+  assert.strictEqual(u.formaterIban(' es91 2100 0418 4502 0005 1332 '), 'ES91 2100 0418 4502 0005 1332');
+  assert.strictEqual(u.formaterTelephone('612 34 56 78'), '612 345 678');
+  assert.strictEqual(u.formaterTelephone('612345678'), '612 345 678');
+  assert.strictEqual(u.formaterTelephone('+34612345678'), '+34 612 345 678');
+  assert.strictEqual(u.formaterTelephone('0034 612 345 678'), '+34 612 345 678');
+  assert.strictEqual(u.formaterTelephone('+44 20 7946 0958'), '+44 20 7946 0958');
+  assert.deepStrictEqual(u.adresseLignes('Calle Mayor 1, 3º B, 28013 Madrid'), ['Calle Mayor 1, 3º B', '28013 Madrid']);
+  assert.deepStrictEqual(u.adresseLignes('Avenida de la Prueba 5 08001 Barcelona'), ['Avenida de la Prueba 5', '08001 Barcelona']);
   assert.deepStrictEqual(u.adresseLignes(''), []);
   assert.strictEqual(u.libelleJours(0), 'Today');
   assert.strictEqual(u.libelleJours(1), 'Tomorrow');
@@ -419,10 +452,10 @@ test('payment term frozen on the invoice, 30 days by default', () => {
   assert.strictEqual(f0.delaiPaiement, 0);
   assert.strictEqual(f0.dateEcheance, '2026-10-31');
 });
-test('quarters: those with no payment are listed too', () => {
-  const t = c.recettesParTrimestre([{ statut: 'payee', datePaiement: '2026-11-20', total: 100 }, { statut: 'payee', datePaiement: '2027-04-15', total: 100 }], reglages, '2027-04-20');
+test('quarters: those with no invoice are listed too', () => {
+  const t = c.trimestresFiscaux([{ dateEmission: '2026-11-20', baseImposable: 100 }, { dateEmission: '2027-04-15', baseImposable: 100 }], reglages, '2027-04-20');
   assert.deepStrictEqual(t.map(x => x.cle), ['2026-T4', '2027-T1', '2027-T2', '2027-T3']);
-  assert.ok(t[1].aDeclarer && t[1].encaisse === 0);
+  assert.ok(t[1].aDeclarer && t[1].base === 0);
 });
 test('reminders and grouping: null entries ignored', () => {
   const r = c.calculerRappels({ entrees: [null, { id: 'x', date: '', minutes: 5 }], taches: [null, { id: 't', statut: 'a-faire', echeance: 'abc', titre: 'x' }], echeances: [null, { id: 'e', date: '2026-09-03', titre: 'e' }], factures: [null, { id: 'f', statut: 'emise', dateEcheance: '', total: 10 }], chrono: { debut: 'abc' } }, { contrat: {}, rappels: {} }, { ref: '2026-09-02' });
@@ -578,7 +611,7 @@ test('invoice lines are grouped by area and label, without a date', () => {
   assert.deepStrictEqual(c.regrouperLignesFacture(null), []);
 });
 
-console.log('Appendix amounts and URSSAF cash flow');
+console.log('Appendix amounts and cash flow');
 test('the sum of the amounts shown in the appendix equals the invoice total excl. tax', () => {
   /* The case of invoice 2026-01: 18 work items, 35.75 h. Rounded one by
      one, the half-cent lines gave €1,532.33 instead of €1,532.25. */
@@ -602,21 +635,16 @@ test('details join without double punctuation', () => {
   assert.ok(!/\.,/.test(c.joindreDetails(['a.', 'b.', 'c'])));
   assert.strictEqual(c.joindreDetails([]), '');
 });
-test('cash flow of an invoice: URSSAF provision, net, BNC allowance', () => {
-  const t = c.tresorerieFacture({ numero: '2026-01', total: 1532.25, statut: 'emise', dateEmission: '2026-10-25', dateEcheance: '2026-11-24' }, reglages);
+test('cash flow of an invoice: VAT to set aside until the model 303 of its quarter', () => {
+  const f = c.construireFacture(c.releveDuMois([{ id: 'a', date: '2026-10-05', axe: 'x', intervention: 'Essai', minutes: 2145 }], '2026-10', reglages, 0), reglages, { numero: '2026-01', dateEmission: '2026-10-25' });
+  const t = c.tresorerieFacture(f);
   assert.strictEqual(t.encaissee, false);
-  assert.strictEqual(t.taux, 19.4);
-  assert.strictEqual(t.cotisations, 297.26);
-  assert.strictEqual(t.net, 1234.99);
-  assert.strictEqual(t.imposable, 1011.29);
-  assert.strictEqual(u.arrondir2(t.abattement + t.imposable), 1532.25);
-  assert.strictEqual(t.prelevement, '2027-04-30');
-  const payee = c.tresorerieFacture({ numero: '2027-09', total: 1000, statut: 'payee', datePaiement: '2027-10-15' }, reglages);
-  assert.strictEqual(payee.cotisations, 258);
-  assert.strictEqual(payee.prelevement, '2028-01-31');
-  assert.strictEqual(c.periodeUrssaf('2027-02-10', reglages).echeance, '2027-04-30');
-  assert.strictEqual(c.periodeUrssaf('2027-05-02', reglages).echeance, '2027-07-31');
-  assert.strictEqual(c.periodeUrssaf('2027-05-02', reglages).premiere, false);
+  assert.strictEqual(t.base, 1532.25);
+  assert.strictEqual(t.tva, 321.77);
+  assert.strictEqual(t.irpf, 229.84);
+  assert.strictEqual(t.total, u.arrondir2(1532.25 + 321.77 - 229.84));
+  assert.strictEqual(t.echeance, '2027-01-30');
+  assert.strictEqual(t.trimestre, 'Q4 2026');
 });
 
 console.log('Frozen invoice and moved work');

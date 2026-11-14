@@ -1,14 +1,14 @@
 /* ============================================================
    CALCULATION ENGINE: durations, grouping by work item, rounding
-   of billed time, monthly statement, invoices, URSSAF quarters.
+   of billed time, monthly statement, invoices, Spanish quarterly taxes.
 
-   Rules (contract of 01/10/2026, article 6.1):
-   - time is counted by the hour, rounded up to the next quarter hour;
-   - a "work item" = same day + same area + same label;
-     its entries are added up BEFORE rounding, as in the original
-     Excel workbook;
-   - amount = billed hours x hourly rate;
-   - no VAT (VAT exemption).
+   Rules:
+   - a "work item" = same day + same area + same label; its entries add
+     up and it counts for its exact time;
+   - only the total of a statement or an invoice is rounded up, once, to
+     the step chosen in Settings (the next quarter hour by default);
+   - amount = billed hours x hourly rate, excluding VAT;
+   - the invoice adds VAT and subtracts the IRPF withheld by the client.
 
    No DOM; tested by tests/test-calculs.js.
    ============================================================ */
@@ -71,7 +71,7 @@ function cleIntervention(e) {
 
 /* An entry is billable unless stated otherwise (facturable: false, with
    a reason: training, goodwill gesture...). A flat fee is a fixed amount
-   excl. tax that replaces hours × rate for the work item. */
+   excl. VAT that replaces hours × rate for the work item. */
 function estFacturable(e) { return !(e && e.facturable === false); }
 
 /* The details of a work item end to end: a comma between two sentence
@@ -160,9 +160,9 @@ function regrouperInterventions(entrees, reglages) {
 }
 
 /* Minutes to add to round the TOTAL of the time billed by the hour up to
-   the next quarter hour (article 6.1 of the contract). Contractor's rule
-   of 26/10/2026: rounding each work item charged nearly two hours too
-   many per month. Flat fees stay out of the rounded total. */
+   the rounding step (Settings). Rounding each work item instead would
+   charge the client nearly two hours too many per month. Flat fees stay
+   out of the rounded total. */
 function arrondiDuTotal(groupes, reglages) {
   var pas = reglages && reglages.arrondi != null ? reglages.arrondi : 0.25;
   var exact = (groupes || []).reduce(function (s, g) { return s + (g.forfait == null ? g.minutesFacturables : 0); }, 0);
@@ -368,13 +368,28 @@ function numeroFactureSuivant(factures, annee) {
   return annee + '-' + deuxChiffres(max + 1);
 }
 
+/* The tax rates of the invoices, in percent: VAT added to the taxable
+   base, IRPF withheld by the client (a Spanish company withholds 15%, or
+   7% in the contractor's first three years). */
+function tauxImpots(reglages) {
+  var i = (reglages && reglages.impots) || {};
+  return { tva: nombreOu(i.tauxTva, 21), irpf: nombreOu(i.tauxIrpf, 15) };
+}
+
 /* Builds the invoice object from a statement: the lines, the two
-   parties and the moves announced by the statement are frozen. */
+   parties, the tax rates and the moves announced by the statement are
+   frozen. The taxable base is the statement total (travel expenses
+   included); the total is what the client transfers: base plus VAT
+   minus the IRPF withheld. */
 function construireFacture(releve, reglages, options) {
   var o = options || {};
   var dateEmission = o.dateEmission || aujourdhui();
   var delai = nombreOu(reglages && reglages.delaiPaiement, 30);
   var annee = Number(dateEmission.slice(0, 4));
+  var taux = tauxImpots(reglages);
+  var base = arrondir2(releve.total);
+  var tva = arrondir2(base * taux.tva / 100);
+  var irpf = arrondir2(base * taux.irpf / 100);
   return {
     id: o.id || uid('fac'),
     numero: o.numero || numeroFactureSuivant(o.factures || [], annee),
@@ -392,8 +407,12 @@ function construireFacture(releve, reglages, options) {
     remise: releve.remise,
     montantHT: releve.montantHT,
     frais: releve.frais,
-    total: releve.total,
-    mentionTVA: (reglages && reglages.mentionTVA) || '',
+    baseImposable: base,
+    tauxTva: taux.tva,
+    montantTva: tva,
+    tauxIrpf: taux.irpf,
+    montantIrpf: irpf,
+    total: arrondir2(base + tva - irpf),
     prestataire: Object.assign({}, reglages && reglages.prestataire),
     client: Object.assign({}, reglages && reglages.client),
     reportsEnvoyes: (releve.reportsEnvoyes || []).map(function (g) { return { mois: g.mois, totaux: { minutes: g.totaux.minutes } }; }),
@@ -453,99 +472,94 @@ function regrouperLignesFacture(lignes) {
   });
 }
 
-/* Social contribution rate that applies on a payment date. */
-function tauxCotisation(iso, reglages) {
-  var c = (reglages && reglages.cotisations) || {};
-  var finAcre = c.finAcre || '';
-  var acre = Number(c.tauxAcre);
-  var plein = Number(c.tauxPlein);
-  if (isNaN(plein)) plein = 25.8;
-  if (isNaN(acre)) acre = plein;
-  if (finAcre && iso && iso <= finAcre) return acre;
-  return plein;
+/* ---------- Spanish quarterly taxes ----------
+   VAT (model 303) and the IRPF instalment (model 130) accrue on the
+   invoice's issue date, not on its payment. Both are filed from the 1st
+   to the 20th of the month after the quarter; the fourth quarter until
+   30 January. */
+
+/* Model 130: 20% of the net income of the year so far, minus the IRPF
+   already withheld and the instalments already paid that year. It is not
+   due when at least 70% of the income has had IRPF withheld. */
+var TAUX_PAIEMENT_130 = 20;
+var PART_RETENUE_SANS_130 = 70;
+
+function echeanceTrimestre(t) {
+  return t.fin.slice(5, 7) === '12' ? (Number(t.fin.slice(0, 4)) + 1) + '-01-30' : ajouterJours(t.fin, 20);
 }
 
-/* Flat-rate allowance of the micro-BNC regime on revenue. */
-var ABATTEMENT_BNC = 34;
+/* Taxable base of an invoice, excluding VAT. */
+function baseFacture(f) { return Number(f && f.baseImposable) || 0; }
 
-/* Declared period and URSSAF direct debit date of a payment. The first
-   declaration covers the quarter in which activity starts and the next
-   one (start on 01/10/2026: October to March, debited on 30/04/2027);
-   after that, a calendar quarter debited at the end of the following
-   month. */
-function periodeUrssaf(iso, reglages) {
-  var t = trimestreDe(iso);
-  var c = (reglages && reglages.cotisations) || {};
-  var debut = c.debutActivite || (reglages && reglages.contrat && reglages.contrat.debut) || '';
-  if (dateValide(debut)) {
-    var suivant = trimestreDe(ajouterJours(trimestreDe(debut).fin, 1));
-    if (t.fin <= suivant.fin) return { fin: suivant.fin, echeance: suivant.echeance, premiere: true };
-  }
-  return { fin: t.fin, echeance: t.echeance, premiere: false };
+/* The autónomo fee paid in the months of a quarter that follow the
+   activity start (a monthly direct debit, deductible for model 130). */
+function cotisationsTrimestre(t, reglages) {
+  var i = (reglages && reglages.impots) || {};
+  var mensuelle = nombreOu(i.cotisationMensuelle, 0);
+  var debut = dateValide(i.debutActivite) ? moisDe(i.debutActivite) : '';
+  return arrondir2(listeMois(moisDe(t.debut), moisDe(t.fin)).filter(function (m) { return m >= debut; }).length * mensuelle);
 }
 
-/* What an invoice leaves: URSSAF provision at the rate of the payment
-   day (the due date while it is unpaid), net available, BNC allowance and
-   estimated taxable income. */
-function tresorerieFacture(f, reglages) {
-  var encaissee = f.statut === 'payee' && !!f.datePaiement;
-  var date = encaissee ? f.datePaiement : (f.dateEcheance || f.dateEmission);
-  var ca = arrondir2(Number(f.total) || 0);
-  var taux = tauxCotisation(date, reglages);
-  var cotisations = arrondir2(ca * taux / 100);
-  var imposable = arrondir2(ca * (100 - ABATTEMENT_BNC) / 100);
+/* What one invoice leaves: VAT to set aside until the model 303 of its
+   quarter, IRPF already withheld by the client, amount transferred. */
+function tresorerieFacture(f) {
+  var t = trimestreDe(f.dateEmission);
   return {
-    numero: f.numero, encaissee: encaissee, date: date, trimestre: trimestreDe(date).libelle,
-    ca: ca, taux: taux, cotisations: cotisations, net: arrondir2(ca - cotisations),
-    abattement: arrondir2(ca - imposable), imposable: imposable,
-    prelevement: periodeUrssaf(date, reglages).echeance,
+    numero: f.numero, encaissee: f.statut === 'payee' && !!f.datePaiement, trimestre: t.libelle,
+    base: baseFacture(f), tva: Number(f.montantTva) || 0, irpf: Number(f.montantIrpf) || 0, total: Number(f.total) || 0,
+    echeance: echeanceTrimestre(t),
   };
 }
 
-/* Income collected per calendar quarter, with an estimate of the
-   contributions and the declaration deadline. The current quarter and
-   the contract's upcoming quarters are listed even with no payment. The
-   amounts are the sum of those of the invoices, so that the two tables
-   on screen agree. */
-function recettesParTrimestre(factures, reglages, dateRef) {
+/* The quarters with their VAT, IRPF withheld, autónomo fees and model 130
+   estimate. The contract's quarters and the current one are listed even
+   with no invoice: a nil model 303 is still due. */
+function trimestresFiscaux(factures, reglages, dateRef) {
   var ref = dateRef || aujourdhui();
   var cles = {};
   var liste = [];
   function obtenir(iso) {
     var t = trimestreDe(iso);
     if (!cles[t.cle]) {
-      var p = periodeUrssaf(iso, reglages);
-      cles[t.cle] = { cle: t.cle, libelle: t.libelle, debut: t.debut, fin: t.fin, echeance: p.echeance, finDeclaration: p.fin, premiere: p.premiere, encaisse: 0, cotisations: 0, imposable: 0, factures: [] };
+      cles[t.cle] = { cle: t.cle, libelle: t.libelle, debut: t.debut, fin: t.fin, echeance: echeanceTrimestre(t), base: 0, baseRetenue: 0, tva: 0, irpf: 0, factures: [] };
       liste.push(cles[t.cle]);
     }
     return cles[t.cle];
   }
   (factures || []).forEach(function (f) {
-    if (!f || f.statut !== 'payee' || !f.datePaiement) return;
-    var t = obtenir(f.datePaiement);
-    var x = tresorerieFacture(f, reglages);
-    t.encaisse += x.ca;
-    t.cotisations += x.cotisations;
-    t.imposable += x.imposable;
+    if (!f || !dateValide(f.dateEmission)) return;
+    var t = obtenir(f.dateEmission);
+    var x = tresorerieFacture(f);
+    t.base += x.base;
+    if (x.irpf > 0) t.baseRetenue += x.base;
+    t.tva += x.tva;
+    t.irpf += x.irpf;
     t.factures.push(f.numero);
   });
-  /* All the contract's quarters up to today (and up to its end), even
-     with no payment: a nil declaration is still due. */
   var c = (reglages && reglages.contrat) || {};
   var de = c.debut && dateValide(c.debut) && c.debut < ref ? moisDe(c.debut) : moisDe(ref);
   var a = c.fin && dateValide(c.fin) && c.fin > ref ? moisDe(c.fin) : moisDe(ref);
   listeMois(de, a).forEach(function (m) { obtenir(m + '-01'); });
   obtenir(ref);
+  liste.sort(function (x, y) { return x.debut < y.debut ? -1 : 1; });
+  /* Model 130 runs on the year so far: the totals restart each January. */
+  var annee = '', cumul = null;
   liste.forEach(function (t) {
-    t.encaisse = arrondir2(t.encaisse);
-    t.cotisations = arrondir2(t.cotisations);
-    t.imposable = arrondir2(t.imposable);
-    t.net = arrondir2(t.encaisse - t.cotisations);
-    t.taux = tauxCotisation(t.fin, reglages);
+    if (t.debut.slice(0, 4) !== annee) { annee = t.debut.slice(0, 4); cumul = { base: 0, baseRetenue: 0, cotisations: 0, irpf: 0, paiements: 0 }; }
+    t.base = arrondir2(t.base);
+    t.tva = arrondir2(t.tva);
+    t.irpf = arrondir2(t.irpf);
+    t.cotisations = cotisationsTrimestre(t, reglages);
+    cumul.base += t.base; cumul.baseRetenue += t.baseRetenue; cumul.cotisations += t.cotisations; cumul.irpf += t.irpf;
+    t.partRetenue = cumul.base > 0 ? arrondir2(cumul.baseRetenue / cumul.base * 100) : null;
+    t.obligation130 = t.partRetenue != null && t.partRetenue < PART_RETENUE_SANS_130;
+    t.paiement130 = t.obligation130 ? arrondir2(Math.max(0, (cumul.base - cumul.cotisations) * TAUX_PAIEMENT_130 / 100 - cumul.irpf - cumul.paiements)) : 0;
+    cumul.paiements += t.paiement130;
+    delete t.baseRetenue;
+    t.aMettreDeCote = arrondir2(t.tva + t.paiement130);
     t.enCours = ref >= t.debut && ref <= t.fin;
-    t.aDeclarer = ref > t.finDeclaration && ref <= t.echeance;
+    t.aDeclarer = ref > t.fin && ref <= t.echeance;
   });
-  liste.sort(function (a, b) { return a.debut < b.debut ? -1 : 1; });
   return liste;
 }
 
@@ -729,7 +743,7 @@ function calculerRappels(donnees, reglages, options) {
     var fraisRestants = Math.max(0, arrondir2(fraisMois - fraisFactures));
     var rel = releveDuMois(entrees, m, reglages, fraisRestants, { exclureIds: idsFactures(factures, m, entrees) });
     if (rel.total <= 0) return;
-    var detail = fmtHeuresDec(rel.totalMinutesFacturables) + ' billable, ' + fmtEuros(rel.montantHT) + ' excl. tax'
+    var detail = fmtHeuresDec(rel.totalMinutesFacturables) + ' billable, ' + fmtEuros(rel.montantHT) + ' excl. VAT'
       + (rel.frais ? ' and ' + fmtEuros(rel.frais) + ' in expenses' : '');
     ajouter({ cle: 'facturer:' + m, categorie: 'facture', niveau: 'urgent', titre: deLibelleMois(m) + ' statement ready to invoice', detail: detail, date: null, jours: null, page: 'releve', cibleId: m });
   });
@@ -799,9 +813,9 @@ if (typeof module !== 'undefined' && module.exports) {
     regrouperInterventions: regrouperInterventions, entreesDuMois: entreesDuMois, entreesPeriode: entreesPeriode,
     totauxEntrees: totauxEntrees, releveDuMois: releveDuMois, repartitionParAxe: repartitionParAxe,
     heuresParMois: heuresParMois, avancementContrat: avancementContrat, interventionsRecentes: interventionsRecentes,
-    numeroFactureSuivant: numeroFactureSuivant, construireFacture: construireFacture, regrouperLignesFacture: regrouperLignesFacture, tauxCotisation: tauxCotisation,
-    recettesParTrimestre: recettesParTrimestre, statutFacture: statutFacture,
-    joindreDetails: joindreDetails, montantsAuCentime: montantsAuCentime, periodeUrssaf: periodeUrssaf, tresorerieFacture: tresorerieFacture, ABATTEMENT_BNC: ABATTEMENT_BNC,
+    numeroFactureSuivant: numeroFactureSuivant, construireFacture: construireFacture, regrouperLignesFacture: regrouperLignesFacture, tauxImpots: tauxImpots,
+    trimestresFiscaux: trimestresFiscaux, echeanceTrimestre: echeanceTrimestre, baseFacture: baseFacture, statutFacture: statutFacture,
+    joindreDetails: joindreDetails, montantsAuCentime: montantsAuCentime, tresorerieFacture: tresorerieFacture,
     NIVEAUX_PRIORITE: NIVEAUX_PRIORITE, LIBELLES_PRIORITE: LIBELLES_PRIORITE, normaliserPriorite: normaliserPriorite,
     prioriteAutomatique: prioriteAutomatique, prioriteEffective: prioriteEffective, comparerTaches: comparerTaches, trierTaches: trierTaches,
     NIVEAUX_RAPPEL: NIVEAUX_RAPPEL, calculerRappels: calculerRappels, minutesTache: minutesTache, deLibelleMois: deLibelleMois,

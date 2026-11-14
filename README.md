@@ -1,9 +1,10 @@
 # Sablier
 
-macOS and Windows app for tracking a freelance engagement: the time spent for a client,
-the monthly activity statement and the invoice that goes with it, tasks,
-notes, the administrative calendar of the micro-business and the reminders
-that come with it.
+macOS and Windows app for tracking a freelance engagement in Spain: the time
+spent for a client, the monthly activity statement and the invoice that goes
+with it (21% VAT, IRPF withheld by the client), tasks, notes, the tax
+calendar of an autónomo (models 303, 130, 390, income tax return) and the
+reminders that come with it.
 
 "Graphite" design (`design/design_system_macos27.md`) since 25 October 2026:
 cool neutrals, steel-blue accent, macOS glass, dark or light following the
@@ -95,27 +96,29 @@ SABLIER_VERIF=<copy of the Donnees folder> cargo test --manifest-path src-tauri/
 | Page | Role |
 |---|---|
 | Reminders (sidebar button, Ctrl+Shift+R) | Everything you must not miss: deadlines, dated tasks, months to invoice, invoices to collect, forgotten timer, neglected log; snooze until tomorrow or for a week, mark done |
-| Dashboard | Current reminders, billable hours and billable amount for the period, earned since the start (issued invoices, paid share), amount to set aside for URSSAF and date of the next direct debit (since 27 October 2026), hours per month, breakdown by area, upcoming tasks and deadlines |
-| Log and statement | The work of the billing month day by day (work items, billed time, amount, status); a day unfolds into its log entries (edit, duplicate, delete, resume with the timer); "Add an entry" (Ctrl+N); in an entry's form: linked task and billing month; moving work items to another month; creating the invoice, which automatically files the invoice and the PDF statement in the invoices folder (Settings), in the "YYYY-MM month" subfolder; once everything is invoiced, the buttons with nothing left to do disappear. Issued invoices, the income ledger and the URSSAF quarters have their own tab, "Invoices and income" (since 27 October 2026). Timer: sidebar and banner (no more quick entry since 27 October 2026) |
+| Dashboard | Current reminders, billable hours and billable amount for the period, earned since the start (issued invoices excl. VAT, amount transferred), amount to set aside for the next quarterly returns (VAT, model 130 when due) and their deadline, hours per month, breakdown by area, upcoming tasks and deadlines |
+| Log and statement | The work of the billing month day by day (work items, billed time, amount, status); a day unfolds into its log entries (edit, duplicate, delete, resume with the timer); "Add an entry" (Ctrl+N); in an entry's form: linked task and billing month; moving work items to another month; creating the invoice, which automatically files the invoice and the PDF statement in the invoices folder (Settings), in the "YYYY-MM month" subfolder; once everything is invoiced, the buttons with nothing left to do disappear. Issued invoices, what each one leaves (VAT, IRPF, amount transferred), the income ledger and the VAT and IRPF quarters have their own tab, "Invoices and income". Timer: sidebar and banner |
 | Tasks | To do / In progress / Done board, drag and drop, full sheet (steps, attachments, linked notes, progress log, time spent), timer from a card |
-| Notes | Pages and subpages, continuous editor in the style of Apple Notes (formatting bar, "/" menu, Markdown and keyboard shortcuts, paste always as plain text, undo and redo), ideas that can become tasks, search in the content, strip of linked tasks |
-| Deadlines | Administrative calendar (ACRE, CFE, URSSAF, watch-outs, annual accounts) and reminders, each with its own reminder lead time |
-| Settings | Rate, rounding, identities, bank details, areas, social contributions, reminders and notifications, backups |
+| Notes | Pages and subpages, continuous editor like a text document (formatting bar, "/" menu, Markdown and keyboard shortcuts, paste always as plain text, undo and redo), ideas that can become tasks, search in the content, strip of linked tasks |
+| Deadlines | Tax calendar of an autónomo (model 303 each quarter, model 390 and income tax return each year, the VeriFactu decision), the contract end and your own reminders, each with its own reminder lead time |
+| Settings | Rate, rounding, taxes (VAT, IRPF withholding, autónomo fee), identities with NIF, bank details, areas, reminders and notifications, backups |
 
 ## Calculation rules
 
 - A **work item** = same day + same area + same label. Its entries add up;
   it counts for its exact time.
 - The **billed time** is the exact total of the statement or the invoice,
-  rounded once up to the next quarter hour (article 6.1 of the contract),
-  adjustable in Settings. Since 26 October 2026 (the contractor's rule):
-  rounding per work item made the client pay nearly two hours too many per
+  rounded once up to the next quarter hour, adjustable in Settings: rounding
+  per work item would make the client pay nearly two hours too many per
   month. The rounding appears on its own line ("Total rounded up to the next
   quarter hour") in the statement and in the invoice annex; the invoice
   freezes it (`arrondiMinutes`). Flat fees stay outside the rounded total.
-- **Amount** = billed hours x hourly rate; no VAT (VAT exemption).
+- **Amount** = billed hours x hourly rate, excluding VAT. The invoice adds
+  VAT (21% by default) to that taxable base and subtracts the IRPF the
+  client withholds (15% by default, 7% in the first three years); the total
+  due is what the client transfers. The rates are frozen on the invoice.
 - An entry can be **non-billable** (the time is still counted, the amount is
-  €0, with a reason) or carry a **flat fee** (a fixed amount excl. tax that
+  €0, with a reason) or carry a **flat fee** (a fixed amount excl. VAT that
   replaces hours × rate; the value at the hourly rate and the discount stay
   visible on the statement and the invoice).
 - An **invoice** freezes the month's entries that are not invoiced yet: a
@@ -125,7 +128,7 @@ SABLIER_VERIF=<copy of the Donnees folder> cargo test --manifest-path src-tauri/
   number is accepted, and the date never precedes that of the previous
   invoice. The invoice also freezes the contractor and the client; the
   statement of an invoiced month stays the one from the time of issue, and
-  "Regenerate the PDFs" adds a copy (`Facture-2026-01 (2).pdf`) without
+  "Regenerate the PDFs" adds a copy (`Invoice-2026-01 (2).pdf`) without
   overwriting the existing PDFs. Only the last invoice can be deleted, and
   never once it is paid. An entry frozen on an invoice no longer changes its
   date, area, duration, billing month or billing status (only the label and
@@ -156,16 +159,19 @@ SABLIER_VERIF=<copy of the Donnees folder> cargo test --manifest-path src-tauri/
   pre-fill it. Hours that would give more than sixteen hours (end before
   start) are refused. A timer stopped during a pause ends at the start of
   the pause.
-- **PDF documents**: the header carries only the useful details (name
-  followed by "EI", address on two lines, SIRET, contact). The invoice
-  (redone on 26 October 2026): issuer on the left, number, issue date and
-  due date on the right, client offset, description, "Total due", VAT
-  exemption notice, then "Payment terms" (due date, early payment discount
-  none, late payment penalties and a fixed recovery fee of €40, always
-  printed because they are mandatory between businesses; account holder,
+- **PDF documents** (in English, which a Spanish invoice may be): each party
+  carries what a Spanish invoice requires, full name, NIF and address (on
+  two lines), plus the contractor's contact details. The invoice: issuer on
+  the left, number, issue date, service period and due date on the right,
+  client offset, description, taxable base, VAT, IRPF withholding, "Total
+  due", then "Payment terms" (due date, early payment discount none, late
+  payment interest and the €40 compensation of Law 3/2004; account holder,
   bank, IBAN in groups of four, BIC). Its annex groups the work items by
   area, with subtotals, without dates (the dated activity statement is
   attached separately).
+- **VeriFactu**: from 1 July 2027 (Royal Decree-law 15/2025), invoices
+  issued with software must comply with VeriFactu. Sablier does not; the
+  Deadlines page carries a reminder to decide before that date.
 - `outils/importer-git.js` rebuilds work sessions from the history of a git
   repository and adds them to the log (preview by default, `--appliquer` to
   write, `--coefficient 0.6` to weight). It refuses to write if an entry of
@@ -173,8 +179,14 @@ SABLIER_VERIF=<copy of the Donnees folder> cargo test --manifest-path src-tauri/
   (non-billable and its reason, flat fee, billing month) by attaching them
   to the work, not to the session number; those that no longer find their
   work are reported.
-- **Social contributions** are estimated on the revenue collected, at the
-  ACRE rate until its end date, then at the full rate.
+- **Quarterly taxes** (`trimestresFiscaux` in `js/calculs.js`) count each
+  invoice on its issue date, paid or not. Model 303 is the VAT of the
+  quarter's invoices (the VAT on your own expenses, deductible, is not
+  tracked). Model 130 is only due when less than 70% of the year's income
+  had IRPF withheld; Sablier then estimates it as 20% of the year's net
+  income so far (invoices minus autónomo fees) minus the IRPF withheld and
+  the instalments already paid. Both are due on the 20th of the month after
+  the quarter, the fourth quarter on 30 January.
 - A past month of the contract is claimed by the **reminders** as soon as
   anything is left to invoice, travel expenses included.
 - **Tasks** sort themselves within each column: high priority, then medium,

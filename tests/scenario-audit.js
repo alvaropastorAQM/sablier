@@ -257,14 +257,16 @@ res.pageInconnue = PAGE_COURANTE === 'tableau';
 afficherPage('chantiers');
 res.aliasChantiers = PAGE_COURANTE === 'taches';
 
-/* --- 14 bis. Dashboard: earned and to set aside for URSSAF, like the invoices page --- */
+/* --- 14 bis. Dashboard: earned and to set aside for taxes, like the invoices page --- */
 afficherPage('tableau');
 var libsTuiles = Array.prototype.map.call(document.querySelectorAll('#tableauContenu .dash-tuile .dash-lib'), function (x) { return x.textContent; });
-res.tuilesTableau = libsTuiles.indexOf('Earned since the start') >= 0 && libsTuiles.indexOf('To set aside for URSSAF') >= 0 && libsTuiles.indexOf('Hours spent') < 0 && libsTuiles.indexOf('Contract progress') < 0;
-var tresoAVenir = factures().map(function (f) { return tresorerieFacture(f, ETAT.reglages); }).filter(function (x) { return x.prelevement >= aujourdhui(); });
-var premierPrelevement = tresoAVenir.map(function (x) { return x.prelevement; }).sort()[0];
-var cav = cotisationsAVenir(aujourdhui());
-res.urssafCommeLesFactures = premierPrelevement ? cav[0].date === premierPrelevement && Math.abs(cav[0].montant - tresoAVenir.filter(function (x) { return x.prelevement === premierPrelevement; }).reduce(function (s, x) { return s + x.cotisations; }, 0)) < 0.005 : cav.length === 0;
+res.tuilesTableau = libsTuiles.indexOf('Earned since the start') >= 0 && libsTuiles.indexOf('To set aside for taxes') >= 0 && libsTuiles.indexOf('Hours spent') < 0 && libsTuiles.indexOf('Contract progress') < 0;
+var declaresAudit = ETAT.reglages.ui.trimestresDeclares || {};
+var dusAudit = trimestresFiscaux(factures(), ETAT.reglages, aujourdhui()).filter(function (t) { return !declaresAudit[t.cle] && t.echeance >= aujourdhui() && t.tva + t.paiement130 > 0; });
+var aVenirAudit = impotsAVenir(aujourdhui());
+var valeurTuile = Array.prototype.filter.call(document.querySelectorAll('#tableauContenu .dash-tuile'), function (x) { return x.querySelector('.dash-lib').textContent === 'To set aside for taxes'; })[0];
+res.impotsCommeLesFactures = (dusAudit.length ? aVenirAudit[0].cle === dusAudit[0].cle && Math.abs(aVenirAudit[0].aMettreDeCote - dusAudit[0].tva - dusAudit[0].paiement130) < 0.005 : aVenirAudit.length === 0)
+  && !!valeurTuile && valeurTuile.querySelector('.dash-val').textContent === fmtEuros(aVenirAudit.length ? aVenirAudit[0].aMettreDeCote : 0);
 
 /* --- 15. Log and statement: one row per day, PDFs filed automatically --- */
 afficherPage('journal');

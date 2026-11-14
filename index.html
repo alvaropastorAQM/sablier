@@ -77,7 +77,7 @@
           <h3>Billing</h3>
           <p class="small">The values from the signed contract. The rate applies to billed time: each work item counts for its exact time, and only the total of the statement or invoice is rounded.</p>
           <div class="grid-4">
-            <div class="field"><label for="reglTarif">Hourly rate (€ excl. tax)</label><input type="number" id="reglTarif" step="0.01" min="0"></div>
+            <div class="field"><label for="reglTarif">Hourly rate (€ excl. VAT)</label><input type="number" id="reglTarif" step="0.01" min="0"></div>
             <div class="field"><label for="reglArrondi">Billed time rounding</label>
               <select id="reglArrondi">
                 <option value="0">None (to the minute)</option>
@@ -90,7 +90,6 @@
             <div class="field"><label for="reglRepereAnnuel">Yearly benchmark (hours)</label><input type="number" id="reglRepereAnnuel" step="1" min="0"></div>
             <div class="field"><label for="reglContratDebut">Contract start</label><input type="date" id="reglContratDebut"></div>
             <div class="field"><label for="reglContratFin">Contract end</label><input type="date" id="reglContratFin"></div>
-            <div class="field span-2"><label for="reglMentionTVA">VAT notice on invoices</label><input type="text" id="reglMentionTVA"></div>
             <div class="field"><label for="reglDelaiPaiement">Payment term (days)</label><input type="number" id="reglDelaiPaiement" step="1" min="0"></div>
             <div class="field span-2"><label for="reglDossierFactures">Invoices folder (invoice and statement PDFs, one subfolder per month)</label>
               <div style="display:flex; gap:8px;"><input type="text" id="reglDossierFactures" style="flex:1;" placeholder="None: Sablier will ask where to save each PDF"><button type="button" class="btn btn-ghost" id="reglChoisirDossierFactures">Choose…</button></div></div>
@@ -99,26 +98,23 @@
 
         <div class="reglage-bloc">
           <h3>Contractor</h3>
-          <p class="small">On invoices and statements: name, legal form, address on two lines, SIREN, email and phone. The SIRET and the APE code stay saved but are not printed.</p>
+          <p class="small">On invoices and statements: full name, NIF, address on two lines, email and phone. A Spanish invoice must carry the name, NIF and address of both parties.</p>
           <div class="grid-4">
-            <div class="field"><label for="reglPrestNom">Name</label><input type="text" id="reglPrestNom"></div>
-            <div class="field"><label for="reglPrestForme">Legal form</label><input type="text" id="reglPrestForme" placeholder="Sole trader (entrepreneur individuel)"></div>
-            <div class="field"><label for="reglPrestSiren">SIREN</label><input type="text" id="reglPrestSiren"></div>
-            <div class="field"><label for="reglPrestSiret">SIRET (not printed)</label><input type="text" id="reglPrestSiret"></div>
-            <div class="field span-2"><label for="reglPrestAdresse">Address (street, then postcode and city)</label><input type="text" id="reglPrestAdresse" placeholder="12 rue des Essais, 75000 Paris"></div>
-            <div class="field"><label for="reglPrestEmail">Email</label><input type="email" id="reglPrestEmail"></div>
+            <div class="field span-2"><label for="reglPrestNom">Full name</label><input type="text" id="reglPrestNom"></div>
+            <div class="field"><label for="reglPrestNif">NIF</label><input type="text" id="reglPrestNif" placeholder="12345678Z"></div>
             <div class="field"><label for="reglPrestTel">Phone</label><input type="text" id="reglPrestTel"></div>
-            <div class="field"><label for="reglPrestApe">APE code (not printed)</label><input type="text" id="reglPrestApe"></div>
+            <div class="field span-2"><label for="reglPrestAdresse">Address (street, then postcode and city)</label><input type="text" id="reglPrestAdresse" placeholder="Calle Mayor 1, 3º B, 28013 Madrid"></div>
+            <div class="field span-2"><label for="reglPrestEmail">Email</label><input type="email" id="reglPrestEmail"></div>
           </div>
         </div>
 
         <div class="reglage-bloc">
           <h3>Bank details</h3>
-          <p class="small">Printed in the "Payment terms" of invoices: account holder, bank, IBAN in groups of four, BIC. Copy them from your bank details slip (RIB).</p>
+          <p class="small">Printed in the "Payment terms" of invoices: account holder, bank, IBAN in groups of four, BIC. Copy them from your bank's account ownership certificate.</p>
           <div class="grid-4">
-            <div class="field"><label for="reglPrestTitulaire">Account holder</label><input type="text" id="reglPrestTitulaire" placeholder="EI First Last"></div>
+            <div class="field"><label for="reglPrestTitulaire">Account holder</label><input type="text" id="reglPrestTitulaire" placeholder="First Last"></div>
             <div class="field"><label for="reglPrestBanque">Bank</label><input type="text" id="reglPrestBanque" placeholder="Example Bank"></div>
-            <div class="field"><label for="reglPrestIban">IBAN</label><input type="text" id="reglPrestIban" placeholder="FR76 …"></div>
+            <div class="field"><label for="reglPrestIban">IBAN</label><input type="text" id="reglPrestIban" placeholder="ES91 …"></div>
             <div class="field"><label for="reglPrestBic">BIC</label><input type="text" id="reglPrestBic"></div>
           </div>
         </div>
@@ -129,7 +125,7 @@
             <div class="field"><label for="reglClientSociete">Company</label><input type="text" id="reglClientSociete"></div>
             <div class="field"><label for="reglClientContact">Contact</label><input type="text" id="reglClientContact"></div>
             <div class="field span-2"><label for="reglClientAdresse">Address</label><input type="text" id="reglClientAdresse"></div>
-            <div class="field"><label for="reglClientSiren">SIREN</label><input type="text" id="reglClientSiren"></div>
+            <div class="field"><label for="reglClientNif">NIF</label><input type="text" id="reglClientNif" placeholder="B12345678"></div>
             <div class="field"><label for="reglClientEmail">Billing email</label><input type="email" id="reglClientEmail"></div>
           </div>
         </div>
@@ -145,13 +141,13 @@
         </div>
 
         <div class="reglage-bloc">
-          <h3>Social contributions (estimate)</h3>
-          <p class="small">Used for cash flow and the URSSAF quarters in the Invoices view. Contributions are calculated on the revenue collected; the first declaration covers the quarter in which the activity started and the next one.</p>
+          <h3>Taxes</h3>
+          <p class="small">Applied to each new invoice, which keeps the rates of its issue date. A Spanish company withholds 15% IRPF, or 7% in the year you start and the two following ones. The autónomo fee is the one the Social Security debits each month; it is deducted from the model 130 estimate.</p>
           <div class="grid-4">
-            <div class="field"><label for="reglDebutActivite">Activity start</label><input type="date" id="reglDebutActivite"></div>
-            <div class="field"><label for="reglTauxAcre">Rate with ACRE (%)</label><input type="number" id="reglTauxAcre" step="0.1" min="0"></div>
-            <div class="field"><label for="reglFinAcre">ACRE end</label><input type="date" id="reglFinAcre"></div>
-            <div class="field"><label for="reglTauxPlein">Full rate (%)</label><input type="number" id="reglTauxPlein" step="0.1" min="0"></div>
+            <div class="field"><label for="reglTauxTva">VAT (%)</label><input type="number" id="reglTauxTva" step="1" min="0"></div>
+            <div class="field"><label for="reglTauxIrpf">IRPF withholding (%)</label><input type="number" id="reglTauxIrpf" step="1" min="0"></div>
+            <div class="field"><label for="reglCotisationMensuelle">Autónomo fee (€ per month)</label><input type="number" id="reglCotisationMensuelle" step="0.01" min="0"></div>
+            <div class="field"><label for="reglDebutActivite">Activity start (alta)</label><input type="date" id="reglDebutActivite"></div>
           </div>
         </div>
 
@@ -200,7 +196,7 @@
           <div class="guide-flow-step"><span class="num">2</span><h4>Check the statement</h4><p>At the end of the month, “Log and statement” shows the work day by day and calculates the billed time.</p></div>
           <div class="guide-flow-step"><span class="num">3</span><h4>Create the invoice</h4><p>One click creates the numbered invoice and saves the invoice and the statement as PDFs in the invoices folder (Settings).</p></div>
           <div class="guide-flow-step"><span class="num">4</span><h4>Record the payment</h4><p>On the “Invoices and income” page, mark the invoice as paid when the transfer arrives, and the income ledger fills itself in.</p></div>
-          <div class="guide-flow-step"><span class="num">5</span><h4>Declare to URSSAF</h4><p>Each quarter, the income table gives the collected revenue to declare.</p></div>
+          <div class="guide-flow-step"><span class="num">5</span><h4>File the quarterly returns</h4><p>Each quarter, the VAT and IRPF table gives the amount for model 303 (and model 130, when it is due).</p></div>
         </div>
       </section>
 
@@ -231,7 +227,7 @@
               <li><strong>Billing month</strong>: in an entry's sheet, it defaults to the month of the work. Choose a later month to carry this work on a later statement and invoice: the entry keeps its date in the log and shows the <span class="guide-ui">moved to October</span> badge. Useful for work done before the contract started.</li>
             </ul>
             <h4>Calculation rule</h4>
-            <div class="guide-note">Entries of the same day that share the same area and the same work item label form a single work item. Each work item counts for its exact time; only the total of the statement or invoice is rounded up to the next quarter hour, once (article 6.1 of the contract; rule of 26 October 2026). Neither the split into entries nor the number of sessions changes what the client pays. A work item is always moved as a whole: its entries share the same billing month.</div>
+            <div class="guide-note">Entries of the same day that share the same area and the same work item label form a single work item. Each work item counts for its exact time; only the total of the statement or invoice is rounded up, once, to the step chosen in Settings (the next quarter hour by default). Neither the split into entries nor the number of sessions changes what the client pays. A work item is always moved as a whole: its entries share the same billing month.</div>
           </div>
         </details>
 
@@ -239,11 +235,11 @@
           <summary>Log and statement, invoices</summary>
           <div class="details-body">
             <ul>
-              <li>The <strong>statement</strong> follows the contract template: date, area, nature of the work, time spent, billed time, amount; on screen it reads day by day, and the PDF keeps the full detail. Authorized travel expenses are added on receipts. An entry can be non-billable (€0, reason shown) or carry a flat fee.</li>
+              <li>The <strong>statement</strong> lists the work: date, area, nature of the work, time spent, billed time, amount; on screen it reads day by day, and the PDF keeps the full detail. Authorized travel expenses are added on receipts. An entry can be non-billable (€0, reason shown) or carry a flat fee.</li>
               <li><strong>Work done</strong>: the tasks completed during the month can be attached to the statement as an appendix, to give the client a view of what moved forward (the first ones are shown, “See more” reveals the rest).</li>
-              <li><strong>Create the invoice</strong> locks the month's entries that are not yet invoiced: continuous number (year-number), issue date, due date at thirty days, payment terms (late payment penalties and the €40 fixed recovery fee always printed) with your bank details. A month can carry several invoices. Only the next number is accepted, and the date cannot be earlier than that of the previous invoice. An issued invoice can no longer be edited; only the latest one can be deleted, in case of an error before sending, and never once it is paid. The month's invoice and statement are saved as PDFs in the invoices folder chosen in Settings, in the month's subfolder (“2026-11 November”), created if needed; “Regenerate the PDFs” adds a copy (“Invoice-2026-01 (2).pdf”) without touching the PDFs already saved: contractor, client and statement stay as they were at issue.</li>
+              <li><strong>Create the invoice</strong> locks the month's entries that are not yet invoiced: continuous number (year-number), issue date, service period, due date at thirty days, taxable base, VAT and IRPF withholding at the rates of Settings, payment terms (late payment interest and the €40 compensation of Law 3/2004) with your bank details. A month can carry several invoices. Only the next number is accepted, and the date cannot be earlier than that of the previous invoice. An issued invoice can no longer be edited; only the latest one can be deleted, in case of an error before sending, and never once it is paid. The month's invoice and statement are saved as PDFs in the invoices folder chosen in Settings, in the month's subfolder (“2026-11 November”), created if needed; “Regenerate the PDFs” adds a copy (“Invoice-2026-01 (2).pdf”) without touching the PDFs already saved: contractor, client and statement stay as they were at issue.</li>
               <li><strong>Move to another month</strong> moves work items to the statement and invoice of a later month, without touching their date: work done in September can thus be invoiced in October. The statement it leaves and the one it arrives on each announce it with a banner, and the entry carries the note “Done in September 2026” on screen as well as on the statement PDF. The invoice itself does not say when the work was done: no date and no original month, and its appendix groups work items by area and label, with times and amounts added up; the trace remains in the log and the statement. A work item already carried by an invoice can no longer be moved.</li>
-              <li><strong>Invoices and income</strong> (tab under “Log and statement”) shows the issued invoices, the income ledger (filled in by marking each invoice as paid) and the table of URSSAF quarters, with estimated contributions (ACRE rate until 30 September 2027, full rate after that) and a “Declared” checkbox for each quarter.</li>
+              <li><strong>Invoices and income</strong> (tab under “Log and statement”) shows the issued invoices, what each invoice leaves (the VAT to keep for the tax office, the IRPF the client withholds, what reaches your account), the income ledger (filled in by marking each invoice as paid) and the VAT and IRPF table by quarter: the VAT for model 303, the model 130 estimate when it is due, and a “Filed” checkbox for each quarter. Invoices count on their issue date, paid or not.</li>
             </ul>
           </div>
         </details>
@@ -255,7 +251,7 @@
               <li><strong>Tasks</strong>: three columns (To do, In progress, Done). Drag cards from one column to another; they sort themselves by priority, then by due date. One click opens the <strong>sheet</strong>: steps to tick off (progress shows on the card), attachments (files and images dragged from your file manager, links, code snippets), linked note pages, a dated progress log, time spent based on the log. From a card, <span class="guide-ui">Timer</span> starts the counter on that task.</li>
               <li><strong>Ideas</strong>: they are written on the “Loose ideas” notes page (<span class="guide-ui">Idea</span> style: light bulb button in the toolbar, <span class="guide-ui">/</span> then “Idea”, or <span class="guide-ui">? </span> at the start of a line). Inside an idea, Enter starts a new line for the details; pressing Enter twice leaves it. The <span class="guide-ui">Turn into a task</span> button creates the task in “To do”, linked to the page; the <span class="guide-ui">Task</span> button in the toolbar does the same for any line.</li>
               <li><strong>Notes</strong>: pages and subpages, like a notebook. A page is written in one go, like a text document: Enter starts a new line, <kbd>Shift</kbd><kbd>Enter</kbd> goes to the next line without changing paragraph. The toolbar above the page sets the style of the selected lines (text or heading, lists, checkboxes, quote, callout, idea, divider), bold, italic, underline, strikethrough, highlight and links. From the keyboard: <span class="guide-ui">/</span> on an empty line to insert; <span class="guide-ui"># </span> heading, <span class="guide-ui">- </span> list, <span class="guide-ui">1. </span> numbered list, <span class="guide-ui">[] </span> checkbox, <span class="guide-ui">&gt; </span> quote at the start of a line; <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>L</kbd> checkbox, <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>7</kbd> list, <kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>1</kbd> to <kbd>3</kbd> headings, <kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>0</kbd> text; <kbd>Tab</kbd> indents a list line, <kbd>Alt</kbd><kbd>Shift</kbd><kbd>↑</kbd> or <kbd>↓</kbd> moves it; <kbd>Ctrl</kbd><kbd>Enter</kbd> ticks a checkbox; <kbd>Ctrl</kbd><kbd>Z</kbd> undoes. Pasted text always arrives without formatting. The search on the left also searches the content of pages. Under the title, the “Linked tasks” strip connects the page to tasks, in both directions. Everything is saved as you type.</li>
-              <li><strong>Deadlines</strong>: the administrative calendar of the micro-business (ACRE, CFE, URSSAF declarations, vigilance certificate, summer 2027 review) and your own reminders, each with its own reminder delay.</li>
+              <li><strong>Deadlines</strong>: the tax calendar of an autónomo (quarterly model 303, yearly model 390 and income tax return, the VeriFactu decision), the contract end and your own reminders, each with its own reminder delay.</li>
             </ul>
           </div>
         </details>

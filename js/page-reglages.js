@@ -1,23 +1,23 @@
 /* ============================================================
-   SETTINGS PAGE: billing, identities, bank details, areas, social
-   contributions, reminders, data.
+   SETTINGS PAGE: billing, taxes, identities, bank details, areas,
+   reminders, data.
    ============================================================ */
 'use strict';
 
 var CHAMPS_REGLAGES = {
   reglTarif: ['tarifHoraire', 'nombre'], reglArrondi: ['arrondi', 'nombre'], reglHeuresJournee: ['heuresJournee', 'nombre'],
-  reglRepereAnnuel: ['repereAnnuel', 'nombre'], reglDelaiPaiement: ['delaiPaiement', 'nombre'], reglMentionTVA: ['mentionTVA', 'texte'], reglDossierFactures: ['dossierFactures', 'texte'],
+  reglRepereAnnuel: ['repereAnnuel', 'nombre'], reglDelaiPaiement: ['delaiPaiement', 'nombre'], reglDossierFactures: ['dossierFactures', 'texte'],
   reglContratDebut: ['contrat.debut', 'texte'], reglContratFin: ['contrat.fin', 'texte'],
-  reglPrestNom: ['prestataire.nom', 'texte'], reglPrestSiren: ['prestataire.siren', 'texte'], reglPrestSiret: ['prestataire.siret', 'texte'],
-  reglPrestApe: ['prestataire.ape', 'texte'], reglPrestAdresse: ['prestataire.adresse', 'texte'], reglPrestEmail: ['prestataire.email', 'texte'],
+  reglPrestNom: ['prestataire.nom', 'texte'], reglPrestNif: ['prestataire.nif', 'texte'],
+  reglPrestAdresse: ['prestataire.adresse', 'texte'], reglPrestEmail: ['prestataire.email', 'texte'],
   reglPrestTel: ['prestataire.telephone', 'texte'], reglPrestIban: ['prestataire.iban', 'texte'], reglPrestBic: ['prestataire.bic', 'texte'],
-  reglPrestForme: ['prestataire.formeJuridique', 'texte'], reglPrestTitulaire: ['prestataire.titulaireCompte', 'texte'], reglPrestBanque: ['prestataire.banque', 'texte'],
+  reglPrestTitulaire: ['prestataire.titulaireCompte', 'texte'], reglPrestBanque: ['prestataire.banque', 'texte'],
   reglRappelNatifs: ['rappels.natives', 'bool'], reglRappelDemarrage: ['rappels.auDemarrage', 'bool'],
   reglRappelEcheances: ['rappels.horizonEcheances', 'nombre'], reglRappelTaches: ['rappels.horizonTaches', 'nombre'], reglRappelFactures: ['rappels.horizonFactures', 'nombre'],
   reglRappelChrono: ['rappels.chronoOublieHeures', 'nombre'], reglRappelJournal: ['rappels.journalJours', 'nombre'],
   reglClientSociete: ['client.societe', 'texte'], reglClientContact: ['client.contact', 'texte'], reglClientAdresse: ['client.adresse', 'texte'],
-  reglClientSiren: ['client.siren', 'texte'], reglClientEmail: ['client.email', 'texte'],
-  reglDebutActivite: ['cotisations.debutActivite', 'texte'], reglTauxAcre: ['cotisations.tauxAcre', 'nombre'], reglFinAcre: ['cotisations.finAcre', 'texte'], reglTauxPlein: ['cotisations.tauxPlein', 'nombre'],
+  reglClientNif: ['client.nif', 'texte'], reglClientEmail: ['client.email', 'texte'],
+  reglDebutActivite: ['impots.debutActivite', 'texte'], reglTauxTva: ['impots.tauxTva', 'nombre'], reglTauxIrpf: ['impots.tauxIrpf', 'nombre'], reglCotisationMensuelle: ['impots.cotisationMensuelle', 'nombre'],
 };
 
 function lireChemin(obj, chemin) { return chemin.split('.').reduce(function (o, k) { return o == null ? undefined : o[k]; }, obj); }

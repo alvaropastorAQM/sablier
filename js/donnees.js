@@ -33,27 +33,31 @@ function axesDefaut() {
   ];
 }
 
+/* The contract runs for a year from the first day of the current month,
+   until the real dates are typed in Settings. */
+function contratDefaut() {
+  return { debut: moisCourant() + '-01', fin: ajouterJours(ajouterMois(moisCourant(), 12) + '-01', -1) };
+}
+
 function reglagesDefaut() {
+  var contrat = contratDefaut();
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     tarifHoraire: 42.86,
     arrondi: 0.25,
     heuresJournee: 7,
     repereAnnuel: 192,
     delaiPaiement: 30,
-    mentionTVA: 'VAT not applicable, article 293 B of the French Tax Code (CGI)',
-    contrat: { debut: '2026-10-01', fin: '2027-09-30' },
+    contrat: contrat,
     prestataire: {
-      nom: 'First Last', formeJuridique: 'Sole proprietor (EI)', siren: '123 456 789', siret: '123 456 789 00015', ape: '62.02A',
-      adresse: '', email: '', telephone: '',
-      titulaireCompte: 'EI Last First', banque: 'Example Bank', iban: '', bic: '',
+      nom: '', nif: '', adresse: '', email: '', telephone: '',
+      titulaireCompte: '', banque: '', iban: '', bic: '',
     },
-    client: {
-      societe: 'Example Client', contact: 'John Smith',
-      adresse: '1 Test Avenue, 75000 Paris', siren: '987 654 321', email: '',
-    },
+    client: { societe: '', contact: '', adresse: '', nif: '', email: '' },
     axes: axesDefaut(),
-    cotisations: { debutActivite: '2026-10-01', tauxAcre: 19.4, finAcre: '2027-09-30', tauxPlein: 25.8 },
+    /* Spanish autónomo invoicing a Spanish company: 21% VAT, 15% IRPF
+       withheld (7% in the first three years), monthly autónomo fee. */
+    impots: { tauxTva: 21, tauxIrpf: 15, cotisationMensuelle: 0, debutActivite: contrat.debut },
     /* Reminders: horizons in days, forgotten timer in hours, neglected
        log in days (0 to disable), desktop notifications. */
     rappels: { natives: true, auDemarrage: true, horizonEcheances: 7, horizonTaches: 3, horizonFactures: 5, chronoOublieHeures: 3, journalJours: 7 },
@@ -61,25 +65,27 @@ function reglagesDefaut() {
   };
 }
 
+/* The Spanish tax calendar of the next fifteen months: the quarterly VAT
+   return, the yearly VAT summary and income tax return, the contract end,
+   and the VeriFactu decision. */
 function echeancesDefaut() {
   var maintenant = new Date().toISOString();
-  return [
-    ['2026-10-01', 'Contract and activity start', 'Contract from 1 October 2026 to 30 September 2027. First period: setup (20 to 30 h on top of the steady pace).', 'contrat'],
-    ['2026-10-13', 'File the ACRE application with URSSAF', 'No later than 60 days after the activity starts. After that the benefit is lost for good. Effect: social contributions at 19.40% until 30/09/2027.', 'admin'],
-    ['2026-10-31', 'Take out professional liability insurance', 'Recommended from the start (€150 to €300 per year). Check the cover for non-consequential intangible damage and for remote work from abroad.', 'admin'],
-    ['2026-12-31', 'File the initial CFE return (form 1447-C-SD)', 'With the business tax office (SIE), before 31 December of the year the business was created. It conditions the first-year exemption. While there, create the professional account on impots.gouv.fr.', 'admin'],
-    ['2027-03-31', 'Send the client the URSSAF vigilance certificate and a SIRENE extract', 'Every six months: both documents can be downloaded online in a few minutes.', 'admin'],
-    ['2027-04-30', 'First revenue declaration to URSSAF', 'Period from October 2026 to March 2027, on revenue actually collected (autoentrepreneur.urssaf.fr). The quarters table in the Invoices view gives the amount.', 'admin'],
-    ['2027-05-31', '2026 income tax return (form 2042-C-PRO)', 'Enter the revenue collected in 2026 in box 5HQ (micro-BNC). Exact date depends on the spring 2027 tax calendar.', 'admin'],
-    ['2027-06-15', 'Prepare the summer 2027 review meeting', 'Consolidated statement of hours by area, work completed, priorities for the next period, rate review (article 6.7: the end of ACRE is a legitimate reason for a review).', 'contrat'],
-    ['2027-07-31', 'URSSAF declaration for Q2 2027', 'Revenue collected from April to June 2027.', 'admin'],
-    ['2027-09-01', 'Mandatory electronic invoicing', 'From 1 September 2027, invoices must be issued through an approved platform. Pick one in the spring (several are free at low volume).', 'admin'],
-    ['2027-09-30', 'Contract end and ACRE end', 'The contract does not renew automatically: a written agreement signed by both parties is needed to continue. Social contributions go from 19.40% to 25.80% on 1 October 2027.', 'contrat'],
-    ['2027-10-01', 'Send the URSSAF vigilance certificate (six months)', 'If the collaboration continues.', 'admin'],
-    ['2027-10-31', 'URSSAF declaration for Q3 2027', 'Revenue collected from July to September 2027.', 'admin'],
-    ['2028-01-31', 'URSSAF declaration for Q4 2027', 'Revenue collected from October to December 2027.', 'admin'],
-  ].map(function (t, i) {
-    return { id: 'ech_defaut_' + i, date: t[0], titre: t[1], detail: t[2], type: t[3], rappelJours: null, fait: false, faitLe: null, creeLe: maintenant };
+  var aujourd = aujourdhui();
+  var horizon = ajouterJours(aujourd, 460);
+  var liste = [];
+  for (var m = moisDe(aujourd); premierJour(m) <= horizon; m = ajouterMois(m, 3)) {
+    var t = trimestreDe(premierJour(m));
+    liste.push([echeanceTrimestre(t), 'Model 303 (VAT) for ' + t.libelle, 'Filed from the 1st to the 20th (the fourth quarter until 30 January), even with no invoice. The amount is on the Invoices and income page. Model 130 is due on the same date only if less than 70% of your income had IRPF withheld.', 'admin']);
+  }
+  var annee = Number(aujourd.slice(0, 4));
+  [annee, annee + 1].forEach(function (a) {
+    liste.push([(a + 1) + '-01-30', 'Model 390 (yearly VAT summary) for ' + a, 'Filed together with the model 303 of the fourth quarter.', 'admin']);
+    liste.push([(a + 1) + '-06-30', 'Income tax return (model 100) for ' + a, 'The campaign opens in early April. The IRPF withheld by the client and the autónomo fees are deducted.', 'admin']);
+  });
+  liste.push(['2027-05-31', 'Decide how to invoice under VeriFactu', 'From 1 July 2027, invoices issued with software must comply with VeriFactu (Royal Decree-law 15/2025). Sablier does not: from that date, issue invoices with a compliant program. Check first whether the date has moved again.', 'admin']);
+  liste.push([contratDefaut().fin, 'Contract end', 'Agree on the renewal with the client in writing before this date.', 'contrat']);
+  return liste.filter(function (x) { return x[0] >= aujourd && x[0] <= horizon; }).sort(function (a, b) { return a[0] < b[0] ? -1 : 1; }).map(function (x, i) {
+    return { id: 'ech_defaut_' + i, date: x[0], titre: x[1], detail: x[2], type: x[3], rappelJours: null, fait: false, faitLe: null, creeLe: maintenant };
   });
 }
 
@@ -155,12 +161,12 @@ function notesDefaut() {
       bloc('p', ''),
     ], 0),
     page('page_admin', 'Admin', null, [
-      bloc('p', 'The micro-business routine, on top of the dated deadlines on the Deadlines page.'),
+      bloc('p', 'The autónomo routine, on top of the dated deadlines on the Deadlines page.'),
       bloc('h2', 'Every month'),
       bloc('puce', 'Activity statement and invoice from Sablier, sent to the client at the end of the month'),
       bloc('puce', 'When payment arrives: mark the invoice as paid (income ledger)'),
       bloc('h2', 'Every quarter'),
-      bloc('puce', 'Declare the revenue collected on autoentrepreneur.urssaf.fr'),
+      bloc('puce', 'File model 303 with the VAT of the quarter\'s invoices (Invoices and income page)'),
     ], 1),
     page('page_idees', 'Loose ideas', null, [
       bloc('p', 'A place to jot things down quickly. Each idea has the "Idea" style: lightbulb button in the toolbar, or type / then "Idea". When it is ripe, "Turn into a task" sends it to the To do column.'),
@@ -220,7 +226,7 @@ function chargerEtat() {
   var defauts = reglagesDefaut();
   var brutReglages = objetOu(lireFichier('reglages')) || {};
   ETAT.reglages = completer(brutReglages, defauts);
-  ['prestataire', 'client', 'contrat', 'factures', 'cotisations', 'rappels', 'ui'].forEach(function (k) {
+  ['prestataire', 'client', 'contrat', 'impots', 'rappels', 'ui'].forEach(function (k) {
     if (!objetOu(ETAT.reglages[k])) { ETAT.reglages[k] = defauts[k]; aReparer.reglages = true; }
   });
   ['tarifHoraire', 'arrondi', 'heuresJournee', 'repereAnnuel', 'delaiPaiement'].forEach(function (k) {

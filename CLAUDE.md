@@ -1,7 +1,9 @@
 # Sablier
 
-Engagement tracking for freelancers: time log, monthly statement and PDF
-invoice, tasks, notes, deadlines, reminders. Interface in plain HTML/CSS/JS
+Engagement tracking for a freelancer in Spain (autónomo invoicing a Spanish
+company): time log, monthly statement and PDF invoice with VAT and IRPF
+withholding, tasks, notes, the quarterly tax figures (models 303 and 130),
+deadlines, reminders. Interface in plain HTML/CSS/JS
 with no framework (`index.html`, `js/`, `css/`), backend in Rust with Tauri 2
 (`src-tauri/`). The README describes each page, the calculation rules and
 the code layout.

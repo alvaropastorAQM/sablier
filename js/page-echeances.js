@@ -47,7 +47,7 @@ function rendreEcheances() {
   var pr = ETAT.reglages.rappels || {};
 
   var html = '<div class="page-entete"><div><h2 class="page-titre">Deadlines</h2>'
-    + '<p class="page-sous">The calendar of the micro-business and the contract, plus your own reminders. Tick what is done. Each deadline is flagged ' + (pr.horizonEcheances != null ? pr.horizonEcheances : 7) + ' days before (or on its own lead time): on the dashboard, in the reminders centre and by notification.</p></div>'
+    + '<p class="page-sous">The tax calendar of your autónomo activity and the contract, plus your own reminders. Tick what is done. Each deadline is flagged ' + (pr.horizonEcheances != null ? pr.horizonEcheances : 7) + ' days before (or on its own lead time): on the dashboard, in the reminders centre and by notification.</p></div>'
     + '<div class="actions"><button class="btn btn-ghost" data-action="rappels">' + icone('cloche', 14) + ' Reminders</button><button class="btn" data-action="nouvelle">New deadline</button></div></div>';
 
   html += '<section class="card">';

@@ -106,8 +106,7 @@ function libelleDate(iso, style) {
 }
 function dateFr(iso) { return libelleDate(iso, 'court'); }
 
-/* Calendar quarter of a date: label, bounds and URSSAF filing deadline
-   (last day of the month after the quarter). */
+/* Calendar quarter of a date: key, label and bounds. */
 function trimestreDe(iso) {
   var d = isoVersDate(iso);
   var t = Math.floor(d.getMonth() / 3) + 1;
@@ -119,7 +118,6 @@ function trimestreDe(iso) {
     libelle: 'Q' + t + ' ' + annee,
     debut: debut,
     fin: dernierJour(finMois),
-    echeance: dernierJour(ajouterMois(finMois, 1)),
   };
 }
 
@@ -209,21 +207,23 @@ function fmtNombreSaisie(n, decimales) {
 
 /* ---------- Identities and contact details (documents) ---------- */
 
-/* IBAN in groups of four: "FR76 3000 6000 0112 3456 7890 189". */
+/* IBAN in groups of four: "ES91 2100 0418 4502 0005 1332". */
 function formaterIban(iban) {
   var s = String(iban || '').replace(/\s+/g, '').toUpperCase();
   return s.replace(/(.{4})/g, '$1 ').trim();
 }
-/* French ten-digit number in pairs: "06 12 34 56 78". */
+/* Spanish nine-digit number in threes: "612 345 678", "+34 612 345 678".
+   Any other number stays as typed. */
 function formaterTelephone(tel) {
   var s = String(tel || '').trim();
   var chiffres = s.replace(/\D/g, '');
-  if (/^0\d{9}$/.test(chiffres)) return chiffres.replace(/(\d{2})(?=\d)/g, '$1 ');
-  if (/^33\d{9}$/.test(chiffres)) return '+33 ' + chiffres.slice(2).replace(/(\d)(\d{2})(\d{2})(\d{2})(\d{2})/, '$1 $2 $3 $4 $5');
+  var trois = function (n) { return n.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3'); };
+  if (/^[6789]\d{8}$/.test(chiffres)) return trois(chiffres);
+  if (/^(0034|34)[6789]\d{8}$/.test(chiffres) && /^(\+|00)/.test(s)) return '+34 ' + trois(chiffres.slice(-9));
   return s;
 }
-/* An address typed on one line ("12 rue des Essais, 75000 Paris")
-   rendered on two: the street, then postcode and city. */
+/* An address typed on one line ("Calle Mayor 1, 28013 Madrid") rendered
+   on two: the street, then postcode and city. */
 function adresseLignes(adresse) {
   var s = String(adresse || '').trim();
   if (!s) return [];

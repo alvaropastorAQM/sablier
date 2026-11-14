@@ -3,12 +3,12 @@
    HTML and then printed to PDF by the application (src-tauri/src/mac.rs
    on macOS, windows.rs on Windows).
 
-   Same look as the Projet A reports: navy banner, serif headings, gold
-   rule, tabular figures. No em dashes.
+   Navy banner, serif headings, gold rule, tabular figures. No em dashes.
 
-   The header only carries the useful mentions: name followed by "EI",
-   address on two lines, SIRET, contact details; the invoice also carries
-   its payment terms and bank details.
+   Each party carries what a Spanish invoice requires: full name, NIF and
+   address (on two lines), plus the contractor's contact details; the
+   invoice also carries its service period, VAT, IRPF withholding,
+   payment terms and bank details.
    ============================================================ */
 'use strict';
 
@@ -146,30 +146,32 @@ function heuresDoc(minutes) {
   return Math.floor(m / 60) + ' h ' + String(m % 60).padStart(2, '0');
 }
 
-/* The contractor's name followed by "EI", mandatory on their professional documents. */
-function nomEI(p) {
-  var nom = String((p && p.nom) || '').trim();
-  return /(^|\s)EI$/.test(nom) ? nom : nom + ' EI';
+/* "the next quarter hour", from the rounding step of the settings. */
+function libelleArrondi(reglages) {
+  var pas = Number(reglages && reglages.arrondi);
+  return pas === 0.5 ? 'the next half hour' : (pas === 1 ? 'the next hour' : 'the next quarter hour');
+}
+/* How the billed time is counted, for the notes of the documents. */
+function texteFacturationHoraire(reglages) {
+  return 'each work item at its exact time' + (Number(reglages && reglages.arrondi) ? ', the total rounded up once to ' + libelleArrondi(reglages) : '');
 }
 
-/* The two parties, kept plain: name, address on two lines, SIRET of the
-   establishment (it contains the SIREN; failing that, the SIREN), contact.
-   No APE code, it is not mandatory. */
+/* The two parties: full name, address on two lines, NIF, contact. */
 function blocParties(r, options) {
   var o = options || {};
   var p = r.prestataire || {}, c = r.client || {};
   var ligne = function (t, classe) { return t ? '<div' + (classe ? ' class="' + classe + '"' : '') + '>' + echapper(t) + '</div>' : ''; };
   return '<div class="parties">'
-    + '<div class="partie"><div class="lib">Contractor</div><div class="nom">' + echapper(nomEI(p)) + '</div>'
+    + '<div class="partie"><div class="lib">Contractor</div><div class="nom">' + echapper(p.nom) + '</div>'
     + adresseLignes(p.adresse).map(function (l) { return ligne(l); }).join('')
-    + ligne(p.siret ? 'SIRET ' + p.siret : (p.siren ? 'SIREN ' + p.siren : ''), 'sec')
+    + ligne(p.nif ? 'NIF ' + p.nif : '', 'sec')
     + ligne(p.email, 'sec')
     + ligne(p.telephone ? formaterTelephone(p.telephone) : '', 'sec')
     + '</div>'
     + '<div class="partie"><div class="lib">' + echapper(o.clientLib || 'Client') + '</div><div class="nom">' + echapper(c.societe) + '</div>'
     + ligne(c.contact)
     + adresseLignes(c.adresse).map(function (l) { return ligne(l); }).join('')
-    + ligne(c.siren ? 'SIREN ' + c.siren : '', 'sec')
+    + ligne(c.nif ? 'NIF ' + c.nif : '', 'sec')
     + '</div></div>';
 }
 
@@ -205,11 +207,11 @@ function tableauReleveHtml(lignes, options) {
   }).join('');
   if (arrondi) {
     totalFact += arrondi; totalMontant += montantArrondi;
-    rows += '<tr>' + (o.sansDate ? '' : '<td></td>') + '<td></td><td>Total rounded up to the next quarter hour</td><td class="num"></td><td class="num">' + heuresDoc(arrondi) + '</td>'
+    rows += '<tr>' + (o.sansDate ? '' : '<td></td>') + '<td></td><td>Total rounded up to ' + libelleArrondi(ETAT.reglages) + '</td><td class="num"></td><td class="num">' + heuresDoc(arrondi) + '</td>'
       + (o.sansMontant ? '' : '<td class="num">' + fmtEuros(montants[lignes.length]) + '</td>') + '</tr>';
   }
   return '<table class="releve"><colgroup>' + (o.sansDate ? '' : '<col style="width:21mm">') + '<col style="width:37mm"><col><col style="width:19mm"><col style="width:20mm">' + (o.sansMontant ? '' : '<col style="width:22mm">') + '</colgroup>'
-    + '<thead><tr>' + (o.sansDate ? '' : '<th class="num">Date</th>') + '<th>Area</th><th>Description of work</th><th class="num">Time spent</th><th class="num">Billed time</th>' + (o.sansMontant ? '' : '<th class="num">Amount excl. tax</th>') + '</tr></thead>'
+    + '<thead><tr>' + (o.sansDate ? '' : '<th class="num">Date</th>') + '<th>Area</th><th>Description of work</th><th class="num">Time spent</th><th class="num">Billed time</th>' + (o.sansMontant ? '' : '<th class="num">Amount excl. VAT</th>') + '</tr></thead>'
     + '<tbody>' + rows + '</tbody>'
     + '<tfoot><tr><td colspan="' + (o.sansDate ? 2 : 3) + '">' + (o.libelleTotal || 'Month total') + '</td><td class="num">' + heuresDoc(totalMin) + '</td><td class="num">' + heuresDoc(totalFact) + '</td>' + (o.sansMontant ? '' : '<td class="num">' + fmtEuros(arrondir2(totalMontant)) + '</td>') + '</tr></tfoot></table>';
 }
@@ -248,7 +250,7 @@ function htmlReleve(releve, options) {
     + '<div class="marque"><b>' + echapper(parties.prestataire.nom) + '</b>for ' + echapper(parties.client.societe) + '</div></div>'
     + blocParties(parties)
     + '<div class="meta">'
-    + '<div class="case"><div class="lib">Hourly rate</div><div class="val">' + fmtEuros(releve.tarif) + ' excl. tax</div></div>'
+    + '<div class="case"><div class="lib">Hourly rate</div><div class="val">' + fmtEuros(releve.tarif) + ' excl. VAT</div></div>'
     + '<div class="case"><div class="lib">Time spent</div><div class="val">' + heuresDoc(releve.totalMinutes) + '</div></div>'
     + '<div class="case"><div class="lib">Billed time</div><div class="val">' + heuresDoc(releve.totalMinutesFacturables) + '</div></div>'
     + '<div class="case"><div class="lib">Days of ' + fmtNombre(hj, 0) + ' h</div><div class="val">' + fmtNombre(releve.journees, 2) + '</div></div>'
@@ -258,13 +260,12 @@ function htmlReleve(releve, options) {
     + (releve.totalMinutesNonFacturables ? '<tr><td>Non-billable time</td><td class="num">' + heuresDoc(releve.totalMinutesNonFacturables) + ' · ' + fmtEuros(0) + '</td></tr>' : '')
     + '<tr><td>Billed time</td><td class="num">' + heuresDoc(releve.totalMinutesFacturables) + ' × ' + fmtEuros(releve.tarif) + '</td></tr>'
     + (releve.remise > 0 ? '<tr><td>Value at the hourly rate</td><td class="num">' + fmtEuros(releve.valeurHoraire) + '</td></tr><tr><td>Flat-fee discount</td><td class="num">' + fmtEuros(-releve.remise) + '</td></tr>' : '')
-    + '<tr><td>Amount excl. tax</td><td class="num">' + fmtEuros(releve.montantHT) + '</td></tr>'
-    + (releve.frais ? '<tr><td>Authorised travel expenses (receipts attached)</td><td class="num">' + fmtEuros(releve.frais) + '</td></tr>' : '')
-    + '<tr class="grand"><td>Amount to invoice</td><td class="num">' + fmtEuros(releve.total) + '</td></tr>'
+    + '<tr><td>Amount excl. VAT</td><td class="num">' + fmtEuros(releve.montantHT) + '</td></tr>'
+    + (releve.frais ? '<tr><td>Travel expenses (receipts attached)</td><td class="num">' + fmtEuros(releve.frais) + '</td></tr>' : '')
+    + '<tr class="grand"><td>Amount to invoice excl. VAT</td><td class="num">' + fmtEuros(releve.total) + '</td></tr>'
     + '</table></div>'
     + '<div class="mention">' + echapper([
-      o.mentionTVA || r.mentionTVA,
-      'Hourly billing: each work item at its exact time, the total rounded up once to the next quarter hour (article 6.1 of the contract)',
+      'Hourly billing: ' + texteFacturationHoraire(r),
       origines.length ? (toutVientDAilleurs ? 'The work items in this statement were done in ' : 'Some work items were done in ') + enumererMois(origines) + ' and are billed in this month' : '',
       minutesParties ? 'Work items done in ' + libelleMois(releve.mois) + ' (' + heuresDoc(minutesParties) + ') are billed on the ' + partis.map(function (g) { return libelleMois(g.mois) + ' statement'; }).join(' and on the ') : '',
     ].filter(Boolean).join('. ')) + '.</div>'
@@ -273,9 +274,9 @@ function htmlReleve(releve, options) {
   return documentHtml('Activity statement ' + libelleMois(releve.mois), corps);
 }
 
-/* Payment terms: due date, early payment discount, late payment penalties
-   and fixed recovery fee (mandatory between businesses, so always
-   printed), and bank details on the right (IBAN in groups of four). */
+/* Payment terms: due date, early payment discount, late payment interest
+   and the €40 collection compensation of Law 3/2004 (between businesses),
+   and bank details on the right (IBAN in groups of four). */
 function blocReglementHtml(f, r) {
   var p = f.prestataire || r.prestataire || {};
   /* The printed term is the one frozen on the invoice (otherwise the gap between issue date and due date). */
@@ -290,7 +291,7 @@ function blocReglementHtml(f, r) {
   return '<div class="reglement"><h3>Payment terms</h3>'
     + '<div class="modalites"><p>' + (joursDelai > 0 ? 'Payment by bank transfer within ' + delai + ' days of the invoice date, no later than ' + dateFr(f.dateEcheance) + '.' : 'Payment by bank transfer on receipt of the invoice.') + '</p>'
     + '<p>Early payment discount: none.</p>'
-    + '<p>In case of late payment, penalties are due without reminder at the European Central Bank refinancing rate plus ten percentage points, together with a fixed recovery fee of €40 (article L. 441-10 of the French Commercial Code).</p></div>'
+    + '<p>In case of late payment, interest is due from the due date, without reminder, at the European Central Bank rate plus eight percentage points, together with a fixed compensation of €40 for collection costs (Law 3/2004, articles 7 and 8).</p></div>'
     + (rib ? '<div class="rib">' + rib + '</div>' : '<div class="sec">Bank details to be entered in Settings.</div>')
     + '</div>';
 }
@@ -333,28 +334,27 @@ function annexeFactureHtml(lignes, arrondiMinutes, tarif) {
   }).join('');
   if (arrondi) {
     totalFact += arrondi; totalMontant += montantArrondi;
-    rows += '<tr class="fx-axe"><td>Total rounded up to the next quarter hour</td><td></td><td class="num">' + heuresDoc(arrondi) + '</td><td class="num">' + fmtEuros(montants[lignes.length]) + '</td></tr>';
+    rows += '<tr class="fx-axe"><td>Total rounded up to ' + libelleArrondi(ETAT.reglages) + '</td><td></td><td class="num">' + heuresDoc(arrondi) + '</td><td class="num">' + fmtEuros(montants[lignes.length]) + '</td></tr>';
   }
   return '<table class="releve fx-annexe"><colgroup><col><col style="width:20mm"><col style="width:20mm"><col style="width:24mm"></colgroup>'
-    + '<thead><tr><th>Description of work</th><th class="num">Time spent</th><th class="num">Billed time</th><th class="num">Amount excl. tax</th></tr></thead>'
+    + '<thead><tr><th>Description of work</th><th class="num">Time spent</th><th class="num">Billed time</th><th class="num">Amount excl. VAT</th></tr></thead>'
     + '<tbody>' + rows + '</tbody>'
     + '<tfoot><tr><td>Invoice total</td><td class="num">' + heuresDoc(totalMin) + '</td><td class="num">' + heuresDoc(totalFact) + '</td><td class="num">' + fmtEuros(arrondir2(totalMontant)) + '</td></tr></tfoot></table>';
 }
 
-/* Invoice: the sender's header (name followed by "EI"), references,
-   client, line items, totals, payment terms; in the annex, the work items
-   grouped by area. The invoice does not say when the work was done
-   (contractor's decision of 09/09/2026, confirmed on 26/10/2026): the dated
-   activity statement is attached separately (article 6.3 of the
-   contract). The parties are the ones frozen at issue; an invoice from
-   before 02/11/2026 carries none and takes those from the settings. */
+/* Invoice: the sender's header, references (with the service period, the
+   date of the operation that a Spanish invoice must state), client, line
+   items, taxable base, VAT, IRPF withholding, total due, payment terms; in
+   the annex, the work items grouped by area. The invoice does not give
+   the day of each work item: the dated activity statement is attached
+   separately. The parties and the tax rates are the ones frozen at
+   issue; an invoice without frozen parties takes those of the settings. */
 function htmlFacture(f) {
   var r = ETAT.reglages;
   var p = f.prestataire || r.prestataire || {}, c = f.client || r.client || {};
   var lignes = f.lignes || [];
   var horaires = lignes.filter(function (l) { return l.facturable !== false && l.forfait == null; });
   var forfaits = lignes.filter(function (l) { return l.facturable !== false && l.forfait != null; });
-  /* An invoice from before 26/10/2026 has no arrondiMinutes: its work items were already rounded. */
   var arrondi = Number(f.arrondiMinutes) || 0;
   var minutesH = horaires.reduce(function (s2, l) { return s2 + (l.minutesFacturables || 0); }, 0) + arrondi;
   var montantH = arrondir2(horaires.reduce(function (s2, l) { return s2 + (l.montant || 0); }, 0) + arrondi / 60 * (Number(f.tarif) || 0));
@@ -371,33 +371,34 @@ function htmlFacture(f) {
       + (l.details && l.details.length ? '<div class="sec">' + echapper(joindreDetails(l.details)) + '</div>' : '') + '</td>'
       + '<td class="num">1</td><td class="num">' + fmtEuros(l.forfait) + '</td><td class="num">' + fmtEuros(l.forfait) + '</td></tr>';
   });
-  if (f.frais) lignesFacture += '<tr><td>Authorised travel expenses, receipts attached</td><td class="num"></td><td class="num"></td><td class="num">' + fmtEuros(f.frais) + '</td></tr>';
-  var corps = '<div class="fx-tete"><div class="fx-emetteur"><div class="fx-nom">' + echapper(nomEI(p)) + '</div>'
+  if (f.frais) lignesFacture += '<tr><td>Travel expenses, receipts attached</td><td class="num"></td><td class="num"></td><td class="num">' + fmtEuros(f.frais) + '</td></tr>';
+  var corps = '<div class="fx-tete"><div class="fx-emetteur"><div class="fx-nom">' + echapper(p.nom) + '</div>'
+    + ligne(p.nif ? 'NIF ' + p.nif : '')
     + adresseLignes(p.adresse).map(function (l) { return ligne(l); }).join('')
-    + ligne(p.siret ? 'SIRET ' + p.siret : (p.siren ? 'SIREN ' + p.siren : ''), 'sec')
     + ligne(p.email, 'sec')
     + ligne(p.telephone ? formaterTelephone(p.telephone) : '', 'sec')
     + '</div><div class="fx-titre"><h1>Invoice</h1><table class="fx-ref">'
     + reference('Number', f.numero)
     + reference('Issue date', dateFr(f.dateEmission))
+    + reference('Service period', capitaliser(libelleMois(f.mois)))
     + reference('Due date', dateFr(f.dateEcheance))
     + '</table></div></div>'
     + '<div class="fx-client"><div class="lib">Billed to</div><div class="nom">' + echapper(c.societe) + '</div>'
-    + ligne(c.contact ? 'Attn: ' + c.contact : '')
+    + ligne(c.nif ? 'NIF ' + c.nif : '')
     + adresseLignes(c.adresse).map(function (l) { return ligne(l); }).join('')
-    + ligne(c.siren ? 'SIREN ' + c.siren : '', 'sec')
+    + ligne(c.contact ? 'Attn: ' + c.contact : '', 'sec')
     + '</div>'
     + '<table class="fx-lignes"><colgroup><col><col style="width:22mm"><col style="width:30mm"><col style="width:28mm"></colgroup><thead><tr><th>Description</th><th class="num">Quantity</th><th class="num">Unit price</th><th class="num">Amount</th></tr></thead><tbody>' + lignesFacture + '</tbody></table>'
     + '<div class="total-bloc"><table>'
-    + '<tr><td>Total excl. tax</td><td class="num">' + fmtEuros(arrondir2(f.montantHT + (f.frais || 0))) + '</td></tr>'
-    + '<tr><td>VAT</td><td class="num">Not applicable</td></tr>'
+    + '<tr><td>Taxable base</td><td class="num">' + fmtEuros(f.baseImposable) + '</td></tr>'
+    + '<tr><td>VAT ' + fmtNombre(f.tauxTva, 0) + '%</td><td class="num">' + fmtEuros(f.montantTva) + '</td></tr>'
+    + (f.tauxIrpf ? '<tr><td>IRPF withholding ' + fmtNombre(f.tauxIrpf, 0) + '%</td><td class="num">' + fmtEuros(-f.montantIrpf) + '</td></tr>' : '')
     + '<tr class="grand"><td>Total due</td><td class="num">' + fmtEuros(f.total) + '</td></tr>'
     + '</table></div>'
-    + '<div class="mention">' + echapper(String(f.mentionTVA || r.mentionTVA).replace(/[.\s]*$/, '.')) + '</div>'
     + blocReglementHtml(f, r)
     + '<div class="annexe">'
     + '<h2 class="annexe-titre">Annex to invoice no. ' + echapper(f.numero) + '</h2>'
-    + '<p class="annexe-sous">Details of the work items billed, by area of the assignment. Hourly rate of ' + fmtEuros(f.tarif) + ' excl. tax; each work item at its exact time, the total rounded up once to the next quarter hour (article 6.1 of the contract).</p>'
+    + '<p class="annexe-sous">Details of the work items billed, by area of the assignment. Hourly rate of ' + fmtEuros(f.tarif) + ' excl. VAT; ' + texteFacturationHoraire(r) + '.</p>'
     + annexeFactureHtml(regrouperLignesFacture(f.lignes), f.arrondiMinutes, f.tarif)
     + listeTravauxHtml(f.travaux, { sansDate: true })
     + '</div>';

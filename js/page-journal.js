@@ -125,7 +125,7 @@ function ouvrirEditionEntree(id, prefill) {
       + champHtml('edDuree', 'Duration', 'text', v.minutes != null ? fmtDuree(v.minutes) : '', { attrs: 'placeholder="e.g. 1h30, 45 min, 2.5"' })
       + '<div class="field"><label>Billing</label><label class="field-ligne" style="padding:6px 0;"><input type="checkbox" id="edNonFacturable"' + (v.facturable === false ? ' checked' : '') + '> <span>Non-billable (€0, the time is still counted)</span></label></div>'
       + champHtml('edMotif', 'Reason (if non-billable)', 'text', v.motif || '', { attrs: 'placeholder="e.g. internship, goodwill gesture"' })
-      + champHtml('edForfait', 'Flat fee excl. tax in € (optional, replaces hours × rate)', 'text', v.forfait != null ? fmtNombreSaisie(v.forfait, 2) : '', { attrs: 'inputmode="decimal" placeholder="e.g. 600 or 600.50"' })
+      + champHtml('edForfait', 'Flat fee excl. VAT in € (optional, replaces hours × rate)', 'text', v.forfait != null ? fmtNombreSaisie(v.forfait, 2) : '', { attrs: 'inputmode="decimal" placeholder="e.g. 600 or 600.50"' })
       + '<div class="field span-2"><label for="edTache">Linked task</label><select id="edTache">' + optionsTachesHtml(v.tache) + '</select>'
       + '<p class="hint">The time of this entry is added to the task\'s time spent, in its sheet.</p></div>'
       + '<div class="field span-2"><label for="edMoisFacturation">Billing month</label>'

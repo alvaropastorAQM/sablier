@@ -97,22 +97,17 @@ function rendreTableauDeBord() {
   }
 
   /* --- Tiles --- */
-  /* What has been earned (all issued invoices) and what must be set aside
-     for the next URSSAF direct debit. */
+  /* What has been earned (all issued invoices, excluding VAT) and what must
+     be set aside for the next quarterly returns. */
   var lesFactures = factures();
-  var emis = arrondir2(lesFactures.reduce(function (s, f) { return s + (Number(f.total) || 0); }, 0));
+  var emis = arrondir2(lesFactures.reduce(function (s, f) { return s + baseFacture(f); }, 0));
   var encaisse = arrondir2(lesFactures.filter(function (f) { return f.statut === 'payee'; }).reduce(function (s, f) { return s + (Number(f.total) || 0); }, 0));
-  var urssaf = cotisationsAVenir(ref);
-  var u0 = urssaf[0];
+  var aVenir = impotsAVenir(ref);
   html += '<div class="dash-tuiles">'
     + '<div class="dash-tuile"><div class="dash-lib">Billable hours</div><div class="dash-val">' + fmtHeuresDec(t.minutesFacturables, true) + ' <small>h</small></div><div class="dash-sous">' + echapper(libellePeriodeTableau()) + ' · that is ' + fmtNombre(t.minutesFacturables / 60 / hj, 2) + ' days of ' + fmtNombre(hj, 0) + ' h</div></div>'
-    + '<div class="dash-tuile"><div class="dash-lib">Billable amount</div><div class="dash-val">' + fmtEuros(t.montant) + '</div><div class="dash-sous">excl. tax, at ' + fmtEuros(r.tarifHoraire) + ' per hour</div></div>'
-    + '<div class="dash-tuile"><div class="dash-lib">Earned since the start</div><div class="dash-val">' + fmtEuros(emis) + '</div><div class="dash-sous">' + (lesFactures.length ? lesFactures.length + (lesFactures.length > 1 ? ' invoices issued' : ' invoice issued') + ' · ' + fmtEuros(encaisse) + ' already paid' : 'no invoice issued yet') + '</div></div>'
-    + '<div class="dash-tuile"><div class="dash-lib">To set aside for URSSAF</div><div class="dash-val">' + fmtEuros(u0 ? u0.montant : 0) + '</div><div class="dash-sous">'
-      + (u0 ? 'debited on ' + dateFr(u0.date) + (u0.enAttente ? (u0.enAttente === u0.montant ? ', as soon as the invoice is paid' : ', including ' + fmtEuros(u0.enAttente) + ' from pending invoices') : '')
-        + (urssaf.length > 1 ? ' · then ' + urssaf.slice(1).map(function (d) { return fmtEuros(d.montant) + ' on ' + dateFr(d.date); }).join(', ') : '')
-      : 'nothing to set aside for now')
-      + ' · excluding income tax</div></div>'
+    + '<div class="dash-tuile"><div class="dash-lib">Billable amount</div><div class="dash-val">' + fmtEuros(t.montant) + '</div><div class="dash-sous">excl. VAT, at ' + fmtEuros(r.tarifHoraire) + ' per hour</div></div>'
+    + '<div class="dash-tuile"><div class="dash-lib">Earned since the start</div><div class="dash-val">' + fmtEuros(emis) + '</div><div class="dash-sous">' + (lesFactures.length ? lesFactures.length + (lesFactures.length > 1 ? ' invoices issued' : ' invoice issued') + ', excl. VAT · ' + fmtEuros(encaisse) + ' transferred' : 'no invoice issued yet') + '</div></div>'
+    + '<div class="dash-tuile"><div class="dash-lib">To set aside for taxes</div><div class="dash-val">' + fmtEuros(aVenir.length ? aVenir[0].aMettreDeCote : 0) + '</div><div class="dash-sous">' + texteImpotsAVenir(aVenir) + '</div></div>'
     + '</div>';
 
   /* --- Charts --- */

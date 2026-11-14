@@ -1,6 +1,6 @@
 /* ============================================================
    LOG AND STATEMENT PAGE: the month's work day by day, the activity
-   statement of the contract (article 6.3) and invoice creation.
+   statement and invoice creation.
 
    A month can carry several invoices: each one only takes the entries not
    yet invoiced (for example a start-up invoice early in the month, then
@@ -119,7 +119,7 @@ function releveFige(mois, lesFactures) {
 function bandeauReportHtml(g, sens) {
   var t = g.totaux;
   var n = t.nbInterventions;
-  var chiffres = t.montant > 0 ? fmtHeuresDec(t.minutesFacturables) + ', ' + fmtEuros(t.montant) + ' excl. tax' : fmtDuree(t.minutes) + ', no amount (non-billable)';
+  var chiffres = t.montant > 0 ? fmtHeuresDec(t.minutesFacturables) + ', ' + fmtEuros(t.montant) + ' excl. VAT' : fmtDuree(t.minutes) + ', no amount (non-billable)';
   var sujet = n > 1 ? n + ' work items' : 'One work item';
   var texte = sens === 'envoye'
     ? sujet + ' from ' + libelleMois(RELEVE_MOIS) + (n > 1 ? ' are' : ' is') + ' moved to the ' + libelleMois(g.mois) + ' statement: ' + chiffres + '.'
@@ -150,7 +150,7 @@ function rendreReleve() {
   }).join('');
 
   var html = '<div class="page-entete"><div><h2 class="page-titre">Log and statement</h2>'
-    + '<p class="page-sous">The month\'s work, day by day: click a day to see its entries. The statement follows the contract (article 6.3); the month total is rounded up only once to the next quarter hour (article 6.1).</p></div>'
+    + '<p class="page-sous">The month\'s work, day by day: click a day to see its entries. Each work item counts for its exact time; only the month total is rounded up, once.</p></div>'
     + '<div class="actions"><button class="btn btn-ghost" data-action="nouvelle-ligne">Add an entry</button>'
     + '<div class="mois-nav"><button class="btn-icone" data-action="mois-prec" title="Previous month">‹</button>' + selectMoisHtml('rlMois', RELEVE_MOIS, { liste: moisAutour(RELEVE_MOIS) }) + '<button class="btn-icone" data-action="mois-suiv" title="Next month">›</button></div></div></div>';
 
@@ -168,10 +168,10 @@ function rendreReleve() {
 
   html += '<section class="card">'
     + '<div class="rl-entete">'
-    + '<div><div class="libelle">Contractor</div><div>' + echapper(r.prestataire.nom) + ' · SIREN ' + echapper(r.prestataire.siren) + '</div></div>'
+    + '<div><div class="libelle">Contractor</div><div>' + echapper(r.prestataire.nom || 'Name not set in Settings') + (r.prestataire.nif ? ' · NIF ' + echapper(r.prestataire.nif) : '') + '</div></div>'
     + '<div><div class="libelle">Client</div><div>' + echapper(r.client.societe) + (r.client.contact ? ' · ' + echapper(r.client.contact) : '') + '</div></div>'
     + '<div><div class="libelle">Month</div><div>' + echapper(capitaliser(libelleMois(RELEVE_MOIS))) + '</div></div>'
-    + '<div><div class="libelle">Hourly rate</div><div>' + fmtEuros(r.tarifHoraire) + ' excl. tax · ' + echapper(r.mentionTVA) + '</div></div>'
+    + '<div><div class="libelle">Hourly rate</div><div>' + fmtEuros(r.tarifHoraire) + ' excl. VAT · invoiced with ' + fmtNombre(tauxImpots(r).tva, 0) + '% VAT and ' + fmtNombre(tauxImpots(r).irpf, 0) + '% IRPF withheld</div></div>'
     + '</div>';
 
   /* Each day stays in its work month; those invoiced on another month are
@@ -224,7 +224,7 @@ function rendreReleve() {
         ? g.factures.map(function (f) { return '<span class="fa-statut ' + (f.statut === 'payee' && !enPartie ? 'payee' : 'emise') + '" title="' + (enPartie ? 'Some entries are still to be invoiced' : 'Invoice no. ' + echapper(f.numero)) + '">' + (enPartie ? 'partly invoiced (no. ' : 'invoiced (no. ') + echapper(f.numero) + ')</span>'; }).join(' ')
         : (g.aFacturer ? '<span class="puce">to invoice</span>' : (g.nb ? '<span class="puce neutre">non-billable</span>' : ''));
     };
-    html += '<div class="tableau-defilant"><table class="tableau rl-jours"><thead><tr><th>Day</th><th class="num">Work items</th><th class="num">Billed time</th><th class="num">Amount excl. tax</th><th>Status</th></tr></thead><tbody>'
+    html += '<div class="tableau-defilant"><table class="tableau rl-jours"><thead><tr><th>Day</th><th class="num">Work items</th><th class="num">Billed time</th><th class="num">Amount excl. VAT</th><th>Status</th></tr></thead><tbody>'
       + trierPar(jours, 'date').map(function (j) {
         var ouvert = !!RELEVE_JOURS[j.date];
         /* A fully moved day shows its figures greyed out, outside the total. */
@@ -266,8 +266,8 @@ function rendreReleve() {
 
   var travauxVus = RELEVE_TRAVAUX_TOUS ? travaux : travaux.slice(0, TRAVAUX_VISIBLES);
   html += '<div class="grid-2" style="align-items:start;">'
-    + '<div class="panneau"><div class="libelle" style="margin-bottom:8px;">Authorised travel expenses</div>'
-    + '<div class="rl-frais"><input type="text" id="rlFrais" class="champ" value="' + (meta.frais ? fmtNombreSaisie(meta.frais, 2) : '') + '" placeholder="0.00" inputmode="decimal"> <span class="petit">€ for the month, with prior agreement and receipts (article 6.6)</span></div></div>'
+    + '<div class="panneau"><div class="libelle" style="margin-bottom:8px;">Travel expenses</div>'
+    + '<div class="rl-frais"><input type="text" id="rlFrais" class="champ" value="' + (meta.frais ? fmtNombreSaisie(meta.frais, 2) : '') + '" placeholder="0.00" inputmode="decimal"> <span class="petit">€ excl. VAT for the month, agreed with the client, with receipts</span></div></div>'
     + '<div class="panneau"><label class="field-ligne" style="padding:0 0 6px;"><input type="checkbox" id="rlJoindre"' + (meta.joindreTravaux !== false ? ' checked' : '') + '> <span class="libelle" style="margin:0;">Attach the completed tasks to the statement</span></label>'
     + (travaux.length ? '<ul class="rl-travaux">' + travauxVus.map(function (t) { return '<li>' + echapper(t.titre) + ' <span class="petit">(' + echapper(libelleAxe(t.axe)) + ', ' + libelleDate(t.faitLe, 'moyen') + ')</span></li>'; }).join('') + '</ul>'
       + (travaux.length > TRAVAUX_VISIBLES ? '<button class="lien" data-action="travaux-tous">' + (RELEVE_TRAVAUX_TOUS ? 'See less' : 'See more (' + (travaux.length - TRAVAUX_VISIBLES) + ')') + '</button>' : '')
@@ -303,9 +303,15 @@ function htmlReleveDuMois(mois) {
     options.dateEtabli = derniere.dateEmission;
     options.prestataire = derniere.prestataire;
     options.client = derniere.client;
-    options.mentionTVA = derniere.mentionTVA;
   }
   return htmlReleve(releve, options);
+}
+
+/* What the taxes make of the statement, in one sentence for the invoice
+   dialog: read from the invoice it would create. */
+function texteImpotsFacture(releve) {
+  var f = construireFacture(releve, ETAT.reglages);
+  return fmtEuros(f.baseImposable) + ' plus ' + fmtNombre(f.tauxTva, 0) + '% VAT (' + fmtEuros(f.montantTva) + '), minus ' + fmtNombre(f.tauxIrpf, 0) + '% IRPF withheld (' + fmtEuros(f.montantIrpf) + '): the client transfers ' + fmtEuros(f.total) + '.';
 }
 
 function etablirFacture() {
@@ -325,12 +331,12 @@ function etablirFacture() {
   var p = ETAT.reglages.prestataire || {};
   var m = ouvrirModale({
     titre: 'Create invoice no. ' + numero,
-    sousTitre: capitaliser(libelleMois(mois)) + ' · ' + fmtHeuresDec(releve.totalMinutesFacturables) + ' billed · ' + fmtEuros(releve.total),
+    sousTitre: capitaliser(libelleMois(mois)) + ' · ' + fmtHeuresDec(releve.totalMinutesFacturables) + ' billed · ' + fmtEuros(releve.total) + ' excl. VAT',
     corps: '<p class="petit" style="margin:0 0 12px;">The invoice freezes the ' + nbFact + ' remaining billable work ' + (nbFact === 1 ? 'item' : 'items') + ' of the month' + (nbNonFact ? ' (the ' + nbNonFact + ' non-billable work ' + (nbNonFact === 1 ? 'item stays' : 'items stay') + ' on the statement at €0)' : '') + (releve.remise > 0 ? ', with a flat-fee discount of ' + fmtEuros(releve.remise) : '') + '.'
       + (moisVenus.length ? ' It includes work done in ' + echapper(enumererMois(moisVenus)) + ', moved to this month; the invoice does not show completion dates, the statement and the log keep them.' : '')
       + ' An issued invoice can no longer be edited; only the latest one can be deleted if there is a mistake before it is sent.</p>'
       + '<div class="grid-2">' + champHtml('faDate', 'Issue date', 'date', aujourdhui()) + champHtml('faNumero', 'Number', 'text', numero) + '</div>'
-      + '<p class="hint">Payment due in ' + fmtNombre(Number(ETAT.reglages.delaiPaiement) || 30, 0) + ' days. ' + (p.iban ? 'Bank details printed in the Payment terms block (' + echapper(p.banque || 'bank not specified') + ').' : 'No IBAN entered in Settings: the invoice will not show one.')
+      + '<p class="hint">' + texteImpotsFacture(releve) + ' Payment due in ' + fmtNombre(Number(ETAT.reglages.delaiPaiement) || 30, 0) + ' days. ' + (p.iban ? 'Bank details printed in the Payment terms block (' + echapper(p.banque || 'bank not specified') + ').' : 'No IBAN entered in Settings: the invoice will not show one.')
       + ' ' + (ETAT.reglages.dossierFactures ? 'The invoice and the statement will be saved in the invoices folder, in the subfolder "' + echapper(mois + ' ' + libelleMoisSeul(mois)) + '".' : 'No invoices folder set in Settings: Sablier will ask where to save the two PDFs.') + '</p>',
     pied: '<div class="a-droite"><button class="btn btn-ghost" data-role="annuler">Cancel</button><button class="btn" data-role="ok">Create the invoice and PDFs</button></div>',
   });
@@ -450,7 +456,7 @@ function appliquerReportInterventions(choisies, cible, moisDepart) {
   rafraichir();
   var t = totauxEntrees(lignes, ETAT.reglages, true);
   var quoi = choisies.length > 1 ? choisies.length + ' work items' : '"' + choisies[0].intervention + '"';
-  notifier(quoi + ': ' + fmtHeuresDec(t.minutesFacturables) + ' and ' + fmtEuros(t.montant) + ' excl. tax move to the ' + libelleMois(cible) + ' statement.', {
+  notifier(quoi + ': ' + fmtHeuresDec(t.minutesFacturables) + ' and ' + fmtEuros(t.montant) + ' excl. VAT move to the ' + libelleMois(cible) + ' statement.', {
     type: 'succes', duree: 9000,
     action: {
       libelle: 'Undo move',
