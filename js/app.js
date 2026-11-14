@@ -26,6 +26,8 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   /* System glass window (src-tauri/src/main.rs): the page background fades out. */
   if (/[?&]vibrance=1/.test(location.search)) document.documentElement.classList.add('vibrance');
+  /* Windows draws its own title bar above the page: no room to leave for the Mac window buttons. */
+  if (estApp() && window.sablier.plateforme === 'win32') document.documentElement.classList.add('windows');
   window.addEventListener('resize', poserBulles);
 
   document.addEventListener('keydown', function (ev) {

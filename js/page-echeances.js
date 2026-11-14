@@ -78,7 +78,7 @@ function ouvrirEditionEcheance(id) {
     titre: e ? 'Edit deadline' : 'New deadline',
     corps: '<div class="grid-2">' + champHtml('ecDate', 'Date', 'date', v.date)
       + '<div class="field"><label for="ecType">Type</label><select id="ecType">' + Object.keys(TYPES_ECHEANCE).map(function (k) { return '<option value="' + k + '"' + (k === v.type ? ' selected' : '') + '>' + echapper(TYPES_ECHEANCE[k]) + '</option>'; }).join('') + '</select></div>'
-      + champHtml('ecTitre', 'Titre', 'text', v.titre, { classe: 'span-2' })
+      + champHtml('ecTitre', 'Title', 'text', v.titre, { classe: 'span-2' })
       + champHtml('ecDetail', 'Details', 'textarea', v.detail, { classe: 'span-2', attrs: 'rows="3"' })
       + '<div class="field span-2"><label for="ecRappel">Remind me</label><select id="ecRappel">' + DELAIS_RAPPEL.map(function (d) { return '<option value="' + d[0] + '"' + (d[0] === rappelActuel ? ' selected' : '') + '>' + echapper(d[1] + (d[0] === '' ? ' (' + (pr.horizonEcheances != null ? pr.horizonEcheances : 7) + ' days before)' : '')) + '</option>'; }).join('') + '</select></div>'
       + '</div><p class="hint">The reminder appears on the dashboard and in the reminders centre, with a desktop notification, then every day from the date.</p>',

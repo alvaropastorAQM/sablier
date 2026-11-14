@@ -32,7 +32,7 @@
     }, Promise.resolve()).then(function () { return res; });
   }
 
-  /* Sous Windows, WebView2 sert les schémas internes en http://<schéma>.localhost. */
+  /* On Windows, WebView2 serves the internal schemes as http://<scheme>.localhost. */
   var windows = demarrage.plateforme === 'win32';
 
   window.sablier = {

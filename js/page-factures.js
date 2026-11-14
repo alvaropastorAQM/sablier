@@ -211,7 +211,7 @@ function exporterRecettesCsv() {
 function exporterTexte(nomFichier, contenu) {
   if (estApp()) {
     window.sablier.fichiers.exporterTexte(nomFichier, contenu).then(function (res) {
-      if (res && res.ok) notifier('File saved: ' + res.chemin.split('/').pop(), { type: 'succes', action: { libelle: 'Show in file manager', fn: function () { window.sablier.fichiers.reveler(res.chemin); } } });
+      if (res && res.ok) notifier('File saved: ' + partiesChemin(res.chemin).pop(), { type: 'succes', action: { libelle: 'Show in file manager', fn: function () { window.sablier.fichiers.reveler(res.chemin); } } });
     });
   } else {
     var a = document.createElement('a');

@@ -189,7 +189,7 @@ function exporterSauvegarde() {
   var nom = 'Sablier-backup-' + aujourdhui() + '.json';
   if (estApp()) {
     window.sablier.donnees.exporter(paquet, nom).then(function (res) {
-      if (res && res.ok) notifier('Backup saved: ' + res.chemin.split('/').pop(), { type: 'succes', action: { libelle: 'Show in file manager', fn: function () { window.sablier.fichiers.reveler(res.chemin); } } });
+      if (res && res.ok) notifier('Backup saved: ' + partiesChemin(res.chemin).pop(), { type: 'succes', action: { libelle: 'Show in file manager', fn: function () { window.sablier.fichiers.reveler(res.chemin); } } });
     });
   } else exporterTexte(nom, JSON.stringify(paquet, null, 2));
 }

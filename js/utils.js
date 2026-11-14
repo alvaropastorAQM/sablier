@@ -290,6 +290,8 @@ function trierPar(tableau, cle, desc) {
   });
 }
 function copier(obj) { return JSON.parse(JSON.stringify(obj)); }
+/* The parts of a path from the backend: "/" on macOS, "\" on Windows. */
+function partiesChemin(chemin) { return String(chemin || '').split(/[\\/]/); }
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -300,7 +302,7 @@ if (typeof module !== 'undefined' && module.exports) {
     dateFr: dateFr, trimestreDe: trimestreDe, hmVersMinutes: hmVersMinutes, minutesVersHM: minutesVersHM, minutesEntre: minutesEntre,
     parseDuree: parseDuree, fmtDuree: fmtDuree, fmtHeuresDec: fmtHeuresDec, fmtNombre: fmtNombre, fmtEuros: fmtEuros,
     fmtPourcent: fmtPourcent, arrondir2: arrondir2, normaliserCle: normaliserCle, capitaliser: capitaliser, debounce: debounce,
-    trierPar: trierPar, copier: copier,
+    trierPar: trierPar, copier: copier, partiesChemin: partiesChemin,
     formaterIban: formaterIban, formaterTelephone: formaterTelephone, adresseLignes: adresseLignes, libelleJours: libelleJours, libelleDelai: libelleDelai, fmtTaille: fmtTaille,
     dateValide: dateValide, lireMontant: lireMontant, fmtNombreSaisie: fmtNombreSaisie,
   };

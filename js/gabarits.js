@@ -414,7 +414,7 @@ function genererPdf(html, nomFichier) {
   }
   return window.sablier.pdf.generer(html, nomFichier).then(function (res) {
     if (res && res.ok) {
-      notifier('PDF saved: ' + res.chemin.split('/').pop(), {
+      notifier('PDF saved: ' + partiesChemin(res.chemin).pop(), {
         type: 'succes',
         action: { libelle: 'Open', fn: function () { window.sablier.fichiers.ouvrir(res.chemin); } },
       });
@@ -441,7 +441,7 @@ function enregistrerPdfFacture(f, htmlRel) {
   }, Promise.resolve([])).then(function (res) {
     var ko = res.filter(function (x) { return !x || !x.ok; })[0];
     if (ko !== undefined) { notifier('PDFs not saved: ' + ((ko && ko.message) || 'unknown error') + '.', { type: 'erreur', duree: 9000 }); return res; }
-    notifier('Invoice and statement saved in "' + res[0].chemin.split('/').slice(-2, -1)[0] + '".', {
+    notifier('Invoice and statement saved in "' + partiesChemin(res[0].chemin).slice(-2, -1)[0] + '".', {
       type: 'succes', duree: 8000,
       action: { libelle: 'Show', fn: function () { window.sablier.fichiers.reveler(res[0].chemin); } },
     });

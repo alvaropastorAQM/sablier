@@ -256,24 +256,6 @@ fn zoomer(app: &AppHandle, id: &str) {
 fn menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     let item = |id: &str, texte: &str, raccourci: Option<&str>| MenuItem::with_id(app, id, texte, true, raccourci);
     let a_propos = AboutMetadata { name: Some("Sablier".into()), version: Some(app.package_info().version.to_string()), ..Default::default() };
-    let sablier = Submenu::with_items(app, "Sablier", true, &[
-        &PredefinedMenuItem::about(app, Some("About Sablier"), Some(a_propos))?,
-        &PredefinedMenuItem::separator(app)?,
-        &item("page:reglages", "Settings…", Some("CmdOrCtrl+,"))?,
-        &item("dossier", "Open the data folder", None)?,
-        &item("exporter", "Export a backup…", None)?,
-        &item("importer", "Import a backup…", None)?,
-        &PredefinedMenuItem::separator(app)?,
-    ])?;
-    // Hide and Show all only make sense with the Dock.
-    #[cfg(target_os = "macos")]
-    sablier.append_items(&[
-        &PredefinedMenuItem::hide(app, Some("Hide Sablier"))?,
-        &PredefinedMenuItem::hide_others(app, Some("Hide others"))?,
-        &PredefinedMenuItem::show_all(app, Some("Show all"))?,
-        &PredefinedMenuItem::separator(app)?,
-    ])?;
-    sablier.append(&item("quitter", "Quit Sablier", Some("CmdOrCtrl+Q"))?)?;
     let fichier = Submenu::with_items(app, "File", true, &[
         &item("nouvelle-saisie", "New log entry", Some("CmdOrCtrl+N"))?,
         &item("chrono", "Start or stop the timer", Some("CmdOrCtrl+Shift+T"))?,
@@ -283,7 +265,6 @@ fn menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         &item("nouvelle-page", "New notes page", Some("CmdOrCtrl+Shift+P"))?,
         &item("rappels", "Reminders…", Some("CmdOrCtrl+Shift+R"))?,
         &PredefinedMenuItem::separator(app)?,
-        &PredefinedMenuItem::close_window(app, Some("Close"))?,
     ])?;
     let edition = Submenu::with_items(app, "Edit", true, &[
         // The notes editor keeps its own history: the page decides.
@@ -301,6 +282,10 @@ fn menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     ];
     let affichage = Submenu::with_items(app, "View", true, &[])?;
     for (i, (texte, page)) in pages.iter().enumerate() {
+        // On Windows the user guide lives in the Help menu (F1); Ctrl+8 still opens it from the page.
+        if cfg!(windows) && *page == "guide" {
+            continue;
+        }
         affichage.append(&item(&format!("page:{page}"), texte, Some(&format!("CmdOrCtrl+{}", i + 1)))?)?;
     }
     affichage.append_items(&[
@@ -311,20 +296,54 @@ fn menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         &item("zoom-moins", "Zoom out", Some("CmdOrCtrl+-"))?,
         &PredefinedMenuItem::separator(app)?,
     ])?;
-    // Full screen and Bring all to front do not exist on Windows.
-    #[cfg(target_os = "macos")]
-    affichage.append(&PredefinedMenuItem::fullscreen(app, Some("Full screen"))?)?;
-    affichage.append(&item("devtools", "Developer tools", Some("CmdOrCtrl+Alt+I"))?)?;
-    let fenetre = Submenu::with_items(app, "Window", true, &[
-        &PredefinedMenuItem::minimize(app, Some("Minimize"))?,
-        &PredefinedMenuItem::maximize(app, Some("Zoom"))?,
-    ])?;
+
+    // macOS: application menu, Close in File, full screen, Window menu.
     #[cfg(target_os = "macos")]
     {
-        fenetre.append_items(&[&PredefinedMenuItem::separator(app)?, &PredefinedMenuItem::bring_all_to_front(app, Some("Bring all to front"))?])?;
+        let sablier = Submenu::with_items(app, "Sablier", true, &[
+            &PredefinedMenuItem::about(app, Some("About Sablier"), Some(a_propos))?,
+            &PredefinedMenuItem::separator(app)?,
+            &item("page:reglages", "Settings…", Some("CmdOrCtrl+,"))?,
+            &item("dossier", "Open the data folder", None)?,
+            &item("exporter", "Export a backup…", None)?,
+            &item("importer", "Import a backup…", None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::hide(app, Some("Hide Sablier"))?,
+            &PredefinedMenuItem::hide_others(app, Some("Hide others"))?,
+            &PredefinedMenuItem::show_all(app, Some("Show all"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &item("quitter", "Quit Sablier", Some("CmdOrCtrl+Q"))?,
+        ])?;
+        fichier.append(&PredefinedMenuItem::close_window(app, Some("Close"))?)?;
+        affichage.append_items(&[&PredefinedMenuItem::fullscreen(app, Some("Full screen"))?, &item("devtools", "Developer tools", Some("CmdOrCtrl+Alt+I"))?])?;
+        let fenetre = Submenu::with_items(app, "Window", true, &[
+            &PredefinedMenuItem::minimize(app, Some("Minimize"))?,
+            &PredefinedMenuItem::maximize(app, Some("Zoom"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::bring_all_to_front(app, Some("Bring all to front"))?,
+        ])?;
         let _ = fenetre.set_as_windows_menu_for_nsapp();
+        Menu::with_items(app, &[&sablier, &fichier, &edition, &affichage, &fenetre])
     }
-    Menu::with_items(app, &[&sablier, &fichier, &edition, &affichage, &fenetre])
+    // Windows: the usual File, Edit, View, Help; settings and data in File, the window buttons do the rest.
+    #[cfg(windows)]
+    {
+        fichier.append_items(&[
+            &item("page:reglages", "Settings…", Some("CmdOrCtrl+,"))?,
+            &item("dossier", "Open the data folder", None)?,
+            &item("exporter", "Export a backup…", None)?,
+            &item("importer", "Import a backup…", None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &item("quitter", "Exit", Some("CmdOrCtrl+Q"))?,
+        ])?;
+        affichage.append(&item("devtools", "Developer tools", Some("CmdOrCtrl+Alt+I"))?)?;
+        let aide = Submenu::with_items(app, "Help", true, &[
+            &item("page:guide", "User guide", Some("F1"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::about(app, Some("About Sablier"), Some(a_propos))?,
+        ])?;
+        Menu::with_items(app, &[&fichier, &edition, &affichage, &aide])
+    }
 }
 
 fn sur_menu(app: &AppHandle, id: &str) {

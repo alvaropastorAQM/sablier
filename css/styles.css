@@ -211,6 +211,7 @@ html.vibrance .lateral { background: transparent; backdrop-filter: none; }
 .lateral button, .lateral .tabs, .lateral-pied { -webkit-app-region: no-drag; }
 /* Below the system traffic lights. */
 .marque { display: flex; align-items: center; gap: 8px; padding: 50px 20px 14px; }
+html.windows .marque { padding-top: 18px; }
 .marque-x { width: 20px; height: 20px; flex: none; display: flex; align-items: center; justify-content: center; color: var(--accent); }
 .marque-x svg { width: 20px; height: 20px; }
 .lateral .brand { font-size: 15px; font-weight: 600; letter-spacing: -0.005em; margin: 0; color: var(--text-primary); }
@@ -535,6 +536,8 @@ button.puce.tache:hover { background: var(--fill-3); color: var(--text-primary);
 .status-bar.erreur::before { background: var(--negative); }
 .status-bar.succes::before { background: var(--positive); }
 .status-bar.show { opacity: 1; transform: none; pointer-events: auto; }
+/* Above the buttons of an open modal, never over them. */
+body:has(.modal-overlay) .status-bar { bottom: 84px; }
 
 /* ============================================================
    MODAL WINDOWS AND MENUS (floating glass, level 4)

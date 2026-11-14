@@ -8,10 +8,10 @@ edition = "2021"
 tauri-build = { version = "2.7.4", features = [] }
 
 [dependencies]
-# custom-protocol : la page est embarquée dans l'exécutable, sans serveur de développement.
+# custom-protocol: the page is embedded in the executable, with no development server.
 tauri = { version = "2.12.5", features = ["macos-private-api", "custom-protocol", "devtools"] }
 tauri-plugin-single-instance = "2.5.5"
-# preserve_order et float_roundtrip : les fichiers JSON gardent l'ordre de leurs clés et leurs nombres exacts, comme sous Electron.
+# preserve_order and float_roundtrip: the JSON files keep their key order and their exact numbers, as under Electron.
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 
@@ -24,7 +24,7 @@ objc2-web-kit = "0.3.2"
 objc2-user-notifications = "0.3.2"
 
 [target.'cfg(windows)'.dependencies]
-# Mêmes versions que celles de wry : les types COM de WebView2 doivent être les mêmes.
+# The same versions as wry's: the WebView2 COM types must be the same ones.
 webview2-com = "=0.39.1"
 windows = "=0.62.2"
 base64 = "0.21"
